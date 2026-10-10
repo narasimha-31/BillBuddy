@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-700.css';
+@import '@fontsource-variable/fraunces/full.css';
+
+/* Warm thermal-paper palette. Every text pair is WCAG AA, none as harsh as black on white. */
+@theme {
+	--color-bg: #efebe1;
+	--color-ink: #2e302c;
+	--color-muted: #62665f;
+	--color-line: #d9d4c7;
+	--color-accent: #4f7258;
+	--color-up: #9a4a2e;
+	--color-down: #4f7258;
+
+	/* receipts stay off-white paper with dark print in both themes */
+	--color-receipt: #f7f4eb;
+	--color-receipt-ink: #2e302c;
+	--color-receipt-muted: #5c6059;
+	--color-receipt-line: #cfc9ba;
+	--color-receipt-up: #94452a;
+	--color-receipt-down: #476a50;
+
+	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+	--font-display: 'Fraunces Variable', Georgia, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #1c1e1c;
+		--color-ink: #e4e1d8;
+		--color-muted: #a2a59c;
+		--color-line: #3d413b;
+		--color-accent: #93b497;
+		--color-up: #e0a184;
+		--color-down: #93b497;
+		--color-receipt: #e6e2d6;
+	}
+}
+
+:root {
+	color-scheme: light dark;
+}
+
+body {
+	overflow-x: clip;
+	background: var(--color-bg);
+	color: var(--color-ink);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
