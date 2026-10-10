@@ -39,7 +39,8 @@
 </svg>
 
 <div
-	class="paper-shadow w-full max-w-xs md:w-80 md:max-w-none xl:w-96"
+	style:--delay="250ms"
+	class="paper-shadow print-feed w-full max-w-xs md:w-80 md:max-w-none xl:w-96"
 	role="presentation"
 	onpointermove={follow}
 	onpointerleave={settle}
@@ -57,9 +58,9 @@
 
 			<div class="my-3 border-t border-dashed border-receipt-line"></div>
 
-			{#each lines as line (line.label)}
+			{#each lines as line, i (line.label)}
 				{@const pct = change(line.price, line.last.price)}
-				<div class="mb-3">
+				<div class="line-in mb-3" style:--delay="{550 + i * 160}ms">
 					<div class="flex justify-between">
 						<span>{line.label}</span>
 						<span>{dollars(cents(line.qty, line.price))}</span>

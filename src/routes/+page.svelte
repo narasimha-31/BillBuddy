@@ -27,16 +27,17 @@
 	>
 		<div>
 			<h1 class="wordmark text-center text-[clamp(3rem,6vw,6rem)] md:text-left">
-				<span class="text-accent">B</span>ill<br /><span class="text-accent">B</span>uddy
+				<span class="blur-rise block"><span class="text-accent">B</span>ill</span>
+				<span class="blur-rise block" style:--delay="120ms"><span class="text-accent">B</span>uddy</span>
 			</h1>
 
 			<div class="mt-8 max-w-md space-y-4 text-lg leading-relaxed text-muted xl:max-w-xl xl:text-xl">
-				<p>Every time you shop, you get a receipt. Most of us throw it away or take a photo we never open again.</p>
-				<p>
+				<p class="blur-rise" style:--delay="350ms">Every time you shop, you get a receipt. Most of us throw it away or take a photo we never open again.</p>
+				<p class="blur-rise" style:--delay="480ms">
 					BillBuddy keeps it for you. Snap the receipt and it reads every item, the price, the weight and
 					the store.
 				</p>
-				<p class="text-ink">
+				<p class="blur-rise text-ink" style:--delay="610ms">
 					Next time you shop, search the item and see what you paid last time, where it was cheaper, and
 					whether the price went up.
 				</p>
@@ -46,7 +47,7 @@
 				<p class="mt-6 font-mono text-sm text-up">SIGN-IN DIDN'T GO THROUGH. TRY AGAIN.</p>
 			{/if}
 
-			<form method="POST" action="?/google" class="mt-8">
+			<form method="POST" action="?/google" class="blur-rise mt-8" style:--delay="760ms">
 				<button
 					class="flex items-center gap-3 rounded-md bg-ink px-5 py-3 font-medium text-bg transition-transform hover:-translate-y-0.5 active:translate-y-0"
 				>
