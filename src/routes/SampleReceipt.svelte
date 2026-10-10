@@ -1,18 +1,22 @@
 <script lang="ts">
-	// Today's prices are Walmart's typical 2026 shelf prices; "last" is the shopper's previous trip
-	const lines = [
-		{ label: 'LARGE EGGS 12CT', qty: 1, unit: 'EA', price: 2.1, last: { qty: 1, price: 1.98 } },
-		{ label: 'BANANAS', qty: 2.1, unit: 'LB', price: 0.56, last: { qty: 3, price: 0.54 } },
-		{ label: 'CHICKEN BREAST', qty: 1.62, unit: 'LB', price: 3.61, last: { qty: 2.05, price: 3.48 } },
-		{ label: 'ROMAINE HEARTS 3PK', qty: 1, unit: 'EA', price: 3.98, last: { qty: 1, price: 3.98 } },
-		{ label: 'CEREAL 18OZ', qty: 1, unit: 'EA', price: 2.88, last: { qty: 1, price: 3.12 } }
-	];
+	import { fade } from 'svelte/transition';
+	import { receiptFor, rotation } from './store-prices';
 
-	const cents = (qty: number, price: number) => Math.round(qty * price * 100);
+	let step = $state(0);
+	const store = $derived(rotation[step % rotation.length]);
+	const lines = $derived(receiptFor(store, Math.floor(step / rotation.length)));
+	const total = $derived(lines.reduce((sum, l) => sum + l.totalCents, 0));
 	const dollars = (c: number) => `$${(c / 100).toFixed(2)}`;
-	const change = (now: number, before: number) => Math.round(((now - before) / before) * 100);
-	const total = lines.reduce((sum, l) => sum + cents(l.qty, l.price), 0);
-	const weighed = (unit: string) => unit === 'LB';
+
+	// only the printed details change; the paper keeps its size and place
+	$effect(() => {
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const timer = setInterval(() => {
+			if (tilt.active || document.hidden) return;
+			step += 1;
+		}, 4500);
+		return () => clearInterval(timer);
+	});
 
 	// hover tilt moves only the receipt (a transform, never layout); off for touch and reduced motion
 	let tilt = $state({ x: 0, y: 0, glareX: 50, glareY: 50, active: false });
@@ -53,48 +57,41 @@
 		style:--glare-x="{tilt.glareX}%"
 		style:--glare-y="{tilt.glareY}%"
 	>
-		<div class="ink">
-			<p class="text-center text-base font-bold tracking-widest">WALMART</p>
+		<div class="ink grid">
+			{#key step}
+				<div class="[grid-area:1/1]" in:fade={{ duration: 500, delay: 200 }} out:fade={{ duration: 300 }}>
+					<p class="text-center text-base font-bold tracking-widest uppercase">{store.name}</p>
 
-			<div class="my-3 border-t border-dashed border-receipt-line"></div>
+					<div class="my-3 border-t border-dashed border-receipt-line"></div>
 
-			{#each lines as line, i (line.label)}
-				{@const pct = change(line.price, line.last.price)}
-				<div class="line-in mb-3" style:--delay="{550 + i * 160}ms">
-					<div class="flex justify-between">
-						<span>{line.label}</span>
-						<span>{dollars(cents(line.qty, line.price))}</span>
-					</div>
-					{#if weighed(line.unit)}
-						<div class="flex justify-between text-receipt-muted">
-							<span>{line.qty.toFixed(2)} LB</span>
-							<span>${line.price.toFixed(2)}/LB</span>
+					{#each lines as line, i (line.label)}
+						<div class="mb-3" class:line-in={step === 0} style:--delay="{550 + i * 160}ms">
+							<div class="flex justify-between">
+								<span>{line.label}</span>
+								<span>{dollars(line.totalCents)}</span>
+							</div>
+							<div class="flex justify-between text-receipt-muted">
+								<span>{line.qty}</span>
+								<span>{line.unitPrice}</span>
+							</div>
+							<div class="mt-1 text-xs">
+								{#if line.versus.kind === 'cheapest'}
+									<span class="text-receipt-down">▼ cheapest of {line.versus.of} stores</span>
+								{:else}
+									<span class="text-receipt-up">▲ {line.versus.percent}% more than {line.versus.store}</span>
+								{/if}
+							</div>
 						</div>
-					{/if}
-					<div class="mt-1 flex justify-between gap-2 text-xs text-receipt-muted">
-						<span>
-							last time {weighed(line.unit) ? `${line.last.qty.toFixed(2)} LB · ` : ''}{dollars(
-								cents(line.last.qty, line.last.price)
-							)}
-						</span>
-						{#if pct > 0}
-							<span class="text-receipt-up">▲ {pct}%{weighed(line.unit) ? '/LB' : ''}</span>
-						{:else if pct < 0}
-							<span class="text-receipt-down">▼ {-pct}%{weighed(line.unit) ? '/LB' : ''}</span>
-						{:else}
-							<span>same price</span>
-						{/if}
+					{/each}
+
+					<div class="border-t border-dashed border-receipt-line pt-3">
+						<div class="flex justify-between font-bold">
+							<span>TOTAL</span>
+							<span>{dollars(total)}</span>
+						</div>
 					</div>
 				</div>
-			{/each}
-
-			<div class="border-t border-dashed border-receipt-line pt-3">
-				<div class="flex justify-between font-bold">
-					<span>TOTAL</span>
-					<span>{dollars(total)}</span>
-				</div>
-			</div>
-
+			{/key}
 		</div>
 
 		<!-- kept outside .ink: the print texture would distort the code and stop phones reading it -->
