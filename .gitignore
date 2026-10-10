@@ -9,10 +9,7 @@ node_modules/
 .svelte-kit/
 .vercel/
 build/
-
-__pycache__/
-.venv/
-venv/
+vite.config.ts.timestamp-*
 
 .DS_Store
 Thumbs.db
