@@ -11,12 +11,14 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest run",
-		"verify": "npm run check && npm test && npm run build"
+		"verify": "npm run check && npm test && npm run build",
+		"db:push": "node --env-file=.env migrate.js"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-vercel": "^6.3.4",
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"supabase": "^2.120.0",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
