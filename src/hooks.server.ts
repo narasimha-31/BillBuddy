@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+import { logError } from './error-log.server';
 import { currentUser } from './session.server';
 
 if (!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(PUBLIC_SUPABASE_URL)) {
@@ -28,4 +29,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 		filterSerializedResponseHeaders: (name) =>
 			name === 'content-range' || name === 'x-supabase-api-version'
 	});
+};
+
+// Unexpected errors get a short reference the user can quote; the details go to error_log.
+// Expected ones (404s and the like) are not logged.
+export const handleError: HandleServerError = async ({ error, event, status }) => {
+	if (status < 500) return { message: 'Not found' };
+
+	const id = crypto.randomUUID();
+	const userId = await event.locals.getUser?.().then((u) => u?.id ?? null).catch(() => null);
+	await logError({
+		id,
+		route: event.route.id,
+		status,
+		message: error instanceof Error ? error.message : String(error),
+		code: (error as { code?: string })?.code ?? null,
+		userId: userId ?? null
+	});
+	return { message: 'Something went wrong', ref: id.slice(0, 8) };
 };
