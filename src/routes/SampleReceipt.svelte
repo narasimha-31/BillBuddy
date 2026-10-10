@@ -39,13 +39,13 @@
 </svg>
 
 <div
-	class="w-full max-w-xs md:w-80 md:max-w-none xl:w-96"
+	class="paper-shadow w-full max-w-xs md:w-80 md:max-w-none xl:w-96"
 	role="presentation"
 	onpointermove={follow}
 	onpointerleave={settle}
 >
 	<div
-		class="receipt rounded-[3px] bg-receipt px-6 pt-7 pb-6 font-mono text-[13px] text-receipt-ink xl:px-8 xl:pt-9 xl:text-sm"
+		class="receipt rounded-t-[3px] bg-receipt px-6 pt-7 pb-9 font-mono text-[13px] text-receipt-ink xl:px-8 xl:pt-9 xl:text-sm"
 		class:active={tilt.active}
 		style:--tilt-x="{tilt.x}deg"
 		style:--tilt-y="{tilt.y}deg"
@@ -111,10 +111,11 @@
 			var(--tone),
 			var(--grain);
 		background-blend-mode: normal, normal, multiply, multiply;
-		box-shadow:
-			0 1px 1px rgb(0 0 0 / 0.08),
-			0 6px 12px -6px rgb(0 0 0 / 0.2),
-			0 22px 44px -16px rgb(0 0 0 / 0.35);
+		/* torn bottom edge, like paper pulled across the tear bar */
+		--tear: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% 100% / 12px 7px repeat-x,
+			linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat;
+		-webkit-mask: var(--tear);
+		mask: var(--tear);
 		position: relative;
 		transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
 		transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -134,6 +135,11 @@
 
 	.receipt.active::after {
 		opacity: 1;
+	}
+
+	/* the mask clips box-shadow, so the shadow comes from the wrapper and follows the torn edge */
+	.paper-shadow {
+		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.1)) drop-shadow(0 14px 20px rgb(0 0 0 / 0.3));
 	}
 
 	/* thermal print sits slightly unevenly in the paper */
