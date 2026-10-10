@@ -193,3 +193,84 @@ describe('row level security on items, name memory and settings', () => {
 		}
 	});
 });
+
+describe('receipt photo storage', () => {
+	// smallest valid jpeg (1x1)
+	const jpeg = Buffer.from(
+		'/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+		'base64'
+	);
+	const bucket = 'receipts';
+	let alicePath: string;
+	const exists = async (path: string) => {
+		const folder = path.split('/')[0];
+		const { data } = await admin.storage.from(bucket).list(folder);
+		return (data ?? []).some((f) => `${folder}/${f.name}` === path);
+	};
+
+	beforeAll(async () => {
+		alicePath = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		const { error } = await alice.storage.from(bucket).upload(alicePath, jpeg, { contentType: 'image/jpeg' });
+		if (error) throw error;
+	});
+
+	afterAll(async () => {
+		for (const id of userIds) {
+			const { data } = await admin.storage.from(bucket).list(id);
+			if (data?.length) await admin.storage.from(bucket).remove(data.map((f) => `${id}/${f.name}`));
+		}
+	});
+
+	it('lets the owner read their own photo', async () => {
+		const { data, error } = await alice.storage.from(bucket).download(alicePath);
+		expect(error).toBeNull();
+		expect(data?.size).toBe(jpeg.length);
+	});
+
+	it("hides another user's photo", async () => {
+		const { data } = await bob.storage.from(bucket).download(alicePath);
+		expect(data).toBeNull();
+		const listing = await bob.storage.from(bucket).list(aliceId);
+		expect(listing.data ?? []).toEqual([]);
+	});
+
+	it("blocks uploading into another user's folder", async () => {
+		const path = `${aliceId}/planted.jpg`;
+		const { error } = await bob.storage.from(bucket).upload(path, jpeg, { contentType: 'image/jpeg' });
+		expect(error).not.toBeNull();
+		expect(await exists(path)).toBe(false);
+	});
+
+	it("blocks deleting another user's photo", async () => {
+		await bob.storage.from(bucket).remove([alicePath]);
+		expect(await exists(alicePath)).toBe(true);
+	});
+
+	it('never lets a photo be swapped out after upload', async () => {
+		const { error } = await alice.storage.from(bucket).upload(alicePath, jpeg, { contentType: 'image/jpeg', upsert: true });
+		expect(error).not.toBeNull();
+	});
+
+	it('only accepts jpeg', async () => {
+		const path = `${aliceId}/${crypto.randomUUID()}.png`;
+		const { error } = await alice.storage.from(bucket).upload(path, jpeg, { contentType: 'image/png' });
+		expect(error).not.toBeNull();
+		expect(await exists(path)).toBe(false);
+	});
+
+	it('rejects photos over 5 MB', async () => {
+		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		const big = Buffer.concat([jpeg, Buffer.alloc(5 * 1024 * 1024)]);
+		const { error } = await alice.storage.from(bucket).upload(path, big, { contentType: 'image/jpeg' });
+		expect(error).not.toBeNull();
+		expect(await exists(path)).toBe(false);
+	});
+
+	it('gives signed-out visitors nothing, not even through a public link', async () => {
+		const anon = createClient(url, publishable, noSession);
+		const { data } = await anon.storage.from(bucket).download(alicePath);
+		expect(data).toBeNull();
+		const publicUrl = anon.storage.from(bucket).getPublicUrl(alicePath).data.publicUrl;
+		expect((await fetch(publicUrl)).ok).toBe(false);
+	});
+});
