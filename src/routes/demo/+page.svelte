@@ -63,42 +63,43 @@
 	</div>
 
 	{#key selected.key}
-		<section in:fade={{ duration: 300 }} class="mt-8 rounded-[3px] bg-receipt px-6 py-6 font-mono text-receipt-ink shadow-lg sm:px-8">
-			<div class="flex items-baseline justify-between gap-4">
-				<h2 class="font-bold tracking-wide">{selected.label}</h2>
-				<span class="text-xs text-receipt-muted">price{per}</span>
-			</div>
+		<section class="card" in:fade={{ duration: 300 }}>
+			<header>
+				<h2>{selected.label}</h2>
+				<span>{selected.unit === 'LB' ? 'per lb' : 'each'}</span>
+			</header>
 
-			<div class="my-4 border-t border-dashed border-receipt-line"></div>
-
-			<ul class="space-y-3">
+			<ul class="rows">
 				{#each selected.prices as row, i (row.store)}
-					<li class="grid grid-cols-[6rem_1fr_4.5rem] items-center gap-3 text-sm">
-						<span>{row.store}</span>
-						<span class="h-2 overflow-hidden rounded-full bg-receipt-line/50">
-							<span
-								class="bar block h-full rounded-full {i === 0 ? 'bg-receipt-down' : 'bg-receipt-ink/70'}"
-								style:--size={row.price / highest}
-								style:--delay="{i * 60}ms"
-							></span>
+					<li class:cheapest={i === 0}>
+						<span class="store">
+							{row.store}
+							{#if i === 0}<em>cheapest</em>{/if}
 						</span>
-						<span class="text-right">{money(row.price)}</span>
+						<span class="track">
+							<span class="bar" style:--size={row.price / highest} style:--delay="{i * 60}ms"></span>
+							{#if selected.usAverage !== null}
+								<span class="average" style:left="{(selected.usAverage / highest) * 100}%"></span>
+							{/if}
+						</span>
+						<span class="price">{money(row.price)}</span>
 					</li>
 				{/each}
 			</ul>
 
-			{#if selected.usAverage !== null}
-				<div class="mt-4 flex justify-between border-t border-dashed border-receipt-line pt-3 text-xs text-receipt-muted">
-					<span>US average, August 2026</span>
-					<span>{money(selected.usAverage)}{per}</span>
-				</div>
-			{/if}
-
-			<p class="mt-5 text-xs text-receipt-down">
-				▼ {selected.prices[0].store} is cheapest. {title(selected.label)} costs {Math.round(
-					((selected.prices.at(-1)!.price - selected.prices[0].price) / selected.prices[0].price) * 100
-				)}% more at {selected.prices.at(-1)!.store}.
-			</p>
+			<footer>
+				{#if selected.usAverage !== null}
+					<p class="legend">
+						<span class="tick"></span>
+						US average {money(selected.usAverage)}{per} · BLS, August 2026
+					</p>
+				{/if}
+				<p class="takeaway">
+					{selected.prices[0].store} is cheapest. {title(selected.label)} costs {Math.round(
+						((selected.prices.at(-1)!.price - selected.prices[0].price) / selected.prices[0].price) * 100
+					)}% more at {selected.prices.at(-1)!.store}.
+				</p>
+			</footer>
 		</section>
 	{/key}
 
@@ -230,11 +231,151 @@
 		color: var(--color-accent);
 	}
 
+	.card {
+		margin-top: 2rem;
+		border-radius: 0.875rem;
+		background: var(--color-receipt);
+		padding: 1.5rem;
+		font-family: var(--font-mono);
+		color: var(--color-receipt-ink);
+		box-shadow:
+			0 1px 2px rgb(0 0 0 / 0.06),
+			0 18px 40px -18px rgb(0 0 0 / 0.35);
+	}
+
+	.card header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		border-bottom: 1px dashed var(--color-receipt-line);
+		padding-bottom: 1rem;
+	}
+
+	.card h2 {
+		font-weight: 700;
+		letter-spacing: 0.03em;
+	}
+
+	.card header span {
+		font-size: 0.75rem;
+		color: var(--color-receipt-muted);
+	}
+
+	.rows {
+		display: grid;
+		gap: 0.85rem;
+		margin-top: 1.25rem;
+	}
+
+	.rows li {
+		display: grid;
+		grid-template-columns: 7.5rem 1fr 4rem;
+		align-items: center;
+		gap: 1rem;
+		font-size: 0.875rem;
+	}
+
+	.store {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		white-space: nowrap;
+	}
+
+	.store em {
+		border-radius: 999px;
+		background: rgb(71 106 80 / 0.14);
+		padding: 0.1rem 0.4rem;
+		font-size: 0.625rem;
+		font-style: normal;
+		color: var(--color-receipt-down);
+	}
+
+	.track {
+		position: relative;
+		height: 0.6rem;
+		border-radius: 999px;
+		background: rgb(207 201 186 / 0.45);
+	}
+
+	.price {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.cheapest .price {
+		font-weight: 700;
+		color: var(--color-receipt-down);
+	}
+
 	/* bars grow from the left; transform only, so rows never shift */
 	.bar {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: rgb(46 48 44 / 0.7);
 		transform-origin: left;
 		transform: scaleX(var(--size));
 		animation: grow 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
+	}
+
+	.cheapest .bar {
+		background: var(--color-receipt-down);
+	}
+
+	.average,
+	.tick {
+		width: 0;
+		border-left: 2px dashed var(--color-receipt-up);
+	}
+
+	.average {
+		position: absolute;
+		top: -0.3rem;
+		bottom: -0.3rem;
+	}
+
+	.card footer {
+		margin-top: 1.5rem;
+		border-top: 1px dashed var(--color-receipt-line);
+		padding-top: 1rem;
+		font-size: 0.75rem;
+		line-height: 1.6;
+	}
+
+	.legend {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--color-receipt-muted);
+	}
+
+	.tick {
+		height: 0.9rem;
+	}
+
+	.takeaway {
+		margin-top: 0.5rem;
+		color: var(--color-receipt-down);
+	}
+
+	@media (max-width: 480px) {
+		.card {
+			padding: 1.25rem 1rem;
+		}
+
+		.rows li {
+			grid-template-columns: 5.25rem 1fr 3.5rem;
+			gap: 0.6rem;
+			font-size: 0.8125rem;
+		}
+
+		.store {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.15rem;
+		}
 	}
 
 	@keyframes grow {
