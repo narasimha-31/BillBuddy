@@ -31,7 +31,7 @@
 </svelte:head>
 
 <main class="mx-auto max-w-3xl px-5 py-10">
-	<a href="/" class="wordmark text-2xl"><span class="text-accent">B</span>ill<span class="text-accent">B</span>uddy</a>
+	<a href="/" class="back">Back</a>
 
 	<h1 class="blur-rise mt-8 text-2xl font-semibold text-ink sm:text-3xl">What does it cost where?</h1>
 	<p class="blur-rise mt-2 max-w-xl text-muted" style:--delay="120ms">
@@ -39,16 +39,15 @@
 		where your real prices show up.
 	</p>
 
-	<input
-		bind:value={query}
-		type="search"
-		placeholder="Search eggs, milk, chicken…"
-		aria-label="Search an item"
-		class="blur-rise mt-6 w-full rounded-md border border-ink/30 bg-receipt px-4 py-3 text-base text-receipt-ink placeholder:text-receipt-muted focus:border-ink focus:outline-none"
-		style:--delay="220ms"
-	/>
+	<label class="search blur-rise" style:--delay="220ms">
+		<svg viewBox="0 0 24 24" aria-hidden="true">
+			<circle cx="11" cy="11" r="7" />
+			<path d="m20 20-3.5-3.5" />
+		</svg>
+		<input bind:value={query} type="search" placeholder="Search eggs, milk, chicken" aria-label="Search an item" />
+	</label>
 
-	<div class="blur-rise mt-4 flex flex-wrap gap-2" style:--delay="300ms">
+	<div class="chips blur-rise" style:--delay="300ms">
 		{#each visible as item (item.key)}
 			<button class="chip" class:selected={item.key === selected.key} onclick={() => (selected = item)}>
 				{item.label}
@@ -110,11 +109,74 @@
 </main>
 
 <style>
-	.wordmark {
-		font-family: var(--font-display);
-		font-weight: 700;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+	.back {
+		display: inline-block;
+		border: 1px solid rgb(43 38 32 / 0.3);
+		border-radius: 999px;
+		padding: 0.45rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-ink);
+		transition:
+			background-color 150ms,
+			border-color 150ms;
+	}
+
+	.search {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1.75rem;
+		border: 1px solid rgb(43 38 32 / 0.2);
+		border-radius: 0.875rem;
+		background: var(--color-receipt);
+		padding: 0 1.1rem;
+		box-shadow:
+			0 1px 2px rgb(0 0 0 / 0.06),
+			0 8px 24px -12px rgb(0 0 0 / 0.25);
+		transition:
+			border-color 150ms,
+			box-shadow 150ms;
+	}
+
+	.search:focus-within {
+		border-color: var(--color-accent);
+		box-shadow:
+			0 0 0 3px rgb(44 74 52 / 0.25),
+			0 8px 24px -12px rgb(0 0 0 / 0.25);
+	}
+
+	.search svg {
+		width: 1.25rem;
+		height: 1.25rem;
+		flex: none;
+		fill: none;
+		stroke: var(--color-receipt-muted);
+		stroke-width: 2;
+		stroke-linecap: round;
+	}
+
+	/* 16px text: iOS Safari zooms the page on any smaller input */
+	.search input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		padding: 0.95rem 0;
+		font-size: 1rem;
+		color: var(--color-receipt-ink);
+		outline: none;
+	}
+
+	.search input::placeholder {
+		color: var(--color-receipt-muted);
+	}
+
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1.25rem;
 	}
 
 	.chip {
@@ -134,6 +196,11 @@
 
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
 	@media (hover: hover) {
+		.back:hover {
+			border-color: var(--color-ink);
+			background: rgb(253 251 245 / 0.5);
+		}
+
 		.chip:hover {
 			border-color: rgb(43 38 32 / 0.55);
 			background: var(--color-receipt);
