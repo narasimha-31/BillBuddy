@@ -14,6 +14,7 @@ jobs:
       # placeholders so the build compiles; tests never call Supabase
       PUBLIC_SUPABASE_URL: https://ciplaceholder.supabase.co
       PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ciplaceholder
+      SUPABASE_SECRET_KEY: sb_secret_ciplaceholder
       VERCEL: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
