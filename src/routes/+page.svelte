@@ -26,7 +26,7 @@
 		class="mx-auto grid max-w-5xl items-start gap-12 px-5 pt-14 pb-16 md:grid-cols-[minmax(0,1fr)_auto] md:gap-16 md:pt-20 xl:max-w-6xl xl:gap-24 2xl:max-w-7xl"
 	>
 		<div class="md:pt-10">
-			<h1 class="wordmark text-center text-[clamp(3.5rem,8vw,8rem)] md:text-left">
+			<h1 class="wordmark text-center text-[clamp(3rem,6vw,6rem)] md:text-left">
 				<span class="text-accent">B</span>ill<br /><span class="text-accent">B</span>uddy
 			</h1>
 
