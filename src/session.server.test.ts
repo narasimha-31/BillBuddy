@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
 	AuthApiError,
+	AuthPKCECodeVerifierMissingError,
 	AuthRetryableFetchError,
 	AuthSessionMissingError,
 	type SupabaseClient
 } from '@supabase/supabase-js';
-import { currentUser } from './session.server';
+import { currentUser, signInWithCode } from './session.server';
 
 function clientReturning(result: { user: unknown; error: unknown }) {
 	return {
-		auth: { getUser: async () => ({ data: { user: result.user }, error: result.error }) }
+		auth: {
+			getUser: async () => ({ data: { user: result.user }, error: result.error }),
+			exchangeCodeForSession: async () => ({ data: {}, error: result.error })
+		}
 	} as unknown as SupabaseClient;
 }
 
@@ -40,6 +44,32 @@ describe('currentUser', () => {
 	it('throws when supabase is unreachable', async () => {
 		const offline = new AuthRetryableFetchError('fetch failed', 0);
 		await expect(currentUser(clientReturning({ user: null, error: offline }))).rejects.toBe(
+			offline
+		);
+	});
+});
+
+describe('signInWithCode', () => {
+	it('succeeds for a valid code', async () => {
+		expect(await signInWithCode(clientReturning({ user: null, error: null }), 'c')).toBe(true);
+	});
+
+	it('fails cleanly when the code was opened in another browser', async () => {
+		const client = clientReturning({ user: null, error: new AuthPKCECodeVerifierMissingError() });
+		expect(await signInWithCode(client, 'c')).toBe(false);
+	});
+
+	it('fails cleanly for a used or made-up code', async () => {
+		const client = clientReturning({
+			user: null,
+			error: new AuthApiError('invalid flow state', 404, 'flow_state_not_found')
+		});
+		expect(await signInWithCode(client, 'c')).toBe(false);
+	});
+
+	it('throws when supabase is unreachable', async () => {
+		const offline = new AuthRetryableFetchError('fetch failed', 0);
+		await expect(signInWithCode(clientReturning({ user: null, error: offline }), 'c')).rejects.toBe(
 			offline
 		);
 	});

@@ -1,16 +1,32 @@
 import {
 	isAuthApiError,
+	isAuthPKCECodeVerifierMissingError,
 	isAuthSessionMissingError,
 	type SupabaseClient,
 	type User
 } from '@supabase/supabase-js';
 
-// getUser checks the token with Supabase; getSession only trusts the cookie.
-// A forged, expired or revoked token is a signed-out visitor, not a server error.
+// Bad, expired, forged or replayed credentials mean "not signed in".
+// Anything else (Supabase down, network failure) is a real error and is thrown.
+function isRejectedCredential(error: unknown) {
+	return (
+		isAuthSessionMissingError(error) ||
+		isAuthPKCECodeVerifierMissingError(error) ||
+		(isAuthApiError(error) && error.status >= 400 && error.status < 500)
+	);
+}
+
+// getUser checks the token with Supabase; getSession only trusts the cookie
 export async function currentUser(supabase: SupabaseClient): Promise<User | null> {
 	const { data, error } = await supabase.auth.getUser();
 	if (!error) return data.user;
-	if (isAuthSessionMissingError(error)) return null;
-	if (isAuthApiError(error) && error.status >= 400 && error.status < 500) return null;
+	if (isRejectedCredential(error)) return null;
+	throw error;
+}
+
+export async function signInWithCode(supabase: SupabaseClient, code: string): Promise<boolean> {
+	const { error } = await supabase.auth.exchangeCodeForSession(code);
+	if (!error) return true;
+	if (isRejectedCredential(error)) return false;
 	throw error;
 }
