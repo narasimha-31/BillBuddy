@@ -274,3 +274,79 @@ describe('receipt photo storage', () => {
 		expect((await fetch(publicUrl)).ok).toBe(false);
 	});
 });
+
+describe('receipt and upload limits, enforced by the database', () => {
+	const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+
+	async function userWithHistory(label: string, count: number, minutesBack: number) {
+		const client = await signedInUser(label);
+		const id = userIds[userIds.length - 1];
+		if (count) {
+			const rows = Array.from({ length: count }, () => ({ user_id: id, created_at: minutesAgo(minutesBack) }));
+			const { error } = await admin.from('receipts').insert(rows);
+			if (error) throw error;
+		}
+		return client;
+	}
+
+	it('refuses a burst of more than 10 receipts in a minute', async () => {
+		const carol = await userWithHistory('carol', 0, 0);
+		for (let i = 0; i < 10; i++) {
+			const { error } = await carol.from('receipts').insert({});
+			expect(error).toBeNull();
+		}
+		const { error } = await carol.from('receipts').insert({});
+		expect(error?.message).toBe('receipt limit: too many at once');
+	});
+
+	it('refuses the 21st receipt in a day', async () => {
+		const dave = await userWithHistory('dave', 20, 5);
+		const { error } = await dave.from('receipts').insert({});
+		expect(error?.message).toBe('receipt limit: daily');
+	});
+
+	it('refuses the 201st receipt in 30 days', async () => {
+		const erin = await userWithHistory('erin', 200, 2 * 24 * 60);
+		const { error } = await erin.from('receipts').insert({});
+		expect(error?.message).toBe('receipt limit: monthly');
+	});
+
+	it('ignores a backdated timestamp sent by the client', async () => {
+		const frank = await userWithHistory('frank', 0, 0);
+		const { data } = await frank.from('receipts').insert({ created_at: '2020-01-01T00:00:00Z' }).select().single();
+		expect(Date.now() - new Date(data!.created_at).getTime()).toBeLessThan(60_000);
+	});
+
+	it('refuses the 26th photo upload in a day', async () => {
+		const gina = await userWithHistory('gina', 0, 0);
+		const id = userIds[userIds.length - 1];
+		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+		for (let i = 0; i < 25; i++) {
+			const { error } = await gina.storage.from('receipts').upload(`${id}/${i}.jpg`, jpeg, { contentType: 'image/jpeg' });
+			expect(error, `upload ${i}`).toBeNull();
+		}
+		const { error } = await gina.storage.from('receipts').upload(`${id}/26.jpg`, jpeg, { contentType: 'image/jpeg' });
+		expect(error).not.toBeNull();
+	}, 60_000);
+});
+
+describe('photo counting function', () => {
+	it('only ever reports the caller their own upload count', async () => {
+		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+		const uploaded = await alice.storage.from('receipts').upload(path, jpeg, { contentType: 'image/jpeg' });
+		expect(uploaded.error).toBeNull();
+
+		const { data: aliceCount } = await alice.rpc('receipt_photos_today');
+		const { data: bobCount } = await bob.rpc('receipt_photos_today');
+		await admin.storage.from('receipts').remove([path]);
+		expect(aliceCount).toBe(1);
+		expect(bobCount).toBe(0);
+	});
+
+	it('cannot be called by signed-out visitors', async () => {
+		const anon = createClient(url, publishable, noSession);
+		const { error } = await anon.rpc('receipt_photos_today');
+		expect(error).not.toBeNull();
+	});
+});
