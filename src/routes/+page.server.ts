@@ -6,14 +6,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const code = url.searchParams.get('code');
 	if (code) {
 		const ok = await signInWithCode(locals.supabase, code);
-		redirect(303, ok ? '/' : '/?signin=failed');
+		redirect(303, ok ? '/receipts' : '/?signin=failed');
 	}
 
-	const user = await locals.getUser();
-	return {
-		email: user?.email ?? null,
-		signInFailed: url.searchParams.get('signin') === 'failed'
-	};
+	if (await locals.getUser()) redirect(303, '/receipts');
+	return { signInFailed: url.searchParams.get('signin') === 'failed' };
 };
 
 export const actions: Actions = {
