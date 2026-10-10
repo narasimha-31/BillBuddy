@@ -8,6 +8,7 @@
 			'Open models on Nebius read your receipt with zero data retention. Nothing is stored after the read, and nothing is used for training.'
 		],
 		['Price checks send only the item name.', 'When we look up a better price, the search sees "bananas". Never you, your store or your city.'],
+		['Cookies only keep you signed in.', 'No tracking or ad cookies, which is why there is no cookie banner.'],
 		['Only you can see your receipts.', 'Locked to your account in the database itself. Delete your account and every receipt goes with it.']
 	];
 </script>
