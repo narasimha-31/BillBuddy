@@ -2,12 +2,23 @@
 	import { fade } from 'svelte/transition';
 	import { comparisons } from '../store-prices';
 
-	const all = comparisons();
+	// staples people buy most often come first; with real receipts this becomes the user's own top items
+	const everyday = ['milk', 'eggs', 'bananas', 'whiteBread', 'chicken', 'beef', 'cereal', 'cheddar', 'pasta', 'romaine'];
+	const rank = (key: string) => (everyday.includes(key) ? everyday.indexOf(key) : everyday.length);
+	const all = comparisons().sort((a, b) => rank(a.key) - rank(b.key));
+	const FIRST = 10;
+
 	let query = $state('');
+	let showAll = $state(false);
 	let selected = $state(all.find((c) => c.key === 'eggs')!);
 
-	const matches = $derived(
-		query.trim() ? all.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase())) : all
+	const searching = $derived(query.trim().length > 0);
+	const visible = $derived(
+		searching
+			? all.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()))
+			: showAll
+				? all
+				: all.slice(0, FIRST)
 	);
 	const highest = $derived(Math.max(...selected.prices.map((p) => p.price), selected.usAverage ?? 0));
 	const per = $derived(selected.unit === 'LB' ? '/lb' : '');
@@ -38,18 +49,18 @@
 	/>
 
 	<div class="blur-rise mt-4 flex flex-wrap gap-2" style:--delay="300ms">
-		{#each matches as item (item.key)}
-			<button
-				onclick={() => (selected = item)}
-				class="rounded-full border px-3 py-1.5 font-mono text-xs transition-colors {item.key === selected.key
-					? 'border-ink bg-ink text-bg'
-					: 'border-ink/30 text-ink hover:border-ink'}"
-			>
+		{#each visible as item (item.key)}
+			<button class="chip" class:selected={item.key === selected.key} onclick={() => (selected = item)}>
 				{item.label}
 			</button>
 		{:else}
 			<p class="text-sm text-muted">Nothing called "{query}" in the sample yet.</p>
 		{/each}
+		{#if !searching && all.length > FIRST}
+			<button class="chip more" onclick={() => (showAll = !showAll)}>
+				{showAll ? 'Fewer' : `More (${all.length - FIRST})`}
+			</button>
+		{/if}
 	</div>
 
 	{#key selected.key}
@@ -104,6 +115,52 @@
 		font-weight: 700;
 		font-synthesis: none;
 		font-variation-settings: 'SOFT' 100;
+	}
+
+	.chip {
+		border: 1px solid rgb(43 38 32 / 0.25);
+		border-radius: 999px;
+		background: rgb(253 251 245 / 0.55);
+		padding: 0.5rem 0.95rem;
+		font: 500 0.75rem/1 var(--font-mono);
+		letter-spacing: 0.02em;
+		color: var(--color-ink);
+		transition:
+			background-color 150ms,
+			border-color 150ms,
+			transform 150ms,
+			box-shadow 150ms;
+	}
+
+	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
+	@media (hover: hover) {
+		.chip:hover {
+			border-color: rgb(43 38 32 / 0.55);
+			background: var(--color-receipt);
+			box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
+			transform: translateY(-1px);
+		}
+
+		.chip.more:hover {
+			background: rgb(44 74 52 / 0.2);
+		}
+	}
+
+	.chip:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.chip.selected {
+		border-color: var(--color-ink);
+		background: var(--color-ink);
+		color: var(--color-receipt);
+	}
+
+	.chip.more {
+		border-style: dashed;
+		background: rgb(44 74 52 / 0.12);
+		color: var(--color-accent);
 	}
 
 	/* bars grow from the left; transform only, so rows never shift */
