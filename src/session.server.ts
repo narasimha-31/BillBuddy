@@ -27,6 +27,10 @@ export async function currentUser(supabase: SupabaseClient): Promise<User | null
 export async function signInWithCode(supabase: SupabaseClient, code: string): Promise<boolean> {
 	const { error } = await supabase.auth.exchangeCodeForSession(code);
 	if (!error) return true;
-	if (isRejectedCredential(error)) return false;
+	if (isRejectedCredential(error)) {
+		// the reason only, never the code: a missing verifier means the flow started on another origin
+		console.warn('sign-in code rejected:', error.code ?? error.name);
+		return false;
+	}
 	throw error;
 }

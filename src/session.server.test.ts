@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
 	AuthApiError,
 	AuthPKCECodeVerifierMissingError,
@@ -55,8 +55,12 @@ describe('signInWithCode', () => {
 	});
 
 	it('fails cleanly when the code was opened in another browser', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		const client = clientReturning({ user: null, error: new AuthPKCECodeVerifierMissingError() });
-		expect(await signInWithCode(client, 'c')).toBe(false);
+		expect(await signInWithCode(client, 'secret-code')).toBe(false);
+		expect(warn).toHaveBeenCalledWith('sign-in code rejected:', 'pkce_code_verifier_not_found');
+		expect(JSON.stringify(warn.mock.calls)).not.toContain('secret-code');
+		warn.mockRestore();
 	});
 
 	it('fails cleanly for a used or made-up code', async () => {
