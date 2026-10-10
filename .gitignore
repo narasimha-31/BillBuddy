@@ -10,6 +10,7 @@ node_modules/
 .vercel/
 build/
 vite.config.ts.timestamp-*
+supabase/.temp/
 
 .DS_Store
 Thumbs.db
