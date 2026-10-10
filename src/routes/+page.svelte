@@ -23,9 +23,9 @@
 {:else}
 	<div class="surface" aria-hidden="true"></div>
 	<main
-		class="mx-auto grid max-w-5xl items-start gap-12 px-5 pt-14 pb-16 md:grid-cols-[minmax(0,1fr)_auto] md:gap-16 md:pt-20 xl:max-w-6xl xl:gap-24 2xl:max-w-7xl"
+		class="mx-auto grid max-w-5xl items-center gap-12 px-5 py-12 md:min-h-dvh md:grid-cols-[minmax(0,1fr)_auto] md:gap-16 md:py-8 xl:max-w-6xl xl:gap-24 2xl:max-w-7xl"
 	>
-		<div class="md:pt-10">
+		<div>
 			<h1 class="wordmark text-center text-[clamp(3rem,6vw,6rem)] md:text-left">
 				<span class="text-accent">B</span>ill<br /><span class="text-accent">B</span>uddy
 			</h1>
@@ -61,7 +61,7 @@
 			</form>
 		</div>
 
-		<div class="flex justify-center md:justify-end md:pt-4">
+		<div class="flex justify-center md:justify-end">
 			<SampleReceipt />
 		</div>
 	</main>
@@ -85,20 +85,15 @@
 		inset: 0;
 		z-index: -1;
 		pointer-events: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .27 0 0 0 0 .2 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .27 0 0 0 0 .2 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 	}
 
 	.surface::before {
 		content: '';
 		position: absolute;
 		inset: -30%;
-		background: radial-gradient(closest-side, rgb(255 250 235 / 0.55), transparent);
+		background: radial-gradient(closest-side, rgb(255 240 210 / 0.35), transparent);
 		transform: translate(-10%, -8%);
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.surface::before {
-			background: radial-gradient(closest-side, rgb(255 236 200 / 0.05), transparent);
-		}
-	}
 </style>

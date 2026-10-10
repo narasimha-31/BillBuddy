@@ -23,17 +23,15 @@
 	font-display: block;
 }
 
-/* Warm thermal-paper palette. Every text pair is WCAG AA, none as harsh as black on white. */
+/* Kraft grocery-bag background with paper receipts on top. Text pairs are WCAG AA. */
 @theme {
-	--color-bg: #efebe1;
-	--color-ink: #2e302c;
-	--color-muted: #62665f;
-	--color-line: #d9d4c7;
-	--color-accent: #4f7258;
-	--color-up: #9a4a2e;
-	--color-down: #4f7258;
+	--color-bg: #c9a87c;
+	--color-ink: #2b2620;
+	--color-muted: #4a3f31;
+	--color-line: #a88b62;
+	--color-accent: #2c4a34;
+	--color-up: #6a2612;
 
-	/* receipts stay off-white paper with dark print in both themes */
 	--color-receipt: #f7f4eb;
 	--color-receipt-ink: #2e302c;
 	--color-receipt-muted: #5c6059;
@@ -46,21 +44,9 @@
 	--font-display: 'Fraunces', Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-bg: #1c1e1c;
-		--color-ink: #e4e1d8;
-		--color-muted: #a2a59c;
-		--color-line: #3d413b;
-		--color-accent: #93b497;
-		--color-up: #e0a184;
-		--color-down: #93b497;
-		--color-receipt: #e6e2d6;
-	}
-}
 
 :root {
-	color-scheme: light dark;
+	color-scheme: light;
 }
 
 body {
