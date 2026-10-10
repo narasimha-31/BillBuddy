@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
-import { isAuthApiError, isAuthSessionMissingError } from '@supabase/supabase-js';
 import type { Handle } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+import { currentUser } from './session.server';
 
 if (!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(PUBLIC_SUPABASE_URL)) {
 	throw new Error('PUBLIC_SUPABASE_URL must look like https://<project-ref>.supabase.co');
@@ -22,15 +22,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	// getUser checks the token with Supabase; getSession only trusts the cookie.
-	// A forged, expired or revoked token is a signed-out visitor, not a server error.
-	event.locals.getUser = async () => {
-		const { data, error } = await event.locals.supabase.auth.getUser();
-		if (!error) return data.user;
-		if (isAuthSessionMissingError(error)) return null;
-		if (isAuthApiError(error) && error.status >= 400 && error.status < 500) return null;
-		throw error;
-	};
+	event.locals.getUser = () => currentUser(event.locals.supabase);
 
 	return resolve(event, {
 		filterSerializedResponseHeaders: (name) =>
