@@ -168,9 +168,11 @@
 					<ul class="list">
 						{#each review as receipt (receipt.id)}
 							<li>
-								<span class="paper-icon" aria-hidden="true"></span>
-								<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
-								<span class="status">check a few lines</span>
+								<a href="/receipts/{receipt.id}" class="open">
+									<span class="paper-icon" aria-hidden="true"></span>
+									<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
+									<span class="status">check a few lines</span>
+								</a>
 							</li>
 						{/each}
 					</ul>
@@ -221,9 +223,11 @@
 					<ul class="list">
 						{#each saved as receipt (receipt.id)}
 							<li>
-								<span class="paper-icon" aria-hidden="true"></span>
-								<span>{receipt.store ?? 'Receipt'}</span>
-								<span class="status">{receipt.purchased_on ?? ''}</span>
+								<a href="/receipts/{receipt.id}" class="open">
+									<span class="paper-icon" aria-hidden="true"></span>
+									<span>{receipt.store ?? 'Receipt'}</span>
+									<span class="status">{receipt.purchased_on ?? ''}</span>
+								</a>
 							</li>
 						{/each}
 					</ul>
@@ -423,6 +427,28 @@
 		padding: 0.85rem 1rem;
 		color: var(--color-receipt-ink);
 		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+	}
+
+	/* a whole row that opens the receipt */
+	.list li:has(> .open) {
+		display: block;
+		padding: 0;
+	}
+
+	.open {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		align-items: center;
+		gap: 0.9rem;
+		border-radius: 0.75rem;
+		padding: 0.85rem 1rem;
+		transition: background-color 150ms;
+	}
+
+	@media (hover: hover) {
+		.open:hover {
+			background: rgb(46 48 44 / 0.04);
+		}
 	}
 
 	.paper-icon {
