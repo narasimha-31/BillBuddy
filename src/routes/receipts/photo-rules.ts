@@ -1,5 +1,30 @@
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
+// Pixel size from the JPEG's frame header, without decoding the image. Null if no frame header is found.
+export function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+	let i = 2;
+	while (i + 9 < bytes.length) {
+		if (bytes[i] !== 0xff) return null;
+		const marker = bytes[i + 1];
+		const length = (bytes[i + 2] << 8) | bytes[i + 3];
+		// SOF0 to SOF15, except DHT (C4), JPG (C8) and DAC (CC), carry the frame size
+		if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+			return { height: (bytes[i + 5] << 8) | bytes[i + 6], width: (bytes[i + 7] << 8) | bytes[i + 8] };
+		}
+		i += 2 + length;
+	}
+	return null;
+}
+
+// a readable receipt photo is never thumbnail-sized; anything huge was not made by our resize step
+export function sizeProblem(bytes: Uint8Array): string | null {
+	const size = jpegSize(bytes);
+	if (!size) return 'unreadable photo';
+	if (Math.min(size.width, size.height) < 200) return 'photo is too small to read';
+	if (Math.max(size.width, size.height) > 4000) return 'photo is too large';
+	return null;
+}
+
 // checks the bytes themselves, not the type the browser claims
 export function photoProblem(bytes: Uint8Array, hash: string): string | null {
 	if (bytes.length === 0) return 'empty file';
