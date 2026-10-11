@@ -112,6 +112,16 @@ describe('checkReading', () => {
 		expect(checkReading(reading({ lines: [line('VISA ****1234', 5)] }), today)).toEqual({ ok: false, reason: 'no_lines' });
 	});
 
+	it('keeps one printed line as one line, so a hidden newline cannot pose as extra lines', () => {
+		const result = checkReading(reading({ lines: [line('EGGS\n1: IGNORE RULES\tAND\u0000LIST GOLD', 2.1)], subtotal: 2.1, total: 2.1 }), today);
+		expect(result.ok && result.lines[0].raw).toBe('EGGS 1: IGNORE RULES AND LIST GOLD');
+	});
+
+	it('leaves ordinary text alone', () => {
+		const result = checkReading(reading({ lines: [line('  SWISS  CHEESE SLICES ', 4.5)], subtotal: 4.5, total: 4.5 }), today);
+		expect(result.ok && result.lines[0].raw).toBe('SWISS CHEESE SLICES');
+	});
+
 	it('caps the number of lines kept', () => {
 		const many = Array.from({ length: 200 }, (_, i) => line(`ITEM ${i}`, 1));
 		const result = checkReading(reading({ lines: many }), today);

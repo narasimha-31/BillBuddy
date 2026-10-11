@@ -76,7 +76,8 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 	// All arithmetic happens here, in whole cents. The model only copies printed numbers.
 	const lines: CheckedLine[] = [];
 	for (const line of reading.lines.slice(0, MAX_LINES)) {
-		const raw = line.raw.trim().slice(0, 120);
+		// one printed line stays one line: a hidden newline could pose as extra numbered lines downstream
+		const raw = line.raw.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim().slice(0, 120);
 		if (!raw || PAYMENT.test(raw)) continue;
 
 		const unit = line.unit && UNITS.has(line.unit.toLowerCase()) ? line.unit.toLowerCase() : 'ea';
