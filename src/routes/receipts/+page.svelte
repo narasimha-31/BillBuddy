@@ -6,14 +6,49 @@
 
 	let { data } = $props();
 
-	type Upload = { id: number; name: string; state: 'working' | 'added' | 'duplicate' | 'failed'; note?: string };
+	type State = 'working' | 'reading' | 'saved' | 'review' | 'duplicate' | 'failed' | 'paused';
+	type Upload = { id: number; name: string; state: State; note?: string };
 	let uploads = $state<Upload[]>([]);
+	let reading = $state<string[]>([]);
 	let dragging = $state(false);
 	let picker: HTMLInputElement;
 	let nextId = 0;
 
-	const waiting = $derived(data.receipts.filter((r) => r.status !== 'saved'));
+	const review = $derived(data.receipts.filter((r) => r.status === 'review'));
+	const waiting = $derived(data.receipts.filter((r) => ['pending', 'processing'].includes(r.status) || (r.status === 'failed' && r.problem === 'error')));
+	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
+
+	const problems: Record<string, string> = {
+		not_a_receipt: "that doesn't look like a receipt",
+		handwritten: "handwritten bills can't be read",
+		no_lines: 'no items found on it',
+		bad_photo: "the photo couldn't be opened"
+	};
+
+	async function post(action: string, body: FormData) {
+		const response = await fetch(`?/${action}`, { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } });
+		return deserialize(await response.text());
+	}
+
+	// reads a receipt that is already uploaded; returns the state to show for it
+	async function read(id: string): Promise<{ state: State; note?: string }> {
+		reading = [...reading, id];
+		try {
+			const body = new FormData();
+			body.set('id', id);
+			const result = await post('process', body);
+			if (result.type !== 'success' || !result.data) return { state: 'failed', note: 'try again in a moment' };
+			const outcome = result.data as { status: string; problem?: string; skipped?: number };
+			if (outcome.status === 'saved') return { state: 'saved', note: outcome.skipped ? `${outcome.skipped} line skipped` : undefined };
+			if (outcome.status === 'review') return { state: 'review' };
+			if (outcome.status === 'paused') return { state: 'paused' };
+			if (outcome.status === 'busy') return { state: 'reading', note: 'already being read' };
+			return { state: 'failed', note: problems[outcome.problem ?? ''] ?? 'try again' };
+		} finally {
+			reading = reading.filter((r) => r !== id);
+		}
+	}
 
 	async function add(files: Iterable<File>) {
 		const batch = [...files].filter((f) => f.type.startsWith('image/'));
@@ -26,14 +61,11 @@
 				const body = new FormData();
 				body.set('photo', jpeg, 'receipt.jpg');
 				body.set('hash', hash);
-				const response = await fetch('?/upload', {
-					method: 'POST',
-					body,
-					headers: { 'x-sveltekit-action': 'true' }
-				});
-				const result = deserialize(await response.text());
-				if (result.type === 'success') entry.state = 'added';
-				else if (result.type === 'failure' && result.status === 409) entry.state = 'duplicate';
+				const result = await post('upload', body);
+				if (result.type === 'success' && result.data?.id) {
+					entry.state = 'reading';
+					Object.assign(entry, await read(String(result.data.id)));
+				} else if (result.type === 'failure' && result.status === 409) entry.state = 'duplicate';
 				else {
 					entry.state = 'failed';
 					entry.note = result.type === 'failure' ? String(result.data?.problem ?? '') : 'try again';
@@ -46,17 +78,25 @@
 		if (batch.length) await invalidateAll();
 	}
 
+	async function readAgain(id: string) {
+		await read(id);
+		await invalidateAll();
+	}
+
 	function dropped(event: DragEvent) {
 		event.preventDefault();
 		dragging = false;
 		if (event.dataTransfer) add(event.dataTransfer.files);
 	}
 
-	const statusText: Record<Upload['state'], string> = {
+	const statusText: Record<State, string> = {
 		working: 'getting it ready',
-		added: 'added',
+		reading: 'reading',
+		saved: 'read',
+		review: 'read, check a few lines',
 		duplicate: 'already added',
-		failed: 'did not upload'
+		failed: "couldn't read",
+		paused: "reading is paused for today, it's saved in your list"
 	};
 </script>
 
@@ -107,6 +147,10 @@
 				}}
 			/>
 
+			<p class="limits">
+				{data.today} of {data.dailyLimit} receipts today · photos up to 5 MB
+			</p>
+
 			{#if uploads.length}
 				<ul class="uploads" aria-live="polite">
 					{#each uploads as upload (upload.id)}
@@ -118,6 +162,21 @@
 				</ul>
 			{/if}
 
+			{#if review.length}
+				<section>
+					<h2>Needs a quick look</h2>
+					<ul class="list">
+						{#each review as receipt (receipt.id)}
+							<li>
+								<span class="paper-icon" aria-hidden="true"></span>
+								<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
+								<span class="status">check a few lines</span>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
 			{#if waiting.length}
 				<section>
 					<h2>Waiting to be read</h2>
@@ -126,7 +185,26 @@
 							<li>
 								<span class="paper-icon" aria-hidden="true"></span>
 								<span>Receipt photo</span>
-								<span class="status">{receipt.status === 'failed' ? 'could not be read' : 'waiting'}</span>
+								{#if reading.includes(receipt.id) || receipt.status === 'processing'}
+									<span class="status">reading</span>
+								{:else}
+									<button class="read-now" onclick={() => readAgain(receipt.id)}>Read now</button>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
+			{#if unreadable.length}
+				<section>
+					<h2>Couldn't read</h2>
+					<ul class="list">
+						{#each unreadable as receipt (receipt.id)}
+							<li>
+								<span class="paper-icon" aria-hidden="true"></span>
+								<span>Receipt photo</span>
+								<span class="status">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
 							</li>
 						{/each}
 					</ul>
@@ -320,9 +398,6 @@
 		color: var(--color-ink);
 	}
 
-	.uploads .added {
-		color: var(--color-accent);
-	}
 
 	.uploads .failed {
 		color: var(--color-up);
@@ -361,6 +436,26 @@
 		font-family: var(--font-mono);
 		font-size: 0.75rem;
 		color: var(--color-receipt-muted);
+	}
+
+	.limits {
+		margin-top: 0.6rem;
+		font-size: 0.8rem;
+		color: var(--color-muted);
+	}
+
+	.read-now {
+		border-radius: 999px;
+		background: var(--color-receipt-ink);
+		padding: 0.35rem 0.85rem;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--color-receipt);
+	}
+
+	.uploads .saved,
+	.uploads .review {
+		color: var(--color-accent);
 	}
 
 	.empty {
