@@ -49,6 +49,14 @@
 	color-scheme: light;
 }
 
+/* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */
+button:not(:disabled),
+[role='button'],
+summary,
+label[for] {
+	cursor: pointer;
+}
+
 body {
 	overflow-x: clip;
 	background: var(--color-bg);
