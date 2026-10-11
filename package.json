@@ -13,7 +13,8 @@
 		"test": "vitest run",
 		"verify": "npm run check && npm test && npm run build",
 		"db:push": "node --env-file=.env migrate.js",
-		"test:db": "node --env-file=.env node_modules/vitest/vitest.mjs run --dir supabase/tests"
+		"test:db": "node --env-file=.env node_modules/vitest/vitest.mjs run --dir supabase/tests",
+		"eval:ai": "node --env-file=.env node_modules/vitest/vitest.mjs run --dir evals"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-vercel": "^6.3.4",
