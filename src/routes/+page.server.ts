@@ -23,8 +23,15 @@ export const actions: Actions = {
 		redirect(303, data.url);
 	},
 
+	// Supabase's default signs every device out; this device only is what people expect
 	signout: async ({ locals }) => {
-		const { error } = await locals.supabase.auth.signOut();
+		const { error } = await locals.supabase.auth.signOut({ scope: 'local' });
+		if (error) throw error;
+		redirect(303, '/');
+	},
+
+	signout_everywhere: async ({ locals }) => {
+		const { error } = await locals.supabase.auth.signOut({ scope: 'global' });
 		if (error) throw error;
 		redirect(303, '/');
 	}
