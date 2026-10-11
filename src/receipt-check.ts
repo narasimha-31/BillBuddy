@@ -69,6 +69,17 @@ function validDate(value: string | null, today = new Date()) {
 	return date.getUTCFullYear() >= 2015 && date <= latest ? value : null;
 }
 
+// The receipt-level math, shared by processing and the review screen so they can never disagree.
+export function reconcile(lineTotals: number[], subtotalCents: number | null, taxCents: number | null, totalCents: number | null) {
+	const sum = lineTotals.reduce((total, cents) => total + cents, 0);
+	const tolerance = Math.max(5, Math.round((subtotalCents ?? 0) * 0.01));
+	return {
+		sum,
+		lines_match_subtotal: subtotalCents !== null && Math.abs(sum - subtotalCents) <= tolerance,
+		totals_match: subtotalCents === null || totalCents === null ? null : Math.abs(subtotalCents + (taxCents ?? 0) - totalCents) <= 2
+	};
+}
+
 export function checkReading(reading: Reading, today = new Date()): Checked {
 	if (reading.kind === 'not_a_receipt') return { ok: false, reason: 'not_a_receipt' };
 	if (reading.handwritten) return { ok: false, reason: 'handwritten' };
@@ -106,12 +117,12 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 	const subtotalCents = cents(reading.subtotal);
 	const taxCents = cents(reading.tax);
 	const totalCents = cents(reading.total);
-	const sum = lines.reduce((total, l) => total + l.totalCents, 0);
-	const tolerance = Math.max(5, Math.round((subtotalCents ?? 0) * 0.01));
-
-	const lines_match_subtotal = subtotalCents !== null && Math.abs(sum - subtotalCents) <= tolerance;
-	const totals_match =
-		subtotalCents === null || totalCents === null ? null : Math.abs(subtotalCents + (taxCents ?? 0) - totalCents) <= 2;
+	const { lines_match_subtotal, totals_match } = reconcile(
+		lines.map((l) => l.totalCents),
+		subtotalCents,
+		taxCents,
+		totalCents
+	);
 
 	return {
 		ok: true,

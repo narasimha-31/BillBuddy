@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, type Reading } from './receipt-check';
+import { checkReading, reconcile, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -24,6 +24,21 @@ const reading = (overrides: Partial<Reading> = {}): Reading => ({
 	...overrides
 });
 const today = new Date('2026-10-11T12:00:00Z');
+
+describe('reconcile', () => {
+	it('adds the lines in cents and compares them with the printed totals', () => {
+		expect(reconcile([321, 118, -50], 389, 32, 421)).toEqual({ sum: 389, lines_match_subtotal: true, totals_match: true });
+	});
+
+	it('reports each mismatch separately', () => {
+		expect(reconcile([321, 118], 500, 0, 500)).toMatchObject({ sum: 439, lines_match_subtotal: false, totals_match: true });
+		expect(reconcile([321, 118], 439, 30, 400)).toMatchObject({ lines_match_subtotal: true, totals_match: false });
+	});
+
+	it('cannot confirm anything when the totals are missing', () => {
+		expect(reconcile([321], null, null, null)).toEqual({ sum: 321, lines_match_subtotal: false, totals_match: null });
+	});
+});
 
 describe('checkReading', () => {
 	it('keeps a normal receipt and finds nothing to review', () => {
