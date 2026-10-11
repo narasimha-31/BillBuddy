@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import AccountMenu from '../AccountMenu.svelte';
 	import { preparePhoto } from './prepare-photo';
 
 	let { data } = $props();
@@ -13,7 +14,6 @@
 
 	const waiting = $derived(data.receipts.filter((r) => r.status !== 'saved'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
-	const initial = $derived((data.firstName ?? 'B').charAt(0).toUpperCase());
 
 	async function add(files: Iterable<File>) {
 		const batch = [...files].filter((f) => f.type.startsWith('image/'));
@@ -67,13 +67,7 @@
 <div class="shell">
 	<header class="top">
 		<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
-		<div class="who">
-			{#if data.firstName}<span class="hello">Hi {data.firstName}</span>{/if}
-			<span class="initial" aria-hidden="true">{initial}</span>
-			<form method="POST" action="/?/signout">
-				<button class="link">Sign out</button>
-			</form>
-		</div>
+		<AccountMenu firstName={data.firstName} />
 	</header>
 
 	<div class="columns">
@@ -210,27 +204,8 @@
 		color: var(--color-accent);
 	}
 
-	.who {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.9rem;
-	}
 
-	.hello {
-		color: var(--color-ink);
-	}
 
-	.initial {
-		display: grid;
-		place-items: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: 999px;
-		background: var(--color-accent);
-		font-weight: 600;
-		color: var(--color-receipt);
-	}
 
 	.link {
 		color: var(--color-muted);
