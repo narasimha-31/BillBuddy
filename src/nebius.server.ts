@@ -46,6 +46,7 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 	const started = Date.now();
 	let usage: { prompt_tokens?: number; completion_tokens?: number } = {};
 	let ok = false;
+	let servedModel: string | null = null;
 	try {
 		let response = await post(body);
 		if (response.status === 429 || response.status >= 500) {
@@ -57,6 +58,7 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 
 		const json = await response.json();
 		usage = json.usage ?? {};
+		servedModel = typeof json.model === 'string' ? json.model.slice(0, 100) : null;
 		const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? '') as T;
 		ok = true;
 		return parsed;
@@ -64,6 +66,7 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 		const { error } = await admin.from('ai_calls').insert({
 			user_id: userId,
 			model: MODELS[role].id,
+			served_model: servedModel,
 			purpose,
 			input_tokens: usage.prompt_tokens ?? 0,
 			output_tokens: usage.completion_tokens ?? 0,
