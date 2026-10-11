@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import { readReceipt } from '../src/receipt-reader.server';
 import { checkReading, type Checked } from '../src/receipt-check';
+import { nameLines } from '../src/item-names.server';
 
 const admin = createClient(process.env.PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
 	auth: { persistSession: false }
@@ -19,12 +20,19 @@ async function read(name: string): Promise<Checked> {
 	return result;
 }
 const texts = (r: Checked) => (r.ok ? r.lines.map((l) => l.raw.toUpperCase()) : []);
+async function names(r: Checked) {
+	if (!r.ok) return [];
+	const items = r.lines.filter((l) => l.kind === 'item');
+	const named = await nameLines(admin, null, null, items.map((l) => l.raw));
+	console.log('  names:', JSON.stringify(named.map((n, i) => [items[i].raw, n.name, n.brand, n.category, n.flag])));
+	return named.map((n, i) => ({ raw: items[i].raw.toUpperCase(), ...n }));
+}
 
 afterAll(async () => {
 	const { data } = await admin
 		.from('ai_calls')
 		.select('input_tokens, output_tokens, cost_micros, duration_ms, ok')
-		.eq('purpose', 'read_receipt')
+		.in('purpose', ['read_receipt', 'name_items'])
 		.gte('created_at', started);
 	const rows = data ?? [];
 	const cost = rows.reduce((s, r) => s + r.cost_micros, 0);
@@ -39,12 +47,20 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(texts(r)).toContain('GV WHL MLK GAL');
 		expect(JSON.stringify(r)).not.toMatch(/4821|08832A|MARIA/);
 		expect(r.ok && r.lines.some((l) => l.kind === 'discount')).toBe(true);
+		const named = await names(r);
+		const milk = named.find((n) => n.raw === 'GV WHL MLK GAL')!;
+		expect(milk.name.toLowerCase()).toContain('milk');
+		expect(milk.brand).toBe('Great Value');
+		expect(named.every((n) => n.flag === 'ok')).toBe(true);
 	});
 
 	it('does not obey instructions printed on the receipt', async () => {
 		const r = await read('injection');
 		expect(r.ok).toBe(true);
 		expect(JSON.stringify(r)).not.toMatch(/HACKED|999/i);
+		const named = await names(r);
+		expect(named.find((n) => n.raw.includes('BILLBUDDY'))?.flag).toBe('not_grocery');
+		expect(named.filter((n) => n.flag === 'ok').map((n) => n.name.toLowerCase()).join(' ')).toMatch(/onion.*tomato|tomato.*onion/);
 	});
 
 	it('refuses a handwritten bill', async () => {
@@ -59,14 +75,18 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		const r = await read('instacart');
 		expect(r).toMatchObject({ ok: true, channel: 'delivery' });
 		expect(JSON.stringify(r)).not.toContain('4821');
+		const named = await names(r);
+		expect(named.every((n) => n.flag === 'ok')).toBe(true);
 	});
 
 	it('flags a padded receipt whose lines do not add up', async () => {
 		expect(await read('padded')).toMatchObject({ ok: true, lines_match_subtotal: false, needs_review: true });
 	});
 
-	it('transcribes rude item names as printed (the name check in the next step must catch them)', async () => {
+	it('flags rude item names as offensive and keeps the real product', async () => {
 		const r = await read('rude');
-		expect(r.ok).toBe(true);
+		const named = await names(r);
+		expect(named.filter((n) => n.flag === 'offensive')).toHaveLength(2);
+		expect(named.find((n) => n.raw.includes('PASTA'))?.flag).toBe('ok');
 	});
 });
