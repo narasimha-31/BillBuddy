@@ -35,7 +35,7 @@ afterAll(async () => {
 describe('reading receipts', { timeout: 90_000 }, () => {
 	it('reads a normal receipt and keeps no payment details', async () => {
 		const r = await read('walmart');
-		expect(r).toMatchObject({ ok: true, purchasedOn: '2026-10-09', adds_up: true });
+		expect(r).toMatchObject({ ok: true, purchasedOn: '2026-10-09', lines_match_subtotal: true, totals_match: true, needs_review: false });
 		expect(texts(r)).toContain('GV WHL MLK GAL');
 		expect(JSON.stringify(r)).not.toMatch(/4821|08832A|MARIA/);
 		expect(r.ok && r.lines.some((l) => l.kind === 'discount')).toBe(true);
@@ -62,7 +62,7 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 	});
 
 	it('flags a padded receipt whose lines do not add up', async () => {
-		expect(await read('padded')).toMatchObject({ ok: true, adds_up: false });
+		expect(await read('padded')).toMatchObject({ ok: true, lines_match_subtotal: false, needs_review: true });
 	});
 
 	it('transcribes rude item names as printed (the name check in the next step must catch them)', async () => {
