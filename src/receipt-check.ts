@@ -5,7 +5,7 @@ export type Reading = {
 	store: string | null;
 	purchase_date: string | null;
 	channel: 'in_store' | 'delivery' | 'pickup' | 'unknown';
-	lines: { raw: string; quantity: number | null; unit: string | null; unit_price: number | null; total: number; discount: boolean }[];
+	lines: { raw: string; quantity: number | null; unit: string | null; unit_price: number | null; total: number | null; discount: boolean }[];
 	subtotal: number | null;
 	tax: number | null;
 	total: number | null;
@@ -18,6 +18,10 @@ export type CheckedLine = {
 	unitPriceCents: number | null;
 	totalCents: number;
 	kind: 'item' | 'discount';
+	// true when the amount was not printed and we worked it out from quantity x unit price
+	computed: boolean;
+	// the printed amount disagrees with quantity x unit price
+	issue: 'line_math' | null;
 };
 
 export type Checked =
@@ -31,7 +35,9 @@ export type Checked =
 			subtotalCents: number | null;
 			taxCents: number | null;
 			totalCents: number | null;
-			adds_up: boolean;
+			lines_match_subtotal: boolean;
+			totals_match: boolean | null;
+			needs_review: boolean;
 	  };
 
 const UNITS = new Set(['ea', 'lb', 'oz', 'kg', 'g', 'gal', 'l', 'ct']);
@@ -67,30 +73,44 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 	if (reading.kind === 'not_a_receipt') return { ok: false, reason: 'not_a_receipt' };
 	if (reading.handwritten) return { ok: false, reason: 'handwritten' };
 
+	// All arithmetic happens here, in whole cents. The model only copies printed numbers.
 	const lines: CheckedLine[] = [];
 	for (const line of reading.lines.slice(0, MAX_LINES)) {
 		const raw = line.raw.trim().slice(0, 120);
-		const total = cents(line.total);
-		if (!raw || total === null || PAYMENT.test(raw)) continue;
-		if (Math.abs(total) > 100_000) continue;
-		if (!line.discount && total < 0) continue;
+		if (!raw || PAYMENT.test(raw)) continue;
 
 		const unit = line.unit && UNITS.has(line.unit.toLowerCase()) ? line.unit.toLowerCase() : 'ea';
-		const quantity = line.quantity && line.quantity > 0 && line.quantity < 1000 ? line.quantity : 1;
+		const printedQuantity = line.quantity && line.quantity > 0 && line.quantity < 1000 ? line.quantity : null;
+		const unitPriceCents = cents(line.unit_price);
+		const fromRate = printedQuantity !== null && unitPriceCents !== null ? Math.round(printedQuantity * unitPriceCents) : null;
+
+		const printed = cents(line.total);
+		const amount = printed ?? fromRate;
+		if (amount === null || Math.abs(amount) > 100_000) continue;
+		if (!line.discount && amount < 0) continue;
+
 		lines.push({
 			raw,
-			quantity,
+			quantity: printedQuantity ?? 1,
 			unit,
-			unitPriceCents: cents(line.unit_price),
-			totalCents: line.discount ? -Math.abs(total) : total,
-			kind: line.discount ? 'discount' : 'item'
+			unitPriceCents,
+			totalCents: line.discount ? -Math.abs(amount) : amount,
+			kind: line.discount ? 'discount' : 'item',
+			computed: printed === null,
+			issue: printed !== null && fromRate !== null && Math.abs(fromRate - printed) > 2 ? 'line_math' : null
 		});
 	}
 	if (!lines.some((l) => l.kind === 'item')) return { ok: false, reason: 'no_lines' };
 
 	const subtotalCents = cents(reading.subtotal);
+	const taxCents = cents(reading.tax);
+	const totalCents = cents(reading.total);
 	const sum = lines.reduce((total, l) => total + l.totalCents, 0);
 	const tolerance = Math.max(5, Math.round((subtotalCents ?? 0) * 0.01));
+
+	const lines_match_subtotal = subtotalCents !== null && Math.abs(sum - subtotalCents) <= tolerance;
+	const totals_match =
+		subtotalCents === null || totalCents === null ? null : Math.abs(subtotalCents + (taxCents ?? 0) - totalCents) <= 2;
 
 	return {
 		ok: true,
@@ -99,8 +119,10 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 		channel: reading.channel,
 		lines,
 		subtotalCents,
-		taxCents: cents(reading.tax),
-		totalCents: cents(reading.total),
-		adds_up: subtotalCents !== null && Math.abs(sum - subtotalCents) <= tolerance
+		taxCents,
+		totalCents,
+		lines_match_subtotal,
+		totals_match,
+		needs_review: !lines_match_subtotal || totals_match === false || lines.some((l) => l.issue !== null)
 	};
 }

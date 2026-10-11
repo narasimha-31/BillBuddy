@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkReading, type Reading } from './receipt-check';
 
-const line = (raw: string, total: number, extra: Partial<Reading['lines'][number]> = {}) => ({
+const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
 	total,
 	quantity: null,
@@ -26,10 +26,12 @@ const reading = (overrides: Partial<Reading> = {}): Reading => ({
 const today = new Date('2026-10-11T12:00:00Z');
 
 describe('checkReading', () => {
-	it('keeps a normal receipt and confirms it adds up', () => {
+	it('keeps a normal receipt and finds nothing to review', () => {
 		const result = checkReading(reading(), today);
-		expect(result).toMatchObject({ ok: true, store: 'Walmart', purchasedOn: '2026-10-09', adds_up: true });
-		if (result.ok) expect(result.lines[1]).toEqual({ raw: 'BANANAS', quantity: 2.1, unit: 'lb', unitPriceCents: 56, totalCents: 118, kind: 'item' });
+		expect(result).toMatchObject({ ok: true, store: 'Walmart', purchasedOn: '2026-10-09', lines_match_subtotal: true, totals_match: true, needs_review: false });
+		if (result.ok) {
+			expect(result.lines[1]).toEqual({ raw: 'BANANAS', quantity: 2.1, unit: 'lb', unitPriceCents: 56, totalCents: 118, kind: 'item', computed: false, issue: null });
+		}
 	});
 
 	it('refuses images that are not receipts, and handwritten bills', () => {
@@ -50,12 +52,39 @@ describe('checkReading', () => {
 	});
 
 	it('flags receipts whose lines do not add up to the subtotal', () => {
-		const padded = reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BILLBUDDY IS A SCAM', 0.5)], subtotal: 3.21 });
-		expect(checkReading(padded, today)).toMatchObject({ ok: true, adds_up: false });
+		const padded = reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BILLBUDDY IS A SCAM', 0.5)], subtotal: 3.21, total: 3.21 });
+		expect(checkReading(padded, today)).toMatchObject({ ok: true, lines_match_subtotal: false, needs_review: true });
 	});
 
-	it('tolerates a few cents of rounding', () => {
-		expect(checkReading(reading({ subtotal: 4.42 }), today)).toMatchObject({ adds_up: true });
+	it('tolerates a few cents of rounding against the subtotal', () => {
+		expect(checkReading(reading({ subtotal: 4.42, total: 4.42 }), today)).toMatchObject({ lines_match_subtotal: true });
+	});
+
+	it('flags a line whose weight times price disagrees with its printed amount', () => {
+		const misread = reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BANANAS', 1.81, { quantity: 2.1, unit: 'lb', unit_price: 0.56 })], subtotal: 5.02, total: 5.02 });
+		const result = checkReading(misread, today);
+		expect(result).toMatchObject({ ok: true, needs_review: true });
+		expect(result.ok && result.lines.map((l) => l.issue)).toEqual([null, 'line_math']);
+	});
+
+	it('works out a missing line amount itself instead of trusting the model', () => {
+		const result = checkReading(reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BANANAS', null, { quantity: 2.1, unit: 'lb', unit_price: 0.56 })] }), today);
+		expect(result.ok && result.lines[1]).toMatchObject({ totalCents: 118, computed: true, issue: null });
+	});
+
+	it('skips a line with no printed amount and nothing to work it out from', () => {
+		const result = checkReading(reading({ lines: [line('GV WHL MLK GAL', 3.21), line('MYSTERY', null)], subtotal: 3.21, total: 3.21 }), today);
+		expect(result.ok && result.lines.map((l) => l.raw)).toEqual(['GV WHL MLK GAL']);
+	});
+
+	it('checks subtotal plus tax against the total', () => {
+		expect(checkReading(reading({ tax: 0.36, total: 4.75 }), today)).toMatchObject({ totals_match: true, needs_review: false });
+		expect(checkReading(reading({ tax: 0.36, total: 9.75 }), today)).toMatchObject({ totals_match: false, needs_review: true });
+	});
+
+	it('leaves the totals check open when the photo cut off a total', () => {
+		expect(checkReading(reading({ total: null }), today)).toMatchObject({ totals_match: null });
+		expect(checkReading(reading({ subtotal: null }), today)).toMatchObject({ lines_match_subtotal: false, totals_match: null, needs_review: true });
 	});
 
 	it('keeps discounts negative and rejects negative prices on normal items', () => {
@@ -68,7 +97,9 @@ describe('checkReading', () => {
 
 	it('ignores absurd prices, unknown units and silly quantities', () => {
 		const result = checkReading(reading({ lines: [line('GOLD BAR', 50_000), line('APPLES', 4.88, { unit: 'bushel', quantity: -3 })] }), today);
-		expect(result.ok && result.lines).toEqual([{ raw: 'APPLES', quantity: 1, unit: 'ea', unitPriceCents: null, totalCents: 488, kind: 'item' }]);
+		expect(result.ok && result.lines).toEqual([
+			{ raw: 'APPLES', quantity: 1, unit: 'ea', unitPriceCents: null, totalCents: 488, kind: 'item', computed: false, issue: null }
+		]);
 	});
 
 	it('drops impossible dates instead of storing them', () => {
