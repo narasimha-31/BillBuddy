@@ -67,7 +67,7 @@
 	}
 
 	.wordmark span {
-		color: var(--color-accent);
+		color: var(--color-brand);
 	}
 
 	nav {

@@ -18,7 +18,7 @@
 </svelte:head>
 
 <main class="mx-auto max-w-xl px-5 py-12">
-	<a href="/" class="wordmark text-2xl"><span class="text-accent">B</span>ill<span class="text-accent">B</span>uddy</a>
+	<a href="/" class="wordmark text-2xl"><span class="text-brand">B</span>ill<span class="text-brand">B</span>uddy</a>
 
 	<article class="mt-6 rounded-[3px] bg-receipt px-6 py-8 font-mono text-receipt-ink shadow-lg sm:px-10">
 		<h1 class="text-center text-lg font-bold tracking-[0.2em]">THE FINE PRINT</h1>

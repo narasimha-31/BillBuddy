@@ -73,7 +73,7 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: 999px;
-		background: var(--color-accent);
+		background: var(--color-brand);
 		font-weight: 600;
 		color: var(--color-receipt);
 	}

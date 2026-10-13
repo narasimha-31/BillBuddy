@@ -101,7 +101,7 @@
 	}
 
 	.wordmark span {
-		color: var(--color-accent);
+		color: var(--color-brand);
 	}
 
 	h1 {

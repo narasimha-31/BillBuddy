@@ -10,8 +10,8 @@
 >
 	<div>
 		<h1 class="wordmark text-center text-[clamp(3rem,6vw,6rem)] md:text-left">
-			<span class="blur-rise block"><span class="text-accent">B</span>ill</span>
-			<span class="blur-rise block" style:--delay="120ms"><span class="text-accent">B</span>uddy</span>
+			<span class="blur-rise block"><span class="text-brand">B</span>ill</span>
+			<span class="blur-rise block" style:--delay="120ms"><span class="text-brand">B</span>uddy</span>
 		</h1>
 
 		<p
