@@ -2,6 +2,14 @@ import { admin } from './admin.server';
 
 export type ErrorEntry = { id: string; route: string | null; status: number; message: string; code: string | null; userId: string | null };
 
+// errors carry codes of any type: Postgres uses strings, a timed-out fetch uses the number 23
+export function errorCode(error: unknown): string | null {
+	const code = (error as { code?: unknown } | null)?.code;
+	if (typeof code === 'string') return code.slice(0, 80);
+	if (typeof code === 'number') return String(code);
+	return null;
+}
+
 // best effort: a failure here must never turn one error into two
 export async function logError(entry: ErrorEntry) {
 	const { error } = await admin.from('error_log').insert({
