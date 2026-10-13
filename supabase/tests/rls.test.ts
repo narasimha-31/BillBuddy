@@ -487,3 +487,43 @@ describe('product grouping', () => {
 		expect((await anon.rpc('my_products')).error).not.toBeNull();
 	});
 });
+
+describe('price changes', () => {
+	it('compares the last two purchases of each product, per pound or each, biggest move first', async () => {
+		const yan = await signedInUser('yan');
+		const yanId = userIds[userIds.length - 1];
+		const store = async (name: string) => (await admin.from('stores').insert({ user_id: yanId, name }).select('id').single()).data!.id as string;
+		const [fiesta, parivar] = [await store('Fiesta'), await store('Parivar')];
+		const receipt = async (storeId: string, day: string | null) =>
+			(await admin.from('receipts').insert({ user_id: yanId, store_id: storeId, purchased_on: day }).select('id').single()).data!.id as string;
+		const item = (receiptId: string, position: number, name: string, unit: string, quantity: number, unitCents: number | null, totalCents: number) => ({
+			user_id: yanId, receipt_id: receiptId, position, kind: 'item', raw_text: name.toUpperCase(), name, brand: null, category: 'Produce',
+			quantity, unit, unit_price_cents: unitCents, total_cents: totalCents, computed: false, issue: null, size_amount: null, size_unit: null
+		});
+		const oldest = await receipt(parivar, '2026-09-01');
+		const older = await receipt(parivar, '2026-09-19');
+		const newer = await receipt(fiesta, '2026-10-02');
+		const undated = await receipt(fiesta, null);
+		const { error } = await admin.from('receipt_items').insert([
+			item(oldest, 0, 'Okra', 'lb', 1, 100, 100),
+			item(older, 0, 'Okra', 'lb', 1.4, 299, 419),
+			item(newer, 0, 'Okra', 'lb', 1.19, 297, 353),
+			item(older, 1, 'Ramen', 'ea', 2, null, 96),
+			item(newer, 1, 'Ramen', 'ea', 3, 50, 150),
+			item(older, 2, 'Limes', 'ea', 1, null, 99),
+			item(newer, 2, 'Limes', 'ea', 1, null, 99),
+			item(newer, 3, 'Toor dal', 'ea', 1, null, 699),
+			item(undated, 0, 'Toor dal', 'ea', 1, null, 999)
+		]);
+		if (error) throw error;
+
+		const { data } = await yan.rpc('my_price_changes', { how_many: 5 });
+		expect(data).toEqual([
+			{ name: 'Ramen', per: 'ea', now_cents: 50, before_cents: 48, store: 'Fiesta', before_store: 'Parivar', bought_on: '2026-10-02' },
+			{ name: 'Okra', per: 'lb', now_cents: 297, before_cents: 299, store: 'Fiesta', before_store: 'Parivar', bought_on: '2026-10-02' }
+		]);
+		expect(((await alice.rpc('my_price_changes')).data ?? []).some((p: { name: string }) => p.name === 'Okra')).toBe(false);
+		const anon = createClient(url, publishable, noSession);
+		expect((await anon.rpc('my_price_changes')).error).not.toBeNull();
+	});
+});
