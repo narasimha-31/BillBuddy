@@ -6,7 +6,7 @@ const BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
 
 if (NEBIUS_API_KEY.length < 20) throw new Error('NEBIUS_API_KEY is missing or too short');
 
-// the daily budget is spent, or the provider is down after one retry
+// the daily budget is spent, or the provider is down, slow or unreachable
 export class AiUnavailable extends Error {}
 
 type Message = { role: 'system' | 'user'; content: string | unknown[] };
@@ -20,13 +20,21 @@ async function spentTodayMicros() {
 	return data.reduce((sum, row) => sum + row.cost_micros, 0);
 }
 
+// no answer in time, or no connection at all, counts as the provider being down; a timeout
+// is not retried, since a second 45 seconds would leave the person waiting far too long
 async function post(body: object) {
-	return fetch(`${BASE_URL}/chat/completions`, {
-		method: 'POST',
-		headers: { Authorization: `Bearer ${NEBIUS_API_KEY}`, 'Content-Type': 'application/json' },
-		body: JSON.stringify(body),
-		signal: AbortSignal.timeout(45_000)
-	});
+	try {
+		return await fetch(`${BASE_URL}/chat/completions`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${NEBIUS_API_KEY}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(45_000)
+		});
+	} catch (error) {
+		if (error instanceof DOMException && error.name === 'TimeoutError') throw new AiUnavailable('provider timed out');
+		if (error instanceof TypeError) throw new AiUnavailable(`provider unreachable: ${error.message}`);
+		throw error;
+	}
 }
 
 // One structured call. reasoning_effort "none" matters: with reasoning on, Nemotron ignores
