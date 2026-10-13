@@ -5,7 +5,7 @@
 	let { data } = $props();
 
 	type State = 'sending' | 'sent' | 'duplicate' | 'failed';
-	type Sent = { id: number; name: string; state: State; note?: string };
+	type Sent = { id: number; photo: string; state: State; note?: string };
 	let sent = $state<Sent[]>([]);
 	let closed = $state(false);
 	let picker = $state<HTMLInputElement>();
@@ -16,15 +16,15 @@
 	);
 
 	const statusText: Record<State, string> = {
-		sending: 'sending',
-		sent: 'sent to your computer',
-		duplicate: 'already added',
-		failed: "couldn't send"
+		sending: 'Sending',
+		sent: 'On your computer',
+		duplicate: 'Already added',
+		failed: "Couldn't send"
 	};
 
 	async function send(files: FileList | null) {
 		for (const file of [...(files ?? [])].filter((f) => f.type.startsWith('image/'))) {
-			sent.unshift({ id: nextId++, name: file.name, state: 'sending' });
+			sent.unshift({ id: nextId++, photo: URL.createObjectURL(file), state: 'sending' });
 			const entry = sent[0];
 			try {
 				const { jpeg, hash } = await preparePhoto(file);
@@ -69,8 +69,15 @@
 			<ul aria-live="polite">
 				{#each sent as item (item.id)}
 					<li class={item.state}>
-						<span class="name">{item.name}</span>
-						<span>{statusText[item.state]}{item.note ? `: ${item.note}` : ''}</span>
+						<img src={item.photo} alt="" />
+						<span>
+							<strong>{statusText[item.state]}</strong>
+							{#if item.state === 'sent'}<small>It's read there in a few seconds.</small>{/if}
+							{#if item.note}<small>{item.note}</small>{/if}
+						</span>
+						{#if item.state === 'sent'}
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -106,8 +113,11 @@
 
 	h1 {
 		margin-top: 2rem;
-		font-size: 1.5rem;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: 1.75rem;
+		font-weight: 650;
+		font-synthesis: none;
+		font-variation-settings: 'SOFT' 100;
 		color: var(--color-ink);
 	}
 
@@ -142,26 +152,63 @@
 
 	li {
 		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		border-radius: 0.75rem;
-		background: rgb(253 251 245 / 0.6);
-		padding: 0.75rem 1rem;
-		font-size: 0.9rem;
+		align-items: center;
+		gap: 0.9rem;
+		border-radius: 0.9rem;
+		background: var(--color-raised);
+		padding: 0.6rem;
 		color: var(--color-ink);
 	}
 
-	.name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	img {
+		flex: none;
+		width: 3rem;
+		height: 4rem;
+		border-radius: 0.35rem;
+		object-fit: cover;
+		box-shadow: 0 0 0 1px var(--color-line);
 	}
 
-	.sent {
-		color: var(--color-accent);
+	/* the photo fades while it travels, then settles once it has arrived */
+	.sending img {
+		animation: sending 1.2s ease-in-out infinite alternate;
 	}
 
-	.failed {
+	@keyframes sending {
+		to {
+			opacity: 0.45;
+		}
+	}
+
+	li span {
+		display: grid;
+		flex: 1;
+		gap: 0.1rem;
+	}
+
+	small {
+		font-size: 0.85rem;
+		color: var(--color-muted);
+	}
+
+	svg {
+		width: 1.5rem;
+		height: 1.5rem;
+		margin-right: 0.4rem;
+		fill: none;
+		stroke: var(--color-accent);
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.failed strong {
 		color: var(--color-up);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sending img {
+			animation: none;
+		}
 	}
 </style>
