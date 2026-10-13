@@ -75,6 +75,12 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(JSON.stringify(r)).not.toMatch(/7730|Rivera|Sam/i);
 	});
 
+	it('reads a receipt photographed sideways or upside down', async () => {
+		for (const name of ['sideways', 'upside-down']) {
+			expect(await read(name), name).toMatchObject({ ok: true, purchasedOn: '2026-10-11', lines_match_subtotal: true });
+		}
+	});
+
 	it('names weighed items without the price unit, and keeps real pack sizes', async () => {
 		const lines = ['FS TOMATOES 1LB-3011', 'FS BANANA LB-3037', 'FS OKRA (BHINDI) 1LB-3002', 'FS LAXMI TOOR DAL PLAIN 2 LB', 'FS LAX MUSTARD SEED 200GM'];
 		const named = await nameLines(admin, null, null, lines, [true, true, true, false, false]);
