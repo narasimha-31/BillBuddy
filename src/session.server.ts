@@ -34,3 +34,9 @@ export async function signInWithCode(supabase: SupabaseClient, code: string): Pr
 	}
 	throw error;
 }
+
+export function firstNameOf(user: User): string | null {
+	const meta = user.user_metadata ?? {};
+	const name = meta.given_name ?? meta.full_name?.split(' ')[0] ?? meta.name?.split(' ')[0];
+	return typeof name === 'string' && name ? name : null;
+}

@@ -1,5 +1,6 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { processReceipt } from '../../process-receipt.server';
+import { firstNameOf } from '../../session.server';
 import { photoProblem } from './photo-rules';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -21,11 +22,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (list.error) throw list.error;
 	if (today.error) throw today.error;
 
-	const meta = user.user_metadata ?? {};
-	const firstName: string | null = meta.given_name ?? meta.full_name?.split(' ')[0] ?? meta.name?.split(' ')[0] ?? null;
-
 	return {
-		firstName,
+		firstName: firstNameOf(user),
 		today: today.count ?? 0,
 		dailyLimit: DAILY_RECEIPTS,
 		receipts: list.data.map(({ stores, ...receipt }) => ({

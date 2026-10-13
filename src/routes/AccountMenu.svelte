@@ -39,6 +39,14 @@
 
 	.hello {
 		color: var(--color-ink);
+		white-space: nowrap;
+	}
+
+	/* the nav needs the room on phones; the initial still says whose account it is */
+	@media (max-width: 480px) {
+		.hello {
+			display: none;
+		}
 	}
 
 	details {

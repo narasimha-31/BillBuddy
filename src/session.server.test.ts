@@ -4,9 +4,10 @@ import {
 	AuthPKCECodeVerifierMissingError,
 	AuthRetryableFetchError,
 	AuthSessionMissingError,
-	type SupabaseClient
+	type SupabaseClient,
+	type User
 } from '@supabase/supabase-js';
-import { currentUser, signInWithCode } from './session.server';
+import { currentUser, firstNameOf, signInWithCode } from './session.server';
 
 function clientReturning(result: { user: unknown; error: unknown }) {
 	return {
@@ -76,5 +77,21 @@ describe('signInWithCode', () => {
 		await expect(signInWithCode(clientReturning({ user: null, error: offline }), 'c')).rejects.toBe(
 			offline
 		);
+	});
+});
+
+describe('firstNameOf', () => {
+	const user = (meta: Record<string, unknown>) => ({ user_metadata: meta }) as unknown as User;
+
+	it('prefers the given name, then the first word of the full name', () => {
+		expect(firstNameOf(user({ given_name: 'Maria', full_name: 'Ana Lopez' }))).toBe('Maria');
+		expect(firstNameOf(user({ full_name: 'Ana Lopez' }))).toBe('Ana');
+		expect(firstNameOf(user({ name: 'Sam Lee' }))).toBe('Sam');
+	});
+
+	it('returns nothing for missing or odd metadata', () => {
+		expect(firstNameOf(user({}))).toBeNull();
+		expect(firstNameOf(user({ given_name: 42 }))).toBeNull();
+		expect(firstNameOf(user({ full_name: '' }))).toBeNull();
 	});
 });

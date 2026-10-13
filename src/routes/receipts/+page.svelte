@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import AccountMenu from '../AccountMenu.svelte';
+	import AppHeader from '../AppHeader.svelte';
 	import { preparePhoto } from './prepare-photo';
 
 	let { data } = $props();
@@ -105,10 +105,7 @@
 </svelte:head>
 
 <div class="shell">
-	<header class="top">
-		<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
-		<AccountMenu firstName={data.firstName} />
-	</header>
+	<AppHeader firstName={data.firstName} />
 
 	<div class="columns">
 		<main>
@@ -263,31 +260,6 @@
 		max-width: 90rem;
 		padding: 1.5rem 1.25rem 4rem;
 	}
-
-	.top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		border-bottom: 1px dashed var(--color-line);
-		padding-bottom: 1.25rem;
-	}
-
-	.wordmark {
-		font-family: var(--font-display);
-		font-size: 1.75rem;
-		font-weight: 700;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
-		color: var(--color-ink);
-	}
-
-	.wordmark span {
-		color: var(--color-accent);
-	}
-
-
-
 
 	.link {
 		color: var(--color-muted);
