@@ -478,8 +478,8 @@ describe('product grouping', () => {
 
 		const { data } = await zoe.rpc('my_products');
 		expect(data).toEqual([
-			{ name: 'Whole milk', times: 2, last_bought: '2026-10-02', stores: 2 },
-			{ name: 'Limes', times: 1, last_bought: '2026-10-02', stores: 1 }
+			{ name: 'Whole milk', times: 2, last_bought: '2026-10-02', stores: 2, category: 'Dairy & eggs' },
+			{ name: 'Limes', times: 1, last_bought: '2026-10-02', stores: 1, category: 'Dairy & eggs' }
 		]);
 		const others = await bob.rpc('my_products');
 		expect((others.data ?? []).some((p: { name: string }) => p.name === 'Limes')).toBe(false);
