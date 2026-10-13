@@ -1,4 +1,6 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
+import { renderSVG } from 'uqr';
+import { createPhoneLink } from '../../phone-link.server';
 import { processReceipt } from '../../process-receipt.server';
 import { DAILY_RECEIPTS, savePhoto } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
@@ -50,5 +52,15 @@ export const actions: Actions = {
 		const id = String((await request.formData()).get('id') ?? '');
 		if (!/^[0-9a-f-]{36}$/.test(id)) httpError(400, 'bad receipt id');
 		return await processReceipt(locals.supabase, user.id, id);
+	},
+
+	// a code the phone camera opens; making a new one cancels the last
+	phone: async ({ locals, url }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+
+		const { token, expiresAt } = await createPhoneLink(user.id);
+		const qr = renderSVG(`${url.origin}/phone/${token}`, { border: 2, whiteColor: '#f7f4eb', blackColor: '#2b2620' });
+		return { qr, expiresAt };
 	}
 };

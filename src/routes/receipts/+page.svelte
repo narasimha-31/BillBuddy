@@ -14,6 +14,47 @@
 	let picker: HTMLInputElement;
 	let nextId = 0;
 
+	// receipts sent from a phone arrive as pending rows; this page checks for them and reads each once
+	let phone = $state<{ qr: string; expiresAt: string; since: string } | null>(null);
+	let phoneExpired = $state(false);
+	const handled = new Set<string>();
+	let fromPhone = $state(0);
+	const phoneUntil = $derived(
+		phone ? new Date(phone.expiresAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+	);
+
+	async function showPhoneCode() {
+		const since = new Date().toISOString();
+		const result = await post('phone', new FormData());
+		if (result.type !== 'success' || !result.data) return;
+		for (const r of data.receipts) handled.add(r.id);
+		phoneExpired = false;
+		fromPhone = 0;
+		phone = { ...(result.data as { qr: string; expiresAt: string }), since };
+	}
+
+	$effect(() => {
+		if (!phone) return;
+		const { expiresAt, since } = phone;
+		const timer = setInterval(async () => {
+			await invalidateAll();
+			const arrived = data.receipts.filter((r) => r.status === 'pending' && r.created_at >= since && !handled.has(r.id));
+			for (const r of arrived) {
+				handled.add(r.id);
+				fromPhone++;
+				await read(r.id);
+			}
+			if (arrived.length) await invalidateAll();
+			// one last check after the code expires, then stop
+			if (Date.now() > Date.parse(expiresAt) + 5000) {
+				clearInterval(timer);
+				phone = null;
+				phoneExpired = true;
+			}
+		}, 4000);
+		return () => clearInterval(timer);
+	});
+
 	const review = $derived(data.receipts.filter((r) => r.status === 'review'));
 	const waiting = $derived(data.receipts.filter((r) => ['pending', 'processing'].includes(r.status) || (r.status === 'failed' && r.problem === 'error')));
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
@@ -63,6 +104,7 @@
 				body.set('hash', hash);
 				const result = await post('upload', body);
 				if (result.type === 'success' && result.data?.id) {
+					handled.add(String(result.data.id));
 					entry.state = 'reading';
 					Object.assign(entry, await read(String(result.data.id)));
 				} else if (result.type === 'failure' && result.status === 409) entry.state = 'duplicate';
@@ -232,6 +274,22 @@
 		</main>
 
 		<aside>
+			<div class="card for-mouse phone">
+				<h2>Use your phone</h2>
+				{#if phone}
+					<div class="qr" role="img" aria-label="QR code for adding receipts from your phone">{@html phone.qr}</div>
+					<p>Open your phone camera and point it at the code. It works until {phoneUntil}.</p>
+					{#if fromPhone}<p class="arrived">{fromPhone} {fromPhone === 1 ? 'receipt' : 'receipts'} received</p>{/if}
+					<button class="link" onclick={() => (phone = null)}>Hide the code</button>
+				{:else}
+					<p>
+						{phoneExpired
+							? 'That code has expired. Make a new one any time.'
+							: 'Snap receipts with your phone and they show up here.'}
+					</p>
+					<button class="pill" onclick={showPhoneCode}>Show a code</button>
+				{/if}
+			</div>
 			<div class="card">
 				<h2>Good photo, good reading</h2>
 				<ul>
@@ -481,6 +539,36 @@
 		display: inline-block;
 		margin-top: 0.75rem;
 		font-size: 0.875rem;
+	}
+
+	.phone p {
+		margin-top: 0.6rem;
+		font-size: 0.9rem;
+		line-height: 1.5;
+		color: var(--color-muted);
+	}
+
+	.phone .pill {
+		margin-top: 0.9rem;
+	}
+
+	.qr {
+		width: 11rem;
+		margin-top: 0.9rem;
+		border-radius: 0.75rem;
+		background: var(--color-receipt);
+		padding: 0.5rem;
+	}
+
+	.qr :global(svg) {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	.phone .arrived {
+		font-weight: 600;
+		color: var(--color-accent);
 	}
 
 	@media (min-width: 1024px) {
