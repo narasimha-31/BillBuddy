@@ -56,6 +56,10 @@
 	});
 
 	const review = $derived(data.receipts.filter((r) => r.status === 'review'));
+	// a read that was cut off (the server stopped mid-way) can be started again after two minutes,
+	// the same window the database uses before it lets another read claim the receipt
+	const stillReading = (r: { status: string; processing_at: string | null }) =>
+		r.status === 'processing' && r.processing_at !== null && Date.now() - Date.parse(r.processing_at) < 120_000;
 	const waiting = $derived(data.receipts.filter((r) => ['pending', 'processing'].includes(r.status) || (r.status === 'failed' && r.problem === 'error')));
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
@@ -138,7 +142,7 @@
 		review: 'read, check a few lines',
 		duplicate: 'already added',
 		failed: "couldn't read",
-		paused: "reading is paused for today, it's saved in your list"
+		paused: "reading isn't available right now, it's saved in your list to try again"
 	};
 </script>
 
@@ -225,7 +229,7 @@
 							<li>
 								<span class="paper-icon" aria-hidden="true"></span>
 								<span>Receipt photo</span>
-								{#if reading.includes(receipt.id) || receipt.status === 'processing'}
+								{#if reading.includes(receipt.id) || stillReading(receipt)}
 									<span class="status">reading</span>
 								{:else}
 									<button class="read-now" onclick={() => readAgain(receipt.id)}>Read now</button>

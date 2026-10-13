@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [list, today] = await Promise.all([
 		locals.supabase
 			.from('receipts')
-			.select('id, status, problem, purchased_on, total_cents, skipped_lines, created_at, stores(name)')
+			.select('id, status, problem, purchased_on, total_cents, skipped_lines, created_at, processing_at, stores(name)')
 			.order('created_at', { ascending: false })
 			.limit(100),
 		locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).gt('created_at', dayAgo)
