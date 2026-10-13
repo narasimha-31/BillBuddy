@@ -6,7 +6,8 @@ if (!SUPABASE_SECRET_KEY.startsWith('sb_secret_')) {
 	throw new Error('SUPABASE_SECRET_KEY must start with sb_secret_');
 }
 
-// bypasses row level security: only for server-owned tables (error_log, ai_calls)
+// bypasses row level security: only for server-owned tables (error_log, ai_calls, phone_links)
+// and phone uploads, which always name the owner explicitly
 export const admin = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, {
 	auth: { persistSession: false, autoRefreshToken: false }
 });
