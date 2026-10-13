@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { money, shortDay, storeName } from '../../format';
 	import AppShell from '../AppShell.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { post, problems, readReceipt } from './reading';
@@ -60,6 +61,22 @@
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
 
+	// read receipts by the month they were bought, newest first, each month with its total
+	const months = $derived.by(() => {
+		const groups = new Map<string, typeof saved>();
+		const newest = [...saved].sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? ''));
+		for (const r of newest) {
+			const key = r.purchased_on?.slice(0, 7) ?? '';
+			groups.set(key, [...(groups.get(key) ?? []), r]);
+		}
+		return [...groups].map(([key, receipts]) => ({
+			key,
+			label: key ? new Date(`${key}-15T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'No date printed',
+			receipts,
+			totalCents: receipts.reduce((sum, r) => sum + (r.total_cents ?? 0), 0)
+		}));
+	});
+
 	async function readAgain(id: string) {
 		busy(id, true);
 		try {
@@ -92,8 +109,11 @@
 								<li>
 									<a href="/receipts/{receipt.id}" class="open">
 										<span class="paper-icon" aria-hidden="true"></span>
-										<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
-										<span class="status">check a few lines</span>
+										<span class="who">
+											<span class="store">{storeName(receipt.store) ?? 'Store not printed'}</span>
+											<span class="when">{shortDay(receipt.purchased_on)}</span>
+										</span>
+										<span class="status">Check the amounts</span>
 									</a>
 								</li>
 							{/each}
@@ -144,22 +164,25 @@
 					<p class="empty">No receipts yet. Your first one takes a few seconds.</p>
 				{/if}
 
-				{#if saved.length}
+				{#each months as month (month.key)}
 					<section>
-						<h2>Read</h2>
+						<h2 class="month">{month.label}<span>{money(month.totalCents)}</span></h2>
 						<ul class="list">
-							{#each saved as receipt (receipt.id)}
+							{#each month.receipts as receipt (receipt.id)}
 								<li>
 									<a href="/receipts/{receipt.id}" class="open">
 										<span class="paper-icon" aria-hidden="true"></span>
-										<span>{receipt.store ?? 'Receipt'}</span>
-										<span class="status">{receipt.purchased_on ?? ''}</span>
+										<span class="who">
+											<span class="store">{storeName(receipt.store) ?? 'Store not printed'}</span>
+											<span class="when">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · delivery' : ''}</span>
+										</span>
+										<span class="amount">{money(receipt.total_cents)}</span>
 									</a>
 								</li>
 							{/each}
 						</ul>
 					</section>
-				{/if}
+				{/each}
 			</div>
 		</main>
 
@@ -219,8 +242,11 @@
 	}
 
 	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: clamp(1.9rem, 3vw, 2.4rem);
+		font-weight: 650;
+		font-synthesis: none;
+		font-variation-settings: 'SOFT' 100;
 		color: var(--color-ink);
 	}
 
@@ -265,7 +291,7 @@
 		background: var(--color-receipt);
 		padding: 0.85rem 1rem;
 		color: var(--color-receipt-ink);
-		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+		box-shadow: 0 0 0 1px var(--color-receipt-line);
 	}
 
 	/* a whole row that opens the receipt */
@@ -286,7 +312,7 @@
 
 	@media (hover: hover) {
 		.open:hover {
-			background: rgb(46 48 44 / 0.04);
+			background: var(--color-raised);
 		}
 	}
 
@@ -298,9 +324,42 @@
 	}
 
 	.status {
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: 0.8rem;
 		color: var(--color-receipt-muted);
+	}
+
+	.who {
+		display: grid;
+		min-width: 0;
+	}
+
+	.store {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 550;
+	}
+
+	.when {
+		font-size: 0.8rem;
+		color: var(--color-receipt-muted);
+	}
+
+	.amount {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.month {
+		display: flex;
+		justify-content: space-between;
+		padding-right: 1rem;
+	}
+
+	.month span {
+		font-family: var(--font-mono);
+		font-weight: 400;
+		color: var(--color-muted);
 	}
 
 	.reason {
@@ -337,7 +396,7 @@
 
 	.card {
 		border-radius: 1rem;
-		background: rgb(253 251 245 / 0.6);
+		background: var(--color-raised);
 		padding: 1rem 1.25rem;
 	}
 

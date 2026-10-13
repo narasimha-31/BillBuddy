@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [list, today] = await Promise.all([
 		locals.supabase
 			.from('receipts')
-			.select('id, status, problem, purchased_on, total_cents, skipped_lines, created_at, processing_at, stores(name)')
+			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, stores(name)')
 			.order('created_at', { ascending: false })
 			.limit(100),
 		// counted from the upload log, so deleted receipts still count, exactly like the limit itself
