@@ -50,9 +50,10 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 	const dropPhoto = async () => {
 		if (photoPath) await supabase.storage.from('receipts').remove([photoPath]);
 	};
+	// the photo is gone, so its fingerprint goes too: the same photo can be added again if we got it wrong
 	const fail = async (problem: 'not_a_receipt' | 'handwritten' | 'no_lines' | 'bad_photo') => {
 		await dropPhoto();
-		await finish({ status: 'failed', problem, image_path: null });
+		await finish({ status: 'failed', problem, image_path: null, image_hash: null });
 		return { status: 'failed' as const, problem };
 	};
 
