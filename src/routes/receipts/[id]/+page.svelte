@@ -1,12 +1,8 @@
 <script lang="ts">
+	import { longDay as day, money } from '../../../format';
+
 	let { data, form } = $props();
 
-	const money = (cents: number | null) => (cents === null ? '' : `${cents < 0 ? '−' : ''}$${(Math.abs(cents) / 100).toFixed(2)}`);
-	// formatted in UTC on both server and browser, so the date never shifts a day or mismatches
-	const day = (iso: string | null) =>
-		iso
-			? new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-			: 'Date not printed';
 	const channels: Record<string, string> = { in_store: 'In store', delivery: 'Delivery', pickup: 'Pickup', unknown: '' };
 
 	const r = $derived(data.receipt);
