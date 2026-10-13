@@ -69,6 +69,12 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(await read('handwritten')).toEqual({ ok: false, reason: 'handwritten' });
 	});
 
+	it('reads a printed receipt someone wrote on, without calling it handwritten', async () => {
+		const r = await read('marked');
+		expect(r).toMatchObject({ ok: true, purchasedOn: '2026-10-11', lines_match_subtotal: true, totals_match: true });
+		expect(JSON.stringify(r)).not.toMatch(/7730|Rivera|Sam/i);
+	});
+
 	it('refuses an image that is not a receipt', async () => {
 		expect(await read('meme')).toEqual({ ok: false, reason: 'not_a_receipt' });
 	});
