@@ -34,12 +34,14 @@ function paid(p: Purchase): Paid | null {
 // newest first; undated purchases go last
 const byDate = (a: Purchase, b: Purchase) => (b.date ?? '').localeCompare(a.date ?? '');
 
-export function itemsBought(purchases: Purchase[]): { name: string; times: number; lastDate: string | null }[] {
-	const seen = new Map<string, { name: string; times: number; lastDate: string | null }>();
+type Bought = { name: string; category: string | null; times: number; lastDate: string | null };
+
+export function itemsBought(purchases: Purchase[]): Bought[] {
+	const seen = new Map<string, Bought>();
 	for (const p of [...purchases].sort(byDate)) {
 		const found = seen.get(key(p.name));
 		if (found) found.times++;
-		else seen.set(key(p.name), { name: p.name, times: 1, lastDate: p.date });
+		else seen.set(key(p.name), { name: p.name, category: p.category, times: 1, lastDate: p.date });
 	}
 	return [...seen.values()].sort((a, b) => b.times - a.times || (b.lastDate ?? '').localeCompare(a.lastDate ?? ''));
 }

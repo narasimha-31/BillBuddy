@@ -77,17 +77,17 @@ describe('historyOf', () => {
 });
 
 describe('itemsBought', () => {
-	it('lists each item once, most often bought first, ties broken by the most recent', () => {
+	it('lists each item once with its aisle, most often bought first, ties broken by the most recent', () => {
 		const list = itemsBought([
 			buy({ name: 'Milk', date: '2026-10-01' }),
 			buy({ name: 'milk', date: '2026-09-01' }),
-			buy({ name: 'Bread', date: '2026-10-03' }),
+			buy({ name: 'Bread', category: 'Bakery', date: '2026-10-03' }),
 			buy({ name: 'Eggs', date: '2026-10-05' })
 		]);
 		expect(list).toEqual([
-			{ name: 'Milk', times: 2, lastDate: '2026-10-01' },
-			{ name: 'Eggs', times: 1, lastDate: '2026-10-05' },
-			{ name: 'Bread', times: 1, lastDate: '2026-10-03' }
+			{ name: 'Milk', category: 'Dairy & eggs', times: 2, lastDate: '2026-10-01' },
+			{ name: 'Eggs', category: 'Dairy & eggs', times: 1, lastDate: '2026-10-05' },
+			{ name: 'Bread', category: 'Bakery', times: 1, lastDate: '2026-10-03' }
 		]);
 	});
 });
