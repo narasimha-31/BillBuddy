@@ -90,7 +90,7 @@
 		content: '';
 		position: absolute;
 		inset: -30%;
-		background: radial-gradient(closest-side, rgb(255 240 210 / 0.35), transparent);
+		background: radial-gradient(closest-side, var(--color-glow), transparent);
 		transform: translate(-10%, -8%);
 	}
 

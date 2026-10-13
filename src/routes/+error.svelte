@@ -45,7 +45,7 @@
 
 	code {
 		border-radius: 0.375rem;
-		background: rgb(253 251 245 / 0.6);
+		background: var(--color-raised);
 		padding: 0.1rem 0.4rem;
 		font-family: var(--font-mono);
 		color: var(--color-ink);

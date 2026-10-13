@@ -41,14 +41,38 @@
 	--color-receipt-up: #94452a;
 	--color-receipt-down: #476a50;
 
+	--color-glow: rgb(255 240 210 / 0.35);
+
 	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 	--font-display: 'Fraunces', Georgia, serif;
 }
 
 
+/* soft charcoal, never black; text pairs stay WCAG AA */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #1f1e1b;
+		--color-ink: #e8e5dc;
+		--color-muted: #aaa69b;
+		--color-line: #3b3934;
+		--color-accent: #94bb9f;
+		--color-brand: #a3b0ea;
+		--color-up: #e39b80;
+		--color-raised: #272622;
+		--color-glow: rgb(255 240 210 / 0.04);
+
+		--color-receipt: #2b2a26;
+		--color-receipt-ink: #e6e3da;
+		--color-receipt-muted: #aba79b;
+		--color-receipt-line: #46443d;
+		--color-receipt-up: #e39b80;
+		--color-receipt-down: #9cc3a6;
+	}
+}
+
 :root {
-	color-scheme: light;
+	color-scheme: light dark;
 }
 
 /* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */

@@ -104,7 +104,7 @@
 
 	@media (hover: hover) {
 		.menu button:hover {
-			background: rgb(46 48 44 / 0.06);
+			background: color-mix(in srgb, var(--color-ink) 6%, transparent);
 		}
 	}
 
