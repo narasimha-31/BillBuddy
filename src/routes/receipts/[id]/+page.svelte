@@ -29,10 +29,14 @@
 		{#if allGood}
 			<p class="good">Everything adds up.</p>
 		{:else}
-			{#if r.subtotal_cents === null}
-				<p class="warn">We couldn't see the subtotal in the photo, so we can't double-check the items.</p>
+			{#if data.math.expected === null}
+				<p class="warn">We couldn't see the subtotal or total in the photo, so we can't double-check the items.</p>
 			{:else if !data.math.lines_match_subtotal}
-				<p class="warn">The items add up to {money(data.math.sum)}, but the receipt says {money(r.subtotal_cents)}. Check the lines below.</p>
+				<p class="warn">
+					The items add up to {money(data.math.sum)}, but {r.subtotal_cents === null
+						? `the total minus tax is ${money(data.math.expected)}`
+						: `the receipt says ${money(data.math.expected)}`}. Check the lines below.
+				</p>
 			{/if}
 			{#if data.math.totals_match === false}
 				<p class="warn">Subtotal plus tax is {money(subtotalPlusTax)}, but the total says {money(r.total_cents)}.</p>
@@ -85,7 +89,7 @@
 							</span>
 						</div>
 						{#if item.issue === 'line_math'}
-							<p class="issue">The weight times the price doesn't match the amount printed for this line.</p>
+							<p class="issue">{item.unit === 'ea' ? 'The quantity' : 'The weight'} times the price doesn't match the amount printed for this line.</p>
 						{:else if item.issue === 'unreadable'}
 							<p class="issue">We couldn't tell what this is. Add a name and we'll remember it next time.</p>
 						{/if}
