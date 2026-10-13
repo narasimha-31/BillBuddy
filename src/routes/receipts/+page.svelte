@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import AppHeader from '../AppHeader.svelte';
+	import AppShell from '../AppShell.svelte';
 	import { preparePhoto } from './prepare-photo';
 
 	let { data } = $props();
@@ -104,8 +104,7 @@
 	<title>Receipts · BillBuddy</title>
 </svelte:head>
 
-<div class="shell">
-	<AppHeader firstName={data.firstName} />
+<AppShell firstName={data.firstName}>
 
 	<div class="columns">
 		<main>
@@ -252,15 +251,9 @@
 			</div>
 		</aside>
 	</div>
-</div>
+</AppShell>
 
 <style>
-	.shell {
-		margin: 0 auto;
-		max-width: 90rem;
-		padding: 1.5rem 1.25rem 4rem;
-	}
-
 	.link {
 		color: var(--color-muted);
 		text-decoration: underline;
@@ -491,9 +484,6 @@
 	}
 
 	@media (min-width: 1024px) {
-		.shell {
-			padding: 2rem 2.5rem 4rem;
-		}
 		.columns {
 			grid-template-columns: minmax(0, 1fr) 22rem;
 			gap: 3rem;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { historyOf, itemsBought } from '../../price-history';
-	import AppHeader from '../AppHeader.svelte';
+	import AppShell from '../AppShell.svelte';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
 
@@ -17,8 +17,7 @@
 	<title>Prices · BillBuddy</title>
 </svelte:head>
 
-<div class="shell">
-	<AppHeader firstName={data.firstName} />
+<AppShell firstName={data.firstName}>
 
 	<main>
 		<h1>What did I pay last time?</h1>
@@ -40,18 +39,11 @@
 			</p>
 		{/if}
 	</main>
-</div>
+</AppShell>
 
 <style>
-	.shell {
-		margin: 0 auto;
-		max-width: 90rem;
-		padding: 1.5rem 1.25rem 4rem;
-	}
-
-	/* same header width as every signed-in page, so the nav never jumps */
 	main {
-		margin: 2rem auto 0;
+		margin-top: 2rem;
 		max-width: 46rem;
 	}
 

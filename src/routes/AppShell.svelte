@@ -1,8 +1,9 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
 
-	let { firstName }: { firstName: string | null } = $props();
+	let { firstName, children }: { firstName: string | null; children: Snippet } = $props();
 
 	const links = [
 		{ href: '/receipts', label: 'Receipts' },
@@ -10,17 +11,34 @@
 	];
 </script>
 
-<header class="top">
-	<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
-	<nav>
-		{#each links as link (link.href)}
-			<a href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>{link.label}</a>
-		{/each}
-	</nav>
-	<AccountMenu {firstName} />
-</header>
+<div class="shell">
+	<header class="top">
+		<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
+		<nav>
+			{#each links as link (link.href)}
+				<a href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>{link.label}</a>
+			{/each}
+		</nav>
+		<AccountMenu {firstName} />
+	</header>
+
+	{@render children()}
+</div>
 
 <style>
+	/* every signed-in page shares this frame, so the header never moves between pages */
+	.shell {
+		margin: 0 auto;
+		max-width: 90rem;
+		padding: 1.5rem 1.25rem 4rem;
+	}
+
+	@media (min-width: 1024px) {
+		.shell {
+			padding: 2rem 2.5rem 4rem;
+		}
+	}
+
 	.top {
 		display: flex;
 		align-items: center;
