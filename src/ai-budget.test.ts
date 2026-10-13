@@ -28,6 +28,6 @@ describe('overUserCap', () => {
 	it('stops one person well before they could use up the day for everyone', () => {
 		expect(overUserCap(USER_DAILY_CAP_MICROS - 1)).toBe(false);
 		expect(overUserCap(USER_DAILY_CAP_MICROS)).toBe(true);
-		expect(USER_DAILY_CAP_MICROS * 10).toBeLessThanOrEqual(DAILY_CAP_MICROS);
+		expect(USER_DAILY_CAP_MICROS * 5).toBeLessThanOrEqual(DAILY_CAP_MICROS);
 	});
 });
