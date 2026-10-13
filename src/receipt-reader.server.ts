@@ -1,4 +1,4 @@
-import { structured } from './nebius.server';
+import { AiUnavailable, structured } from './nebius.server';
 import type { Reading } from './receipt-check';
 
 const nullable = (type: string) => ({ type: [type, 'null'] });
@@ -46,7 +46,7 @@ Rules:
 - kind: "store_receipt" for a printed till receipt, "online_order" for an app or website order summary, "not_a_receipt" for anything else (people, places, memes, documents, blank or unreadable images). For not_a_receipt return empty lines and nulls.
 - handwritten: true if the items or prices are written by hand.
 - Copy every number exactly as printed. Never add, multiply, total, round or correct anything. If a number is not printed, use null.
-- lines: one entry per purchased item or discount, in printed order. raw is the item text exactly as printed, including abbreviations. total is the printed line amount in dollars, or null if no amount is printed. Discounts, coupons and savings: discount true and total as a positive number.
+- lines: one entry per purchased item or discount, in printed order. raw is the item text exactly as printed, including abbreviations. total is the printed line amount in dollars, or null if no amount is printed. Discounts, coupons and savings: discount true and total as a positive number. Delivery fees, service fees, tips, bag fees and other order charges listed after the subtotal are not lines; leave them out.
 - quantity, unit and unit_price only when printed (for example "2.10 lb @ 0.56/lb").
 - Never output payment or identity details: card numbers or digits, card type, approval or auth codes, cashier names, loyalty or member numbers, cash tendered, change.
 - subtotal, tax and total as printed, in dollars. purchase_date as YYYY-MM-DD. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
@@ -61,23 +61,34 @@ function base64(bytes: Uint8Array) {
 	return btoa(binary);
 }
 
-export async function readReceipt(jpeg: Uint8Array, userId: string | null): Promise<Reading> {
+export type VisionRole = 'vision' | 'visionBackup';
+
+// GLM reads receipts for a fraction of a cent; when it is down or slow the backup gets one try.
+// A spent daily budget is not an outage, so it never falls through to the next model.
+export async function readReceipt(jpeg: Uint8Array, userId: string | null, roles: VisionRole[] = ['vision', 'visionBackup']): Promise<Reading> {
 	const image = `data:image/jpeg;base64,${base64(jpeg)}`;
-	return structured<Reading>({
-		role: 'vision',
-		purpose: 'read_receipt',
-		userId,
-		maxTokens: 3000,
-		schema,
-		messages: [
-			{ role: 'system', content: instructions },
-			{
-				role: 'user',
-				content: [
-					{ type: 'image_url', image_url: { url: image } },
-					{ type: 'text', text: 'Transcribe this image following the rules.' }
+	for (const [i, role] of roles.entries()) {
+		try {
+			return await structured<Reading>({
+				role,
+				purpose: 'read_receipt',
+				userId,
+				maxTokens: 3000,
+				schema,
+				messages: [
+					{ role: 'system', content: instructions },
+					{
+						role: 'user',
+						content: [
+							{ type: 'image_url', image_url: { url: image } },
+							{ type: 'text', text: 'Transcribe this image following the rules.' }
+						]
+					}
 				]
-			}
-		]
-	});
+			});
+		} catch (error) {
+			if (!(error instanceof AiUnavailable) || error.budget || i === roles.length - 1) throw error;
+		}
+	}
+	throw new Error('no vision model to read with');
 }

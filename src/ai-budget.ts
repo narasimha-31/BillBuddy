@@ -1,7 +1,10 @@
-// Exact Token Factory ids and catalog prices (USD per 1M tokens), kept in one place.
+// Exact Token Factory ids, catalog prices (USD per 1M tokens) and how long to wait for an answer.
+// GLM normally reads a receipt in 3 to 9 seconds, so 20 seconds means it is down or overloaded
+// and the backup gets its turn.
 export const MODELS = {
-	vision: { id: 'zai-org/GLM-5.3-Flash', input: 0.15, output: 0.5 },
-	names: { id: 'nvidia/Nemotron-3_5-Lightning', input: 0.06, output: 0.24 }
+	vision: { id: 'zai-org/GLM-5.3-Flash', input: 0.15, output: 0.5, seconds: 20 },
+	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 45 },
+	names: { id: 'nvidia/Nemotron-3_5-Lightning', input: 0.06, output: 0.24, seconds: 45 }
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

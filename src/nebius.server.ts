@@ -6,8 +6,15 @@ const BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
 
 if (NEBIUS_API_KEY.length < 20) throw new Error('NEBIUS_API_KEY is missing or too short');
 
-// the daily budget is spent, or the provider is down, slow or unreachable
-export class AiUnavailable extends Error {}
+// the provider is down, slow or unreachable, or (budget) the daily AI budget is spent
+export class AiUnavailable extends Error {
+	constructor(
+		message: string,
+		readonly budget = false
+	) {
+		super(message);
+	}
+}
 
 type Message = { role: 'system' | 'user'; content: string | unknown[] };
 type Request = { role: ModelRole; purpose: string; userId: string | null; messages: Message[]; schema: object; maxTokens?: number };
@@ -21,14 +28,14 @@ async function spentTodayMicros() {
 }
 
 // no answer in time, or no connection at all, counts as the provider being down; a timeout
-// is not retried, since a second 45 seconds would leave the person waiting far too long
-async function post(body: object) {
+// is not retried, since waiting twice would leave the person sitting there far too long
+async function post(body: object, seconds: number) {
 	try {
 		return await fetch(`${BASE_URL}/chat/completions`, {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${NEBIUS_API_KEY}`, 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(45_000)
+			signal: AbortSignal.timeout(seconds * 1000)
 		});
 	} catch (error) {
 		if (error instanceof DOMException && error.name === 'TimeoutError') throw new AiUnavailable('provider timed out');
@@ -40,7 +47,7 @@ async function post(body: object) {
 // One structured call. reasoning_effort "none" matters: with reasoning on, Nemotron ignores
 // response_format and bills the reasoning, so strict JSON (our injection defence) breaks.
 export async function structured<T>({ role, purpose, userId, messages, schema, maxTokens = 2000 }: Request): Promise<T> {
-	if (overDailyCap(await spentTodayMicros())) throw new AiUnavailable('daily AI budget reached');
+	if (overDailyCap(await spentTodayMicros())) throw new AiUnavailable('daily AI budget reached', true);
 
 	const body = {
 		model: MODELS[role].id,
@@ -56,10 +63,10 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 	let ok = false;
 	let servedModel: string | null = null;
 	try {
-		let response = await post(body);
+		let response = await post(body, MODELS[role].seconds);
 		if (response.status === 429 || response.status >= 500) {
 			await new Promise((wait) => setTimeout(wait, 1500));
-			response = await post(body);
+			response = await post(body, MODELS[role].seconds);
 		}
 		if (response.status === 429 || response.status >= 500) throw new AiUnavailable(`provider returned ${response.status}`);
 		if (!response.ok) throw new Error(`provider rejected the request: ${response.status}`);
