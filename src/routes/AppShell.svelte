@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
 
-	let { firstName, children }: { firstName: string | null; children: Snippet } = $props();
+	let { firstName, fit = false, children }: { firstName: string | null; fit?: boolean; children: Snippet } = $props();
 
 	const links = [
 		{ href: '/receipts', label: 'Receipts' },
@@ -11,7 +11,7 @@
 	];
 </script>
 
-<div class="shell">
+<div class="shell" class:fit>
 	<header class="top">
 		<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
 		<nav>
@@ -36,6 +36,16 @@
 	@media (min-width: 1024px) {
 		.shell {
 			padding: 2rem 2.5rem 4rem;
+		}
+	}
+
+	/* on a laptop a fitted page is exactly one screen tall; its own lists scroll instead of the page */
+	@media (min-width: 1024px) and (min-height: 600px) {
+		.shell.fit {
+			display: flex;
+			flex-direction: column;
+			height: 100dvh;
+			padding-bottom: 1.5rem;
 		}
 	}
 

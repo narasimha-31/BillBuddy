@@ -150,7 +150,7 @@
 	<title>Receipts · BillBuddy</title>
 </svelte:head>
 
-<AppShell firstName={data.firstName}>
+<AppShell fit firstName={data.firstName}>
 
 	<div class="columns">
 		<main>
@@ -193,103 +193,109 @@
 				{data.today} of {data.dailyLimit} receipts today · photos up to 5 MB
 			</p>
 
-			{#if uploads.length}
-				<ul class="uploads" aria-live="polite">
-					{#each uploads as upload (upload.id)}
-						<li class={upload.state}>
-							<span class="name">{upload.name}</span>
-							<span>{statusText[upload.state]}{upload.note ? `: ${upload.note}` : ''}</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
+			<div class="scroll">
+				{#if uploads.length}
+					<ul class="uploads" aria-live="polite">
+						{#each uploads as upload (upload.id)}
+							<li class={upload.state}>
+								<span class="name">{upload.name}</span>
+								<span>{statusText[upload.state]}{upload.note ? `: ${upload.note}` : ''}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 
-			{#if review.length}
-				<section>
-					<h2>Needs a quick look</h2>
-					<ul class="list">
-						{#each review as receipt (receipt.id)}
-							<li>
-								<a href="/receipts/{receipt.id}" class="open">
+				{#if review.length}
+					<section>
+						<h2>Needs a quick look</h2>
+						<ul class="list">
+							{#each review as receipt (receipt.id)}
+								<li>
+									<a href="/receipts/{receipt.id}" class="open">
+										<span class="paper-icon" aria-hidden="true"></span>
+										<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
+										<span class="status">check a few lines</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
+
+				{#if waiting.length}
+					<section>
+						<h2>Waiting to be read</h2>
+						<ul class="list">
+							{#each waiting as receipt (receipt.id)}
+								<li>
 									<span class="paper-icon" aria-hidden="true"></span>
-									<span>{receipt.store ?? 'Receipt'}{receipt.purchased_on ? ` · ${receipt.purchased_on}` : ''}</span>
-									<span class="status">check a few lines</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
+									<span>Receipt photo</span>
+									{#if reading.includes(receipt.id) || stillReading(receipt)}
+										<span class="status">reading</span>
+									{:else}
+										<button class="read-now" onclick={() => readAgain(receipt.id)}>Read now</button>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
 
-			{#if waiting.length}
-				<section>
-					<h2>Waiting to be read</h2>
-					<ul class="list">
-						{#each waiting as receipt (receipt.id)}
-							<li>
-								<span class="paper-icon" aria-hidden="true"></span>
-								<span>Receipt photo</span>
-								{#if reading.includes(receipt.id) || stillReading(receipt)}
-									<span class="status">reading</span>
-								{:else}
-									<button class="read-now" onclick={() => readAgain(receipt.id)}>Read now</button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
-
-			{#if unreadable.length}
-				<section>
-					<h2>Couldn't read</h2>
-					<ul class="list">
-						{#each unreadable as receipt (receipt.id)}
-							<li>
-								<span class="paper-icon" aria-hidden="true"></span>
-								<span>
-									Receipt photo
-									<span class="status reason">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
-								</span>
-								<form method="POST" action="/receipts/{receipt.id}?/delete">
-									<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
-								</form>
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
-
-			{#if !data.receipts.length && !uploads.length}
-				<p class="empty">No receipts yet. Your first one takes a few seconds.</p>
-			{/if}
-
-			{#if saved.length}
-				<section>
-					<h2>Read</h2>
-					<ul class="list">
-						{#each saved as receipt (receipt.id)}
-							<li>
-								<a href="/receipts/{receipt.id}" class="open">
+				{#if unreadable.length}
+					<section>
+						<h2>Couldn't read</h2>
+						<ul class="list">
+							{#each unreadable as receipt (receipt.id)}
+								<li>
 									<span class="paper-icon" aria-hidden="true"></span>
-									<span>{receipt.store ?? 'Receipt'}</span>
-									<span class="status">{receipt.purchased_on ?? ''}</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
+									<span>
+										Receipt photo
+										<span class="status reason">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
+									</span>
+									<form method="POST" action="/receipts/{receipt.id}?/delete">
+										<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
+									</form>
+								</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
+
+				{#if !data.receipts.length && !uploads.length}
+					<p class="empty">No receipts yet. Your first one takes a few seconds.</p>
+				{/if}
+
+				{#if saved.length}
+					<section>
+						<h2>Read</h2>
+						<ul class="list">
+							{#each saved as receipt (receipt.id)}
+								<li>
+									<a href="/receipts/{receipt.id}" class="open">
+										<span class="paper-icon" aria-hidden="true"></span>
+										<span>{receipt.store ?? 'Receipt'}</span>
+										<span class="status">{receipt.purchased_on ?? ''}</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
+			</div>
 		</main>
 
 		<aside>
 			<div class="card for-mouse phone">
 				<h2>Use your phone</h2>
 				{#if phone}
-					<div class="qr" role="img" aria-label="QR code for adding receipts from your phone">{@html phone.qr}</div>
-					<p>Open your phone camera and point it at the code. It works until {phoneUntil}.</p>
-					{#if fromPhone}<p class="arrived">{fromPhone} {fromPhone === 1 ? 'receipt' : 'receipts'} received</p>{/if}
-					<button class="link" onclick={() => (phone = null)}>Hide the code</button>
+					<div class="code">
+						<div class="qr" role="img" aria-label="QR code for adding receipts from your phone">{@html phone.qr}</div>
+						<div>
+							<p>Point your phone camera at the code. It works until {phoneUntil}.</p>
+							{#if fromPhone}<p class="arrived">{fromPhone} {fromPhone === 1 ? 'receipt' : 'receipts'} received</p>{/if}
+							<button class="link" onclick={() => (phone = null)}>Hide the code</button>
+						</div>
+					</div>
 				{:else}
 					<p>
 						{phoneExpired
@@ -302,17 +308,17 @@
 			<div class="card">
 				<h2>Good photo, good reading</h2>
 				<ul>
-					<li>Lay the receipt flat in good light.</li>
-					<li>Get the whole receipt in the frame, top to bottom.</li>
-					<li>Crumpled? Smooth it out first, folds hide prices.</li>
+					<li>Lay it flat in good light.</li>
+					<li>Fit the whole receipt in the frame.</li>
+					<li>Smooth out folds, they hide prices.</li>
 				</ul>
 			</div>
 			<div class="card">
 				<h2>Your privacy</h2>
 				<ul>
 					<li>Card details are never saved.</li>
-					<li>The photo is deleted once it is read.</li>
-					<li>Location is stripped before it leaves your device.</li>
+					<li>Photos are deleted once read.</li>
+					<li>Location is removed on your device.</li>
 				</ul>
 				<a href="/privacy" class="link">The fine print</a>
 			</div>
@@ -536,19 +542,19 @@
 	aside {
 		display: grid;
 		align-content: start;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 
 	.card {
 		border-radius: 1rem;
 		background: rgb(253 251 245 / 0.6);
-		padding: 1.25rem 1.4rem;
+		padding: 1rem 1.25rem;
 	}
 
 	.card ul {
 		display: grid;
-		gap: 0.5rem;
-		margin: 0.75rem 0 0;
+		gap: 0.3rem;
+		margin: 0.5rem 0 0;
 		padding-left: 1.1rem;
 		list-style: disc;
 		font-size: 0.9rem;
@@ -573,9 +579,20 @@
 		margin-top: 0.9rem;
 	}
 
+	.code {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-top: 0.75rem;
+	}
+
+	.code p:first-child {
+		margin-top: 0;
+	}
+
 	.qr {
-		width: 11rem;
-		margin-top: 0.9rem;
+		flex: none;
+		width: 8.5rem;
 		border-radius: 0.75rem;
 		background: var(--color-receipt);
 		padding: 0.5rem;
@@ -598,7 +615,37 @@
 			gap: 3rem;
 		}
 		.drop {
-			padding: 4.5rem 2rem;
+			padding: 3rem 2rem;
+		}
+	}
+
+	/* the heading, drop zone and limits stay put and only the receipt lists scroll; the side cards are sized to fit */
+	@media (min-width: 1024px) and (min-height: 600px) {
+		.columns {
+			flex: 1;
+			min-height: 0;
+			grid-template-rows: minmax(0, 1fr);
+		}
+
+		main {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.scroll {
+			flex: 1;
+			min-height: 0;
+			margin-top: 0.5rem;
+			padding-right: 0.5rem;
+			overflow-y: auto;
+			scrollbar-gutter: stable;
+			scrollbar-width: thin;
+			scrollbar-color: var(--color-line) transparent;
+		}
+
+		.drop {
+			padding: 1.75rem 2rem;
 		}
 	}
 </style>
