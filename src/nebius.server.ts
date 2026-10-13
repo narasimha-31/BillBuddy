@@ -27,6 +27,21 @@ async function spentToday(userId: string | null) {
 	return { all: Number(row?.all_micros ?? 0), mine: Number(row?.user_micros ?? 0) };
 }
 
+// Whether this model's last call in the past ten minutes failed. A model that is down then
+// gets skipped instead of making every person wait for its timeout, and after ten quiet
+// minutes it gets tried again, so we switch back on our own once it recovers.
+export async function recentlyFailed(role: ModelRole) {
+	const { data, error } = await admin
+		.from('ai_calls')
+		.select('ok')
+		.eq('model', MODELS[role].id)
+		.gt('created_at', new Date(Date.now() - 10 * 60_000).toISOString())
+		.order('created_at', { ascending: false })
+		.limit(1);
+	if (error) throw error;
+	return data.length > 0 && !data[0].ok;
+}
+
 // no answer in time, or no connection at all, counts as the provider being down; a timeout
 // is not retried, since waiting twice would leave the person sitting there far too long
 async function post(body: object, seconds: number) {

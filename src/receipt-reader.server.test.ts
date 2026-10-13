@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiUnavailable, structured } from './nebius.server';
+import { AiUnavailable, recentlyFailed, structured } from './nebius.server';
 import { readReceipt } from './receipt-reader.server';
 
 vi.mock('./nebius.server', async (original) => ({
 	...(await original<typeof import('./nebius.server')>()),
-	structured: vi.fn()
+	structured: vi.fn(),
+	recentlyFailed: vi.fn()
 }));
 
 const call = vi.mocked(structured);
+const down = vi.mocked(recentlyFailed);
 const roles = () => call.mock.calls.map(([request]) => request.role);
 const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
-beforeEach(() => call.mockReset());
+beforeEach(() => {
+	call.mockReset();
+	down.mockReset().mockResolvedValue(false);
+});
 
 describe('readReceipt', () => {
 	it('uses GLM when it answers', async () => {
@@ -41,6 +46,20 @@ describe('readReceipt', () => {
 	it('does not retry a request the provider rejected', async () => {
 		call.mockRejectedValueOnce(new Error('provider rejected the request: 422'));
 		await expect(readReceipt(jpeg, null)).rejects.toThrow('422');
+		expect(roles()).toEqual(['vision']);
+	});
+
+	it('goes straight to the backup while GLM keeps failing', async () => {
+		down.mockResolvedValue(true);
+		call.mockResolvedValueOnce({ kind: 'store_receipt' });
+		await readReceipt(jpeg, null);
+		expect(roles()).toEqual(['visionBackup']);
+	});
+
+	it('still uses the one model it was pointed at, even if that model failed lately', async () => {
+		down.mockResolvedValue(true);
+		call.mockResolvedValueOnce({ kind: 'store_receipt' });
+		await readReceipt(jpeg, null, ['vision']);
 		expect(roles()).toEqual(['vision']);
 	});
 

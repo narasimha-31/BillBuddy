@@ -1,4 +1,4 @@
-import { AiUnavailable, structured } from './nebius.server';
+import { AiUnavailable, recentlyFailed, structured } from './nebius.server';
 import type { Reading } from './receipt-check';
 
 const nullable = (type: string) => ({ type: [type, 'null'] });
@@ -63,10 +63,12 @@ function base64(bytes: Uint8Array) {
 
 export type VisionRole = 'vision' | 'visionBackup';
 
-// GLM reads receipts for a fraction of a cent; when it is down or slow the backup gets one try.
-// A spent daily budget is not an outage, so it never falls through to the next model.
+// GLM reads receipts for a fraction of a cent; when it is down or slow the backup gets one try,
+// and while it keeps failing the backup goes first. A spent daily budget is not an outage, so it
+// never falls through to the next model.
 export async function readReceipt(jpeg: Uint8Array, userId: string | null, roles: VisionRole[] = ['vision', 'visionBackup']): Promise<Reading> {
 	const image = `data:image/jpeg;base64,${base64(jpeg)}`;
+	if (roles.length > 1 && (await recentlyFailed(roles[0]))) roles = roles.slice(1);
 	for (const [i, role] of roles.entries()) {
 		try {
 			return await structured<Reading>({
