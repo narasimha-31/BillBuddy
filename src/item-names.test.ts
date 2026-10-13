@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyNames, brandName, knownPayload, linesPayload, size, sortLines, type NameAnswer } from './item-names';
+import { applyNames, knownPayload, linesPayload, size, sortLines, type NameAnswer } from './item-names';
 
 const raws = ['GV WHL MLK GAL', 'GRN CHILI HOT', 'BANANAS'];
 type Answered = Omit<NameAnswer['items'][number], 'size_amount' | 'size_unit'> & Partial<Pick<NameAnswer['items'][number], 'size_amount' | 'size_unit'>>;
@@ -132,13 +132,5 @@ describe('size', () => {
 		expect(named[0]).toMatchObject({ name: 'Whole milk', brand: 'H-E-B', sizeAmount: 64, sizeUnit: 'oz' });
 		const { remembered } = sortLines(['GV WHL MLK GAL'], [{ raw_text: 'GV WHL MLK GAL', name: 'Whole milk', brand: 'Great Value', category: 'Dairy & eggs', size_amount: 1, size_unit: 'gal' }]);
 		expect(remembered.get(0)).toMatchObject({ sizeAmount: 1, sizeUnit: 'gal' });
-	});
-});
-
-describe('brandName', () => {
-	it('spells store-brand shorthand out the same way every time, and leaves other brands alone', () => {
-		expect(['GV', 'gv', ' HEB ', 'H E B', 'KRO'].map(brandName)).toEqual(['Great Value', 'Great Value', 'H-E-B', 'H-E-B', 'Kroger']);
-		expect(brandName('Tyson')).toBe('Tyson');
-		expect(brandName(null)).toBeNull();
 	});
 });

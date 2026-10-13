@@ -44,22 +44,6 @@ export type Remembered = {
 	size_unit?: string | null;
 };
 
-// Store-brand shorthand printed on receipts. Expanded here, not by the model, so the same brand is
-// always spelled the same way.
-const BRANDS: Record<string, string> = {
-	GV: 'Great Value',
-	HEB: 'H-E-B',
-	'H E B': 'H-E-B',
-	KS: 'Kirkland Signature',
-	KRO: 'Kroger',
-	MM: "Member's Mark",
-	GG: 'Good & Gather',
-	HNS: 'Head & Shoulders',
-	FF: 'Friendly Farms'
-};
-
-export const brandName = (brand: string | null) => (brand === null ? null : (BRANDS[brand.trim().toUpperCase()] ?? brand));
-
 // a pack size is kept only when both parts make sense; anything else means "not printed"
 export function size(amount: unknown, unit: unknown): { sizeAmount: number | null; sizeUnit: SizeUnit | null } {
 	const known = typeof unit === 'string' && (SIZE_UNITS as readonly string[]).includes(unit);
@@ -90,8 +74,8 @@ const hidden = (flag: 'offensive' | 'not_grocery', from: Named['from']): Named =
 	from
 });
 
-// Offensive lines are settled here and never reach the model; known lines come from memory.
-// Only what is left goes to the model.
+// Offensive lines are settled here and never reach the model; lines the shopper has named
+// themselves come from their corrections. Only what is left goes to the model.
 export function sortLines(raws: string[], memory: Remembered[]) {
 	const known = new Map(memory.map((m) => [key(m.raw_text), m]));
 	const remembered = new Map<number, Named>();
@@ -140,7 +124,7 @@ export function applyNames(raws: string[], remembered: Map<number, Named>, answe
 		const name = item ? clean(item.name, 80) : '';
 		if (!item || !name) return { name: clean(raw, 80), brand: null, category: 'Other', sizeAmount: null, sizeUnit: null, flag: 'unreadable', from: 'ai' };
 
-		const brand = brandName(item.brand ? clean(item.brand, 40) || null : null);
+		const brand = item.brand ? clean(item.brand, 40) || null : null;
 		if (item.flag === 'offensive' || OFFENSIVE.test(raw) || OFFENSIVE.test(name) || (brand !== null && OFFENSIVE.test(brand))) {
 			return hidden('offensive', 'ai');
 		}

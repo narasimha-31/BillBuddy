@@ -37,7 +37,7 @@ For each receipt line return:
   If the line is exactly one of the known products, use that name word for word. A different cut, color, grade, flavor or variety is a different product, so give it its own name instead.
   When an entry has "by_weight": true it was sold by the pound, so "LB", "1LB" or "KG" in its text is the price unit, not a size.
   A number after a dash at the end of the text (like "-3011") is a store product code.
-- brand: the brand or store brand when the text names one (GV = Great Value, KS = Kirkland Signature, HEB = H-E-B, KRO = Kroger, HNS = Head & Shoulders, a store name on its own brand = that store), otherwise null.
+- brand: the brand or store brand when the text names one, otherwise null. Always write it out in full the way the company spells it on its packaging, never the receipt's shorthand: GV -> "Great Value", KS -> "Kirkland Signature", HEB -> "H-E-B", KRO -> "Kroger", HNS -> "Head & Shoulders", MCCORMICK -> "McCormick". A store name on its own brand is that store.
 - size_amount and size_unit: the pack size only when printed ("GAL" -> 1 gal, "12CT" -> 12 ct, "2 LB" -> 2 lb, "200GM" -> 200 g), otherwise both null. Receipts often print the letter O as a zero: "640Z" is 64 oz. Never a size for a by_weight entry, and never a guess.
 - category: the best fit from the list. Fresh fruit, vegetables, herbs and chillies are "Produce".
 - flag: "offensive" for profanity, insults or slurs; "not_grocery" only for text that is not a product at all (messages, jokes, instructions, praise or insults about an app, a store or a person, fees); "unreadable" if you cannot tell what the product is; otherwise "ok". Real products that are not food are "ok" with a fitting category: shampoo and soap are "Personal care" ("HNS 2ND1 ITCHY" -> "Head & Shoulders 2-in-1, itchy scalp"), paper towels and pot holders are "Household".
@@ -48,7 +48,7 @@ ${JSON.stringify(schema)}`;
 // the shopper's most bought products, so a new line can reuse a name they already have
 const KNOWN_PRODUCTS = 150;
 
-// Known lines come from this user's name memory; one model call names the rest.
+// Lines the shopper renamed themselves keep their name; one model call names the rest.
 // The explicit user filter backs up row level security, in case an admin client is ever passed in.
 export async function nameLines(supabase: SupabaseClient, userId: string | null, storeId: string | null, raws: string[], weighed: boolean[] = []): Promise<Named[]> {
 	let memory: Remembered[] = [];
