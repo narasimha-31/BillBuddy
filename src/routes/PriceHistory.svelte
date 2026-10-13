@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { History } from '../price-history';
-	import { money, shortDay } from '../format';
+	import { money, shortDay, storeName } from '../format';
 
 	let { history }: { history: History } = $props();
 
@@ -21,16 +21,16 @@
 		<p class="label">You paid last time</p>
 		<p class="big">{money(history.last.unitCents)}<small>{per}</small></p>
 		<p class="where">
-			at {history.last.store ?? 'an unknown store'} on {shortDay(history.last.date)}
+			at {storeName(history.last.store) ?? 'an unknown store'} on {shortDay(history.last.date)}
 			{#if history.last.channel === 'delivery'}<em class="tag">delivery</em>{/if}
 		</p>
 		{#if change && previous}
 			<p class="change" class:up={change.cents > 0} class:down={change.cents < 0}>
 				{#if change.cents === 0}
-					Same as the time before at {previous.store ?? 'an unknown store'}.
+					Same as the time before at {storeName(previous.store) ?? 'an unknown store'}.
 				{:else}
 					{change.cents > 0 ? 'Up' : 'Down'}
-					{money(Math.abs(change.cents))} ({Math.abs(change.percent)}%) from {previous.store ?? 'an unknown store'} on {shortDay(previous.date)}.
+					{money(Math.abs(change.cents))} ({Math.abs(change.percent)}%) from {storeName(previous.store) ?? 'an unknown store'} on {shortDay(previous.date)}.
 				{/if}
 			</p>
 		{/if}
@@ -43,7 +43,7 @@
 				{#each history.stores as row, i (row.store)}
 					{@const cheapest = row.lastCents === history.stores[0].lastCents}
 					<li class:cheapest>
-						<span class="store">{row.store}{#if cheapest}<em>cheapest</em>{/if}</span>
+						<span class="store">{storeName(row.store)}{#if cheapest}<em>cheapest</em>{/if}</span>
 						<span class="track"><span class="bar" style:--size={row.lastCents / priciest} style:--delay="{i * 60}ms"></span></span>
 						<span class="price">{money(row.lastCents)}</span>
 					</li>
@@ -58,7 +58,7 @@
 			{#each history.visits.slice(0, SHOWN) as visit, i (i)}
 				<li>
 					<span>{shortDay(visit.date)}</span>
-					<span class="store">{visit.store ?? 'Unknown store'}{#if visit.channel === 'delivery'}<em class="tag">delivery</em>{/if}</span>
+					<span class="store">{storeName(visit.store) ?? 'Unknown store'}{#if visit.channel === 'delivery'}<em class="tag">delivery</em>{/if}</span>
 					<span class="price">{money(visit.unitCents)}{per}</span>
 				</li>
 			{/each}
@@ -76,9 +76,7 @@
 		padding: 1.5rem;
 		font-family: var(--font-mono);
 		color: var(--color-receipt-ink);
-		box-shadow:
-			0 1px 2px rgb(0 0 0 / 0.06),
-			0 18px 40px -18px rgb(0 0 0 / 0.35);
+		box-shadow: 0 0 0 1px var(--color-receipt-line);
 	}
 
 	header {
@@ -162,11 +160,17 @@
 		font-size: 0.875rem;
 	}
 
+	/* every row shares one name column, as wide as the longest store name, so the bars line up */
+	.stores {
+		grid-template-columns: minmax(0, max-content) minmax(5rem, 1fr) auto;
+		column-gap: 1rem;
+	}
+
 	.stores li {
 		display: grid;
-		grid-template-columns: 7.5rem 1fr 4rem;
+		grid-column: 1 / -1;
+		grid-template-columns: subgrid;
 		align-items: center;
-		gap: 1rem;
 	}
 
 	.visits li {
@@ -180,6 +184,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		max-width: 16rem;
+		overflow: hidden;
 		white-space: nowrap;
 	}
 
@@ -191,12 +197,12 @@
 	}
 
 	.store em:not(.tag) {
-		background: rgb(71 106 80 / 0.14);
+		background: color-mix(in srgb, var(--color-receipt-down) 14%, transparent);
 		color: var(--color-receipt-down);
 	}
 
 	.tag {
-		background: rgb(148 69 42 / 0.12);
+		background: color-mix(in srgb, var(--color-receipt-up) 12%, transparent);
 		color: var(--color-receipt-up);
 	}
 
@@ -204,7 +210,7 @@
 		position: relative;
 		height: 0.6rem;
 		border-radius: 999px;
-		background: rgb(207 201 186 / 0.45);
+		background: color-mix(in srgb, var(--color-receipt-line) 60%, transparent);
 	}
 
 	/* bars grow from the left; transform only, so rows never shift */
@@ -212,7 +218,7 @@
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
-		background: rgb(46 48 44 / 0.7);
+		background: color-mix(in srgb, var(--color-receipt-ink) 70%, transparent);
 		transform-origin: left;
 		transform: scaleX(var(--size));
 		animation: grow 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
@@ -242,15 +248,23 @@
 			padding: 1.25rem 1rem;
 		}
 
+		/* on a phone the name and price sit on one line with the bar under them */
 		.stores li {
-			grid-template-columns: 5.25rem 1fr 3.5rem;
-			gap: 0.6rem;
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-areas: 'store price' 'track track';
+			row-gap: 0.35rem;
 		}
 
 		.stores .store {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.15rem;
+			grid-area: store;
+		}
+
+		.stores .track {
+			grid-area: track;
+		}
+
+		.stores .price {
+			grid-area: price;
 		}
 
 		.visits li {
