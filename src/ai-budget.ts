@@ -4,7 +4,9 @@
 export const MODELS = {
 	vision: { id: 'zai-org/GLM-5.3-Flash', input: 0.15, output: 0.5, seconds: 20 },
 	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 45 },
-	names: { id: 'nvidia/Nemotron-3_5-Lightning', input: 0.06, output: 0.24, seconds: 45 }
+	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
+	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
+	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 45 }
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
