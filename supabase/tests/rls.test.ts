@@ -359,6 +359,15 @@ describe('receipt and upload limits, enforced by the database', () => {
 		expect(error?.message).toBe('receipt limit: daily');
 	});
 
+	it('tells people their own upload count, deleted receipts included, and nobody else', async () => {
+		const ivy = await userWithHistory('ivy', 3, 5);
+		const id = userIds[userIds.length - 1];
+		await admin.from('receipts').delete().eq('user_id', id);
+		expect((await ivy.rpc('uploads_today')).data).toBe(3);
+		const anon = createClient(url, publishable, noSession);
+		expect((await anon.rpc('uploads_today')).error).not.toBeNull();
+	});
+
 	it('keeps the upload log out of reach of users and visitors', async () => {
 		const henry = await userWithHistory('henry', 1, 5);
 		const id = userIds[userIds.length - 1];

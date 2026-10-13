@@ -10,21 +10,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
 	const [list, today] = await Promise.all([
 		locals.supabase
 			.from('receipts')
 			.select('id, status, problem, purchased_on, total_cents, skipped_lines, created_at, processing_at, stores(name)')
 			.order('created_at', { ascending: false })
 			.limit(100),
-		locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).gt('created_at', dayAgo)
+		// counted from the upload log, so deleted receipts still count, exactly like the limit itself
+		locals.supabase.rpc('uploads_today')
 	]);
 	if (list.error) throw list.error;
 	if (today.error) throw today.error;
 
 	return {
 		firstName: firstNameOf(user),
-		today: today.count ?? 0,
+		today: (today.data as number | null) ?? 0,
 		dailyLimit: DAILY_RECEIPTS,
 		receipts: list.data.map(({ stores, ...receipt }) => ({
 			...receipt,
