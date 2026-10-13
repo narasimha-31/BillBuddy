@@ -6,8 +6,17 @@ import { readReceipt } from './receipt-reader.server';
 import { itemRows } from './receipt-rows';
 import { sizeProblem } from './routes/receipts/photo-rules';
 
+// what was saved, for the screen to print back as a receipt
+export type Printed = {
+	store: string | null;
+	date: string | null;
+	totalCents: number | null;
+	matches: boolean;
+	lines: { name: string; totalCents: number }[];
+};
+
 export type ProcessResult =
-	| { status: 'saved' | 'review'; skipped: number }
+	| { status: 'saved' | 'review'; skipped: number; printed: Printed }
 	| { status: 'failed'; problem: 'not_a_receipt' | 'handwritten' | 'no_lines' | 'bad_photo' }
 	| { status: 'busy' }
 	| { status: 'paused' };
@@ -109,7 +118,14 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 			skipped_lines: skipped,
 			image_path: keepPhoto ? photoPath : null
 		});
-		return { status: needsReview ? 'review' : 'saved', skipped };
+		const printed: Printed = {
+			store: storeId ? checked.store : null,
+			date: checked.purchasedOn,
+			totalCents: checked.totalCents,
+			matches: checked.lines_match_subtotal,
+			lines: rows.map((r) => ({ name: r.name ?? r.raw_text, totalCents: r.total_cents }))
+		};
+		return { status: needsReview ? 'review' : 'saved', skipped, printed };
 	} catch (error) {
 		if (error instanceof AiUnavailable) {
 			await finish({ status: 'pending' });
