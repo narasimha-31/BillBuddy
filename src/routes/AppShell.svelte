@@ -17,7 +17,7 @@
 		<a href="/home" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
 		<nav>
 			{#each links as link (link.href)}
-				<a href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>{link.label}</a>
+				<a href={link.href} aria-current={page.url.pathname === link.href || page.url.pathname.startsWith(`${link.href}/`) ? 'page' : undefined}>{link.label}</a>
 			{/each}
 		</nav>
 		<AccountMenu {firstName} />
