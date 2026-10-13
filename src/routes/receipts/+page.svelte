@@ -247,8 +247,13 @@
 						{#each unreadable as receipt (receipt.id)}
 							<li>
 								<span class="paper-icon" aria-hidden="true"></span>
-								<span>Receipt photo</span>
-								<span class="status">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
+								<span>
+									Receipt photo
+									<span class="status reason">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
+								</span>
+								<form method="POST" action="/receipts/{receipt.id}?/delete">
+									<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
+								</form>
 							</li>
 						{/each}
 					</ul>
@@ -495,6 +500,18 @@
 		margin-top: 0.6rem;
 		font-size: 0.8rem;
 		color: var(--color-muted);
+	}
+
+	.reason {
+		display: block;
+		margin-top: 0.15rem;
+	}
+
+	.remove {
+		font-size: 0.8rem;
+		color: var(--color-receipt-muted);
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 
 	.read-now {
