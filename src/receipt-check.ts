@@ -101,9 +101,10 @@ function rateCents(l: Pick<ReadLine, 'quantity' | 'unit_price' | 'unit_price_for
 
 // Some stores print "1.17 lb @ 1.47 /lb" above its item (Fiesta), others below it (Walmart),
 // and the model can attach such lines to the wrong neighbour, sometimes only a few of them.
-// Each run of neighbouring details that don't match their own amounts is moved one line down,
-// or one line up, when that makes every one of them match and the line it moves onto had no
-// detail of its own. Pure cent arithmetic; the model is never asked to do it.
+// Within each run of neighbouring details that don't match their own amounts, details move one
+// line down (or up), starting from the far end, for as long as each lands on a line it matches
+// that is free: no detail of its own, or one that just moved away. Whatever can't move stays and
+// is flagged. Pure cent arithmetic; the model is never asked to do it.
 export function realignDetails(lines: ReadLine[]): ReadLine[] {
 	const fits = (i: number, target: number) => {
 		const rate = rateCents(lines[i]);
@@ -119,14 +120,18 @@ export function realignDetails(lines: ReadLine[]): ReadLine[] {
 		while (end + 1 < lines.length && misfit(end + 1)) end++;
 		const run = Array.from({ length: end - start + 1 }, (_, k) => start + k);
 
-		for (const shift of [1, -1]) {
-			const receiver = shift === 1 ? end + 1 : start - 1;
-			if (!lines[receiver] || rateCents(lines[receiver]) !== null) continue;
-			if (!run.every((i) => fits(i, i + shift))) continue;
-			for (const i of run) result[i] = { ...result[i], ...noDetail };
-			for (const i of run) result[i + shift] = { ...result[i + shift], ...detail(lines[i]) };
-			break;
-		}
+		const moves = [1, -1].map((shift) => {
+			const moved: number[] = [];
+			for (const i of shift === 1 ? [...run].reverse() : run) {
+				const free = moved.includes(i + shift) || (lines[i + shift] !== undefined && rateCents(lines[i + shift]) === null);
+				if (!free || !fits(i, i + shift)) break;
+				moved.push(i);
+			}
+			return { shift, moved };
+		});
+		const best = moves[0].moved.length >= moves[1].moved.length ? moves[0] : moves[1];
+		for (const i of best.moved) result[i] = { ...result[i], ...noDetail };
+		for (const i of best.moved) result[i + best.shift] = { ...result[i + best.shift], ...detail(lines[i]) };
 		start = end;
 	}
 	return result;

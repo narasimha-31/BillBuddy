@@ -146,6 +146,22 @@ describe('checkReading', () => {
 		]);
 	});
 
+	// Qwen on the real Fiesta receipt: the cilantro detail lost its "2/", so only the later two can move
+	it('moves the details that fit even when one in the run fits nowhere', () => {
+		const read = [
+			line('CILANTRO', 0.59, { quantity: 2, unit_price: 0.99 }),
+			line('CUCUMBERS', 0.99, { quantity: 1.09, unit: 'lb', unit_price: 0.79 }),
+			line('SWEET POT YAM', 0.86, { quantity: 8, unit_price: 0.99, unit_price_for: 4 }),
+			line('LIMES', 1.98)
+		];
+		expect(realignDetails(read).map((l) => [l.raw, l.quantity, l.unit_price])).toEqual([
+			['CILANTRO', 2, 0.99],
+			['CUCUMBERS', null, null],
+			['SWEET POT YAM', 1.09, 0.79],
+			['LIMES', 8, 0.99]
+		]);
+	});
+
 	it('never moves a detail onto a line that has its own', () => {
 		const read = [line('A', 1.99, { quantity: 1.17, unit: 'lb', unit_price: 1.47 }), line('B', 1.72, { quantity: 1, unit_price: 1.72 })];
 		expect(realignDetails(read)).toEqual(read);
