@@ -208,8 +208,15 @@ describe('receipt photo storage', () => {
 		return (data ?? []).some((f) => `${folder}/${f.name}` === path);
 	};
 
+	// a photo is only accepted for a receipt of yours that is waiting for it, like the app makes
+	const awaiting = async (client: SupabaseClient, path: string) => {
+		const { error } = await client.from('receipts').insert({ image_path: path });
+		if (error) throw error;
+	};
+
 	beforeAll(async () => {
 		alicePath = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		await awaiting(alice, alicePath);
 		const { error } = await alice.storage.from(bucket).upload(alicePath, jpeg, { contentType: 'image/jpeg' });
 		if (error) throw error;
 	});
@@ -234,8 +241,9 @@ describe('receipt photo storage', () => {
 		expect(listing.data ?? []).toEqual([]);
 	});
 
-	it("blocks uploading into another user's folder", async () => {
+	it("blocks uploading into another user's folder, even with a receipt pointing there", async () => {
 		const path = `${aliceId}/planted.jpg`;
+		await awaiting(bob, path);
 		const { error } = await bob.storage.from(bucket).upload(path, jpeg, { contentType: 'image/jpeg' });
 		expect(error).not.toBeNull();
 		expect(await exists(path)).toBe(false);
@@ -253,6 +261,7 @@ describe('receipt photo storage', () => {
 
 	it('only accepts jpeg', async () => {
 		const path = `${aliceId}/${crypto.randomUUID()}.png`;
+		await awaiting(alice, path);
 		const { error } = await alice.storage.from(bucket).upload(path, jpeg, { contentType: 'image/png' });
 		expect(error).not.toBeNull();
 		expect(await exists(path)).toBe(false);
@@ -260,10 +269,32 @@ describe('receipt photo storage', () => {
 
 	it('rejects photos over 5 MB', async () => {
 		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		await awaiting(alice, path);
 		const big = Buffer.concat([jpeg, Buffer.alloc(5 * 1024 * 1024)]);
 		const { error } = await alice.storage.from(bucket).upload(path, big, { contentType: 'image/jpeg' });
 		expect(error).not.toBeNull();
 		expect(await exists(path)).toBe(false);
+	});
+
+	it('refuses a photo with no receipt waiting for it', async () => {
+		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		const { error } = await alice.storage.from(bucket).upload(path, jpeg, { contentType: 'image/jpeg' });
+		expect(error).not.toBeNull();
+		expect(await exists(path)).toBe(false);
+	});
+
+	it('refuses a photo for a receipt that was already read or is too old', async () => {
+		const read = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		const old = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		await admin.from('receipts').insert([
+			{ user_id: aliceId, image_path: read, status: 'saved' },
+			{ user_id: aliceId, image_path: old, created_at: new Date(Date.now() - 11 * 60_000).toISOString() }
+		]);
+		for (const path of [read, old]) {
+			const { error } = await alice.storage.from(bucket).upload(path, jpeg, { contentType: 'image/jpeg' });
+			expect(error, path).not.toBeNull();
+			expect(await exists(path)).toBe(false);
+		}
 	});
 
 	it('gives signed-out visitors nothing, not even through a public link', async () => {
@@ -317,30 +348,47 @@ describe('receipt and upload limits, enforced by the database', () => {
 		expect(Date.now() - new Date(data!.created_at).getTime()).toBeLessThan(60_000);
 	});
 
-	it('refuses the 26th photo upload in a day', async () => {
-		const gina = await userWithHistory('gina', 0, 0);
+	it('does not hand back a slot when receipts are deleted', async () => {
+		const gina = await userWithHistory('gina', 19, 5);
 		const id = userIds[userIds.length - 1];
-		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
-		for (let i = 0; i < 25; i++) {
-			const { error } = await gina.storage.from('receipts').upload(`${id}/${i}.jpg`, jpeg, { contentType: 'image/jpeg' });
-			expect(error, `upload ${i}`).toBeNull();
+		const last = await gina.from('receipts').insert({}).select('id').single();
+		expect(last.error).toBeNull();
+		const deleted = await gina.from('receipts').delete().eq('user_id', id).select('id');
+		expect(deleted.data).toHaveLength(20);
+		const { error } = await gina.from('receipts').insert({});
+		expect(error?.message).toBe('receipt limit: daily');
+	});
+
+	it('keeps the upload log out of reach of users and visitors', async () => {
+		const henry = await userWithHistory('henry', 1, 5);
+		const id = userIds[userIds.length - 1];
+		const anon = createClient(url, publishable, noSession);
+		for (const client of [henry, anon]) {
+			const { data } = await client.from('upload_log').select();
+			expect(data ?? []).toEqual([]);
+			const removed = await client.from('upload_log').delete().eq('user_id', id).select();
+			expect(removed.data ?? []).toEqual([]);
+			const forged = await client.from('upload_log').insert({ user_id: id, created_at: '2020-01-01T00:00:00Z' });
+			expect(forged.error).not.toBeNull();
 		}
-		const { error } = await gina.storage.from('receipts').upload(`${id}/26.jpg`, jpeg, { contentType: 'image/jpeg' });
-		expect(error).not.toBeNull();
-	}, 60_000);
+		const { count } = await admin.from('upload_log').select('*', { count: 'exact', head: true }).eq('user_id', id);
+		expect(count).toBe(1);
+	});
 });
 
 describe('photo counting function', () => {
 	it('only ever reports the caller their own upload count', async () => {
 		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
 		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+		const before = (await alice.rpc('receipt_photos_today')).data as number;
+		await alice.from('receipts').insert({ image_path: path });
 		const uploaded = await alice.storage.from('receipts').upload(path, jpeg, { contentType: 'image/jpeg' });
 		expect(uploaded.error).toBeNull();
 
 		const { data: aliceCount } = await alice.rpc('receipt_photos_today');
 		const { data: bobCount } = await bob.rpc('receipt_photos_today');
 		await admin.storage.from('receipts').remove([path]);
-		expect(aliceCount).toBe(1);
+		expect(aliceCount).toBe(before + 1);
 		expect(bobCount).toBe(0);
 	});
 
