@@ -43,12 +43,15 @@ export type Checked =
 const UNITS = new Set(['ea', 'lb', 'oz', 'kg', 'g', 'gal', 'l', 'ct']);
 const MAX_LINES = 80;
 
+// 12 to 19 digits in a row is a barcode or a card number. Neither is kept, but the item it is
+// printed on is: Parivar prints "FS LAXMI TOOR DAL PLAIN 2 LB-723246183084".
+const LONG_NUMBER = /[\s#:-]*\b\d{12,19}\b/g;
+
 // payment and identity details we never keep, even if the model transcribed them
 // narrow on purpose: "BIRTHDAY CARD" and "MEMBER'S MARK EGGS" are groceries, not payment data
 const PAYMENT = new RegExp(
 	[
 		String.raw`(\*{2,}|x{4,})\s*\d{2,4}`,
-		String.raw`\b\d{12,19}\b`,
 		String.raw`\b(auth|approval|appr|ref)\s*(code|#|no)?\s*[:#]?\s*\w{4,}`,
 		String.raw`\b(visa|mastercard|amex|discover|debit|credit)\b`,
 		String.raw`\bcard\s*(#|no\b|number|ending)`,
@@ -88,8 +91,8 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 	const lines: CheckedLine[] = [];
 	for (const line of reading.lines.slice(0, MAX_LINES)) {
 		// one printed line stays one line: a hidden newline could pose as extra numbered lines downstream
-		const raw = line.raw.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim().slice(0, 120);
-		if (!raw || PAYMENT.test(raw)) continue;
+		const raw = line.raw.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').replace(LONG_NUMBER, '').trim().slice(0, 120);
+		if (!/[a-z]{2}/i.test(raw) || PAYMENT.test(raw)) continue;
 
 		const unit = line.unit && UNITS.has(line.unit.toLowerCase()) ? line.unit.toLowerCase() : 'ea';
 		const printedQuantity = line.quantity && line.quantity > 0 && line.quantity < 1000 ? line.quantity : null;

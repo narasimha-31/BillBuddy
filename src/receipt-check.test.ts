@@ -60,6 +60,26 @@ describe('checkReading', () => {
 		expect(result.ok && result.lines.map((l) => l.raw)).toEqual(['EGGS 12CT']);
 	});
 
+	// a real Parivar receipt lost four items to the card number rule on 10-13
+	it('keeps items printed with a barcode, minus the barcode', () => {
+		const printed = ['FS LAXMI TOOR DAL PLAIN 2 LB-723246183084', 'FS LAX MUSTARD SEED 200GM-723246211558', 'FS SWAD ORANGE FOOD COLOUR 25G-051179360037', 'ORGANIC MILK 0123456789012', 'FS TOMATOES 1LB-3011'];
+		const result = checkReading(reading({ lines: printed.map((p) => line(p, 2)) }), today);
+		expect(result.ok && result.lines.map((l) => l.raw)).toEqual([
+			'FS LAXMI TOOR DAL PLAIN 2 LB',
+			'FS LAX MUSTARD SEED 200GM',
+			'FS SWAD ORANGE FOOD COLOUR 25G',
+			'ORGANIC MILK',
+			'FS TOMATOES 1LB-3011'
+		]);
+	});
+
+	it('still drops a bare card number, and never keeps one inside a line', () => {
+		const result = checkReading(reading({ lines: [line('MILK', 3), line('4111111111111111', 1), line('#4111 1111 1111 1111', 1), line('REF 4111111111111111 EGGS', 2)] }), today);
+		expect(result.ok && result.lines.map((l) => l.raw)).toEqual(['MILK']);
+		const kept = checkReading(reading({ lines: [line('EGGS 4111111111111111', 2)] }), today);
+		expect(JSON.stringify(kept)).not.toContain('4111111111111111');
+	});
+
 	it('keeps common grocery names, while credit and debit always count as payment words', () => {
 		const groceries = ["MEMBER'S MARK EGGS", 'BIRTHDAY CARD', 'VISALIA ORANGES', 'CREDIT UNION CHOC BAR'];
 		const result = checkReading(reading({ lines: groceries.map((g) => line(g, 2)) }), today);
