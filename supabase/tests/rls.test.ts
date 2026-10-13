@@ -350,3 +350,52 @@ describe('photo counting function', () => {
 		expect(error).not.toBeNull();
 	});
 });
+
+describe('phone links', () => {
+	const hex = () => [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
+	const later = () => new Date(Date.now() + 600_000).toISOString();
+
+	async function link(over: Record<string, unknown> = {}) {
+		const row = { token_hash: hex(), claim_hash: hex(), user_id: aliceId, expires_at: later(), ...over };
+		await admin.from('phone_links').delete().eq('user_id', aliceId);
+		const { error } = await admin.from('phone_links').insert(row);
+		if (error) throw error;
+		return row as { token_hash: string; claim_hash: string };
+	}
+
+	it('are invisible to users and visitors, even their own', async () => {
+		const own = await link();
+		const anon = createClient(url, publishable, noSession);
+		for (const client of [alice, bob, anon]) {
+			const { data } = await client.from('phone_links').select();
+			expect(data ?? []).toEqual([]);
+			const insert = await client.from('phone_links').insert({ token_hash: hex(), user_id: aliceId, expires_at: later() });
+			expect(insert.error).not.toBeNull();
+			const used = await client.rpc('use_phone_link', { p_token_hash: own.token_hash, p_claim_hash: own.claim_hash });
+			expect(used.error).not.toBeNull();
+		}
+	});
+
+	it('count an upload only for the phone that claimed the link', async () => {
+		const own = await link();
+		const right = await admin.rpc('use_phone_link', { p_token_hash: own.token_hash, p_claim_hash: own.claim_hash });
+		const wrong = await admin.rpc('use_phone_link', { p_token_hash: own.token_hash, p_claim_hash: hex() });
+		expect(right.data).toBe(aliceId);
+		expect(wrong.data).toBeNull();
+	});
+
+	it('stop working once expired or after 20 photos', async () => {
+		const expired = await link({ expires_at: new Date(Date.now() - 1000).toISOString() });
+		expect((await admin.rpc('use_phone_link', { p_token_hash: expired.token_hash, p_claim_hash: expired.claim_hash })).data).toBeNull();
+
+		const full = await link({ uploads: 19 });
+		expect((await admin.rpc('use_phone_link', { p_token_hash: full.token_hash, p_claim_hash: full.claim_hash })).data).toBe(aliceId);
+		expect((await admin.rpc('use_phone_link', { p_token_hash: full.token_hash, p_claim_hash: full.claim_hash })).data).toBeNull();
+	});
+
+	it('allow one link per account', async () => {
+		await link();
+		const second = await admin.from('phone_links').insert({ token_hash: hex(), user_id: aliceId, expires_at: later() });
+		expect(second.error?.code).toBe('23505');
+	});
+});
