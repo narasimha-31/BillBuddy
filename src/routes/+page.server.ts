@@ -6,10 +6,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const code = url.searchParams.get('code');
 	if (code) {
 		const ok = await signInWithCode(locals.supabase, code);
-		redirect(303, ok ? '/receipts' : '/?signin=failed');
+		redirect(303, ok ? '/home' : '/?signin=failed');
 	}
 
-	if (await locals.getUser()) redirect(303, '/receipts');
+	if (await locals.getUser()) redirect(303, '/home');
 	return { signInFailed: url.searchParams.get('signin') === 'failed' };
 };
 

@@ -6,6 +6,7 @@
 	let { firstName, fit = false, children }: { firstName: string | null; fit?: boolean; children: Snippet } = $props();
 
 	const links = [
+		{ href: '/home', label: 'Home' },
 		{ href: '/receipts', label: 'Receipts' },
 		{ href: '/prices', label: 'Prices' }
 	];
@@ -13,7 +14,7 @@
 
 <div class="shell" class:fit>
 	<header class="top">
-		<a href="/receipts" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
+		<a href="/home" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
 		<nav>
 			{#each links as link (link.href)}
 				<a href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>{link.label}</a>
