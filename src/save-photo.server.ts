@@ -1,13 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { photoProblem } from './routes/receipts/photo-rules';
 
-export const DAILY_RECEIPTS = 20;
+export const DAILY_RECEIPTS = 10;
 
 // database limit messages, turned into something a person can act on
 const limitMessages: Record<string, string> = {
 	'receipt limit: too many at once': 'slow down a little and try again in a minute',
 	'receipt limit: daily': `you've added ${DAILY_RECEIPTS} receipts today, the limit resets tomorrow`,
-	'receipt limit: monthly': "you've reached 200 receipts this month",
+	'receipt limit: monthly': "you've reached 100 receipts this month",
 	photos: "you've reached today's photo limit, try again tomorrow"
 };
 

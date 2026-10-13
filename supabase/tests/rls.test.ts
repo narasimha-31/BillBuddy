@@ -320,9 +320,9 @@ describe('receipt and upload limits, enforced by the database', () => {
 		return client;
 	}
 
-	it('refuses a burst of more than 10 receipts in a minute', async () => {
+	it('refuses a burst of more than 5 receipts in a minute', async () => {
 		const carol = await userWithHistory('carol', 0, 0);
-		for (let i = 0; i < 10; i++) {
+		for (let i = 0; i < 5; i++) {
 			const { error } = await carol.from('receipts').insert({});
 			expect(error).toBeNull();
 		}
@@ -330,14 +330,14 @@ describe('receipt and upload limits, enforced by the database', () => {
 		expect(error?.message).toBe('receipt limit: too many at once');
 	});
 
-	it('refuses the 21st receipt in a day', async () => {
-		const dave = await userWithHistory('dave', 20, 5);
+	it('refuses the 11th receipt in a day', async () => {
+		const dave = await userWithHistory('dave', 10, 5);
 		const { error } = await dave.from('receipts').insert({});
 		expect(error?.message).toBe('receipt limit: daily');
 	});
 
-	it('refuses the 201st receipt in 30 days', async () => {
-		const erin = await userWithHistory('erin', 200, 2 * 24 * 60);
+	it('refuses the 101st receipt in 30 days', async () => {
+		const erin = await userWithHistory('erin', 100, 2 * 24 * 60);
 		const { error } = await erin.from('receipts').insert({});
 		expect(error?.message).toBe('receipt limit: monthly');
 	});
@@ -349,12 +349,12 @@ describe('receipt and upload limits, enforced by the database', () => {
 	});
 
 	it('does not hand back a slot when receipts are deleted', async () => {
-		const gina = await userWithHistory('gina', 19, 5);
+		const gina = await userWithHistory('gina', 9, 5);
 		const id = userIds[userIds.length - 1];
 		const last = await gina.from('receipts').insert({}).select('id').single();
 		expect(last.error).toBeNull();
 		const deleted = await gina.from('receipts').delete().eq('user_id', id).select('id');
-		expect(deleted.data).toHaveLength(20);
+		expect(deleted.data).toHaveLength(10);
 		const { error } = await gina.from('receipts').insert({});
 		expect(error?.message).toBe('receipt limit: daily');
 	});
@@ -387,17 +387,19 @@ describe('receipt and upload limits, enforced by the database', () => {
 
 describe('photo counting function', () => {
 	it('only ever reports the caller their own upload count', async () => {
-		const path = `${aliceId}/${crypto.randomUUID()}.jpg`;
+		// a fresh person: earlier tests used up the others' per-minute receipt limit
+		const pat = await signedInUser('pat');
+		const path = `${userIds[userIds.length - 1]}/${crypto.randomUUID()}.jpg`;
 		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
-		const before = (await alice.rpc('receipt_photos_today')).data as number;
-		await alice.from('receipts').insert({ image_path: path });
-		const uploaded = await alice.storage.from('receipts').upload(path, jpeg, { contentType: 'image/jpeg' });
+		const waiting = await pat.from('receipts').insert({ image_path: path });
+		expect(waiting.error).toBeNull();
+		const uploaded = await pat.storage.from('receipts').upload(path, jpeg, { contentType: 'image/jpeg' });
 		expect(uploaded.error).toBeNull();
 
-		const { data: aliceCount } = await alice.rpc('receipt_photos_today');
+		const { data: patCount } = await pat.rpc('receipt_photos_today');
 		const { data: bobCount } = await bob.rpc('receipt_photos_today');
 		await admin.storage.from('receipts').remove([path]);
-		expect(aliceCount).toBe(before + 1);
+		expect(patCount).toBe(1);
 		expect(bobCount).toBe(0);
 	});
 
@@ -441,11 +443,11 @@ describe('phone links', () => {
 		expect(wrong.data).toBeNull();
 	});
 
-	it('stop working once expired or after 20 photos', async () => {
+	it('stop working once expired or after 10 photos', async () => {
 		const expired = await link({ expires_at: new Date(Date.now() - 1000).toISOString() });
 		expect((await admin.rpc('use_phone_link', { p_token_hash: expired.token_hash, p_claim_hash: expired.claim_hash })).data).toBeNull();
 
-		const full = await link({ uploads: 19 });
+		const full = await link({ uploads: 9 });
 		expect((await admin.rpc('use_phone_link', { p_token_hash: full.token_hash, p_claim_hash: full.claim_hash })).data).toBe(aliceId);
 		expect((await admin.rpc('use_phone_link', { p_token_hash: full.token_hash, p_claim_hash: full.claim_hash })).data).toBeNull();
 	});

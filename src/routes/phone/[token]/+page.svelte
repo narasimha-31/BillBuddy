@@ -63,7 +63,7 @@
 
 		<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
 		<button class="take" onclick={() => picker?.click()}>Take or choose a photo</button>
-		<p class="small">This code works until {until}, for up to 20 photos.</p>
+		<p class="small">This code works until {until}, for up to 10 photos.</p>
 
 		{#if sent.length}
 			<ul aria-live="polite">

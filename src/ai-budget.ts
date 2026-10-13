@@ -11,8 +11,8 @@ export const MODELS = {
 
 export type ModelRole = keyof typeof MODELS;
 
-// $1 a day across everyone: about a thousand receipts, and a hard ceiling on the credits
-export const DAILY_CAP_MICROS = 1_000_000;
+// 50 cents a day across everyone: about 300 receipts, and a hard ceiling on the credits
+export const DAILY_CAP_MICROS = 500_000;
 
 // a price per 1M tokens times tokens is exactly millionths of a dollar; round up so we never undercount
 export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; completion_tokens?: number }) {
@@ -20,9 +20,9 @@ export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; com
 	return Math.ceil((usage.prompt_tokens ?? 0) * input + (usage.completion_tokens ?? 0) * output);
 }
 
-// 5 cents a day per person, about 40 to 60 receipts. Counted from the call log, which people
+// 2 cents a day per person, about 12 receipts. Counted from the call log, which people
 // cannot touch, so deleting receipts and adding them again never buys more reads.
-export const USER_DAILY_CAP_MICROS = 50_000;
+export const USER_DAILY_CAP_MICROS = 20_000;
 
 export function overDailyCap(spentTodayMicros: number) {
 	return spentTodayMicros >= DAILY_CAP_MICROS;
