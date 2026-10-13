@@ -1,16 +1,20 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { fade } from 'svelte/transition';
-	import { historyOf, itemsBought } from '../../price-history';
 	import AppShell from '../AppShell.svelte';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
 
 	let { data } = $props();
 
-	const items = $derived(itemsBought(data.purchases));
+	// the chip lights up at once; the history follows when the server answers
 	let picked = $state<string | null>(null);
-	const selected = $derived(picked ?? items[0]?.name ?? '');
-	const history = $derived(historyOf(data.purchases, selected));
+	const selected = $derived(picked ?? data.selected ?? '');
+
+	function pick(name: string) {
+		picked = name;
+		goto(`?item=${encodeURIComponent(name)}`, { replaceState: true, noScroll: true, keepFocus: true });
+	}
 </script>
 
 <svelte:head>
@@ -22,13 +26,13 @@
 	<main>
 		<h1>What did I pay last time?</h1>
 
-		{#if items.length}
+		{#if data.products.length}
 			<p class="lead">Pick something you buy. You'll see what you paid, where, and how the price moved.</p>
-			<ItemPicker {items} bind:selected={() => selected, (name) => (picked = name)} />
-			{#key selected}
-				{#if history}
+			<ItemPicker items={data.products} bind:selected={() => selected, pick} />
+			{#key data.selected}
+				{#if data.history}
 					<div class="mt-8" in:fade={{ duration: 300 }}>
-						<PriceHistory {history} />
+						<PriceHistory history={data.history} />
 					</div>
 				{/if}
 			{/key}
