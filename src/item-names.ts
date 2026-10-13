@@ -15,13 +15,57 @@ export const CATEGORIES = [
 	'Other'
 ] as const;
 
+export const SIZE_UNITS = ['oz', 'fl oz', 'lb', 'g', 'kg', 'gal', 'l', 'ml', 'ct'] as const;
+
 export type Category = (typeof CATEGORIES)[number];
+export type SizeUnit = (typeof SIZE_UNITS)[number];
 export type Flag = 'ok' | 'offensive' | 'not_grocery' | 'unreadable';
-export type Named = { name: string; brand: string | null; category: Category; flag: Flag; from: 'memory' | 'filter' | 'ai' };
+// name is the generic product every store shares ("Whole milk"); brand and pack size are kept apart
+export type Named = {
+	name: string;
+	brand: string | null;
+	category: Category;
+	sizeAmount: number | null;
+	sizeUnit: SizeUnit | null;
+	flag: Flag;
+	from: 'memory' | 'filter' | 'ai';
+};
 
 // what the names model returns, untrusted until applyNames() has run
-export type NameAnswer = { items: { index: number; name: string; brand: string | null; category: string; flag: string }[] };
-export type Remembered = { raw_text: string; name: string; brand: string | null; category: string | null };
+export type NameAnswer = {
+	items: { index: number; name: string; brand: string | null; category: string; size_amount: number | null; size_unit: string | null; flag: string }[];
+};
+export type Remembered = {
+	raw_text: string;
+	name: string;
+	brand: string | null;
+	category: string | null;
+	size_amount?: number | null;
+	size_unit?: string | null;
+};
+
+// Store-brand shorthand printed on receipts. Expanded here, not by the model, so the same brand is
+// always spelled the same way.
+const BRANDS: Record<string, string> = {
+	GV: 'Great Value',
+	HEB: 'H-E-B',
+	'H E B': 'H-E-B',
+	KS: 'Kirkland Signature',
+	KRO: 'Kroger',
+	MM: "Member's Mark",
+	GG: 'Good & Gather',
+	HNS: 'Head & Shoulders',
+	FF: 'Friendly Farms'
+};
+
+export const brandName = (brand: string | null) => (brand === null ? null : (BRANDS[brand.trim().toUpperCase()] ?? brand));
+
+// a pack size is kept only when both parts make sense; anything else means "not printed"
+export function size(amount: unknown, unit: unknown): { sizeAmount: number | null; sizeUnit: SizeUnit | null } {
+	const known = typeof unit === 'string' && (SIZE_UNITS as readonly string[]).includes(unit);
+	const sane = typeof amount === 'number' && Number.isFinite(amount) && amount > 0 && amount < 100_000;
+	return known && sane ? { sizeAmount: amount, sizeUnit: unit as SizeUnit } : { sizeAmount: null, sizeUnit: null };
+}
 
 // Checked before the model (offensive lines are never sent) and again on its answer.
 const OFFENSIVE =/\b(f+u+c+k\w*|f\*+ck\w*|sh[i1]t\w*|b[i1]tch\w*|a+ss+hole\w*|bastard\w*|d[i1]ck\w*|c+u+n+t\w*|wh[o0]re\w*|slut\w*|n[i1]gg\w*|f[a4]gg?\w*|retard\w*)\b/i;
@@ -40,6 +84,8 @@ const hidden = (flag: 'offensive' | 'not_grocery', from: Named['from']): Named =
 	name: flag === 'offensive' ? 'Hidden line' : 'Not a grocery item',
 	brand: null,
 	category: 'Other',
+	sizeAmount: null,
+	sizeUnit: null,
 	flag,
 	from
 });
@@ -59,6 +105,7 @@ export function sortLines(raws: string[], memory: Remembered[]) {
 				name: hit.name,
 				brand: hit.brand,
 				category: (CATEGORIES as readonly string[]).includes(hit.category ?? '') ? (hit.category as Category) : 'Other',
+				...size(hit.size_amount === null || hit.size_amount === undefined ? null : Number(hit.size_amount), hit.size_unit),
 				flag: 'ok',
 				from: 'memory'
 			});
@@ -76,6 +123,11 @@ export function linesPayload(unknown: { index: number; raw: string }[], weighed:
 		.replaceAll('>', '\\u003e');
 }
 
+// the shopper's own product names travel the same way: JSON data with < and > escaped
+export function knownPayload(names: string[]) {
+	return JSON.stringify(names).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
+}
+
 // Joins the model's answer back to the real lines. Anything it skipped, invented or mangled
 // becomes "unreadable" rather than being trusted.
 export function applyNames(raws: string[], remembered: Map<number, Named>, answer: NameAnswer | null): Named[] {
@@ -86,9 +138,9 @@ export function applyNames(raws: string[], remembered: Map<number, Named>, answe
 
 		const item = byIndex.get(index);
 		const name = item ? clean(item.name, 80) : '';
-		if (!item || !name) return { name: clean(raw, 80), brand: null, category: 'Other', flag: 'unreadable', from: 'ai' };
+		if (!item || !name) return { name: clean(raw, 80), brand: null, category: 'Other', sizeAmount: null, sizeUnit: null, flag: 'unreadable', from: 'ai' };
 
-		const brand = item.brand ? clean(item.brand, 40) || null : null;
+		const brand = brandName(item.brand ? clean(item.brand, 40) || null : null);
 		if (item.flag === 'offensive' || OFFENSIVE.test(raw) || OFFENSIVE.test(name) || (brand !== null && OFFENSIVE.test(brand))) {
 			return hidden('offensive', 'ai');
 		}
@@ -96,6 +148,6 @@ export function applyNames(raws: string[], remembered: Map<number, Named>, answe
 
 		const category = (CATEGORIES as readonly string[]).includes(item.category) ? (item.category as Category) : 'Other';
 		const flag: Flag = item.flag === 'unreadable' ? 'unreadable' : 'ok';
-		return { name, brand, category, flag, from: 'ai' };
+		return { name, brand, category, ...size(item.size_amount, item.size_unit), flag, from: 'ai' };
 	});
 }

@@ -8,6 +8,8 @@ export type ItemRow = {
 	name: string | null;
 	brand: string | null;
 	category: string | null;
+	size_amount: number | null;
+	size_unit: string | null;
 	quantity: number;
 	unit: string;
 	unit_price_cents: number | null;
@@ -25,7 +27,7 @@ export function itemRows(lines: CheckedLine[], names: Named[]): { rows: ItemRow[
 
 	for (const line of lines) {
 		if (line.kind === 'discount') {
-			rows.push({ ...base(line, rows.length), name: 'Savings', brand: null, category: null, issue: line.issue });
+			rows.push({ ...base(line, rows.length), name: 'Savings', brand: null, category: null, size_amount: null, size_unit: null, issue: line.issue });
 			continue;
 		}
 
@@ -40,6 +42,8 @@ export function itemRows(lines: CheckedLine[], names: Named[]): { rows: ItemRow[
 			name: unreadable ? null : named.name,
 			brand: unreadable ? null : named.brand,
 			category: unreadable ? null : named.category,
+			size_amount: unreadable ? null : named.sizeAmount,
+			size_unit: unreadable ? null : named.sizeUnit,
 			issue: line.issue ?? (unreadable ? 'unreadable' : null)
 		});
 	}

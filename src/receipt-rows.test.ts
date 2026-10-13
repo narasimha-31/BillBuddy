@@ -14,7 +14,7 @@ const line = (raw: string, totalCents: number, extra: Partial<CheckedLine> = {})
 	issue: null,
 	...extra
 });
-const named = (name: string, flag: Named['flag'] = 'ok'): Named => ({ name, brand: null, category: 'Other', flag, from: 'ai' });
+const named = (name: string, flag: Named['flag'] = 'ok', extra: Partial<Named> = {}): Named => ({ name, brand: null, category: 'Other', sizeAmount: null, sizeUnit: null, flag, from: 'ai', ...extra });
 
 describe('itemRows', () => {
 	it('pairs each item line with its name and keeps the line numbers tight', () => {
@@ -63,5 +63,10 @@ describe('itemRows', () => {
 		const { rows, skipped } = itemRows([line('A', 100), line('B', 200)], [named('Apple')]);
 		expect(rows.map((r) => [r.raw_text, r.name])).toEqual([['A', 'Apple']]);
 		expect(skipped).toBe(1);
+	});
+
+	it('keeps the pack size apart from the product name', () => {
+		const { rows } = itemRows([line('HEB WHOLE MILK 640Z', 185)], [named('Whole milk', 'ok', { brand: 'H-E-B', sizeAmount: 64, sizeUnit: 'oz' })]);
+		expect(rows[0]).toMatchObject({ name: 'Whole milk', brand: 'H-E-B', size_amount: 64, size_unit: 'oz' });
 	});
 });
