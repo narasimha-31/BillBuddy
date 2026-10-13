@@ -75,6 +75,16 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(JSON.stringify(r)).not.toMatch(/7730|Rivera|Sam/i);
 	});
 
+	// modeled on a real Fiesta receipt: BALANCE is the total, CASH and CHANGE are not, no subtotal
+	it('takes the balance as the total, not the cash handed over, and works out multi-buy prices', async () => {
+		const r = await read('balance');
+		expect(r).toMatchObject({ ok: true, totalCents: 1824, taxCents: 45, lines_match_subtotal: true, needs_review: false });
+		expect(r.ok && r.lines.filter((l) => l.issue)).toEqual([]);
+		const named = await names(r);
+		const shampoo = named.find((n) => n.raw === 'HNS 2ND1 ITCHY')!;
+		expect(shampoo).toMatchObject({ flag: 'ok', category: 'Personal care' });
+	});
+
 	it('reads a receipt photographed sideways or upside down', async () => {
 		for (const name of ['sideways', 'upside-down']) {
 			expect(await read(name), name).toMatchObject({ ok: true, purchasedOn: '2026-10-11', lines_match_subtotal: true });
