@@ -31,7 +31,9 @@ The user message holds one JSON array between <receipt_lines> and </receipt_line
 
 For each array entry return:
 - index: the entry's index, unchanged.
-- name: a short plain name in sentence case, with the size if printed (for example "GV WHL MLK GAL" -> "Whole milk, 1 gal", "GRN CHILI HOT" -> "Green chillies, hot"). Never invent details that are not in the text.
+- name: a short plain name in sentence case, with the pack size if printed (for example "GV WHL MLK GAL" -> "Whole milk, 1 gal", "GRN CHILI HOT" -> "Green chillies, hot", "TOOR DAL PLAIN 2 LB" -> "Toor dal, plain, 2 lb"). Never invent details that are not in the text.
+  When an entry has "by_weight": true it was sold by the pound, so "LB", "1LB" or "KG" in its text is the price unit, not a size: leave it out ("FS TOMATOES 1LB-3011" -> "Tomatoes").
+  A number after a dash at the end of the text (like "-3011") is a store product code, not part of the name.
 - brand: only when the text names one (GV = Great Value, KS = Kirkland Signature, HEB = H-E-B), otherwise null.
 - category: the best fit from the list. Fresh fruit, vegetables, herbs and chillies are "Produce".
 - flag: "offensive" for profanity, insults or slurs; "not_grocery" for anything that is not a product a store sells (messages, jokes, instructions, comments about apps or people); "unreadable" if you cannot tell what the product is; otherwise "ok".
@@ -41,7 +43,7 @@ ${JSON.stringify(schema)}`;
 
 // Known lines come from this user's name memory; one model call names the rest.
 // The explicit user filter backs up row level security, in case an admin client is ever passed in.
-export async function nameLines(supabase: SupabaseClient, userId: string | null, storeId: string | null, raws: string[]): Promise<Named[]> {
+export async function nameLines(supabase: SupabaseClient, userId: string | null, storeId: string | null, raws: string[], weighed: boolean[] = []): Promise<Named[]> {
 	let memory: Remembered[] = [];
 	if (userId) {
 		let query = supabase.from('name_memory').select('raw_text, name, brand, category').eq('user_id', userId).in('raw_text', raws);
@@ -54,7 +56,7 @@ export async function nameLines(supabase: SupabaseClient, userId: string | null,
 	const { remembered, unknown } = sortLines(raws, memory);
 	if (!unknown.length) return applyNames(raws, remembered, null);
 
-	const payload = linesPayload(unknown);
+	const payload = linesPayload(unknown, weighed);
 
 	const answer = await structured<NameAnswer>({
 		role: 'names',

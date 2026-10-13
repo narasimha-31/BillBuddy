@@ -78,7 +78,13 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		const storeId = settings?.keep_store_name && checked.store ? await storeFor(supabase, checked.store) : null;
 
 		const items = checked.lines.filter((l) => l.kind === 'item');
-		const names = await nameLines(supabase, userId, storeId, items.map((l) => l.raw));
+		const names = await nameLines(
+			supabase,
+			userId,
+			storeId,
+			items.map((l) => l.raw),
+			items.map((l) => ['lb', 'kg', 'oz', 'g'].includes(l.unit))
+		);
 		const { rows, skipped } = itemRows(checked.lines, names);
 
 		// a crashed earlier attempt may have left lines behind

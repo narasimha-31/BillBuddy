@@ -75,6 +75,15 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(JSON.stringify(r)).not.toMatch(/7730|Rivera|Sam/i);
 	});
 
+	it('names weighed items without the price unit, and keeps real pack sizes', async () => {
+		const lines = ['FS TOMATOES 1LB-3011', 'FS BANANA LB-3037', 'FS OKRA (BHINDI) 1LB-3002', 'FS LAXMI TOOR DAL PLAIN 2 LB', 'FS LAX MUSTARD SEED 200GM'];
+		const named = await nameLines(admin, null, null, lines, [true, true, true, false, false]);
+		console.log('  names:', JSON.stringify(named.map((n, i) => [lines[i], n.name])));
+		for (const n of named.slice(0, 3)) expect(n.name).not.toMatch(/\blb\b|\d{3,}/i);
+		expect(named[3].name).toMatch(/2 ?lb/i);
+		expect(named[4].name).toMatch(/200 ?g/i);
+	});
+
 	it('refuses an image that is not a receipt', async () => {
 		expect(await read('meme')).toEqual({ ok: false, reason: 'not_a_receipt' });
 	});

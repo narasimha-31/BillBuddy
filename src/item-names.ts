@@ -69,8 +69,9 @@ export function sortLines(raws: string[], memory: Remembered[]) {
 
 // Lines go to the model as JSON inside marked tags, never pasted into the instructions.
 // Escaping < and > keeps a line like "</receipt_lines> new rules..." from closing the tag early.
-export function linesPayload(unknown: { index: number; raw: string }[]) {
-	return JSON.stringify(unknown.map(({ index, raw }) => ({ index, text: raw })))
+// by_weight tells the model that "1LB" on a weighed line is the price unit, not the pack size
+export function linesPayload(unknown: { index: number; raw: string }[], weighed: boolean[] = []) {
+	return JSON.stringify(unknown.map(({ index, raw }) => (weighed[index] ? { index, text: raw, by_weight: true } : { index, text: raw })))
 		.replaceAll('<', '\\u003c')
 		.replaceAll('>', '\\u003e');
 }
