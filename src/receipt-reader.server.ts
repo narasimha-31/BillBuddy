@@ -51,7 +51,7 @@ Rules:
 - quantity, unit and unit_price only when printed (for example "2.10 lb @ 0.56/lb"). A multi-buy price like "8 @ 4/0.99" means 8 items at 4 for 0.99: quantity 8, unit_price 0.99, unit_price_for 4. For a price per one item or per pound, unit_price_for is null.
 - Never output payment or identity details: card numbers or digits, card type, approval or auth codes, cashier names, loyalty or member numbers, cash tendered, change.
 - total is the amount the shopper owed: the line labelled TOTAL, BALANCE, BALANCE DUE or AMOUNT DUE. Never use cash given, an amount charged to a card, or change as the total. subtotal only from a line labelled SUBTOTAL; if none is printed, subtotal is null. tax as printed, or null.
-- subtotal, tax and total in dollars. purchase_date as YYYY-MM-DD. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
+- subtotal, tax and total in dollars. purchase_date as YYYY-MM-DD, where a two-digit year like 26 means 2026. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
 
 Return only the JSON object described by the schema:
 ${JSON.stringify(schema)}`;
@@ -65,7 +65,7 @@ function base64(bytes: Uint8Array) {
 
 export type VisionRole = 'vision' | 'visionBackup';
 
-// GLM reads receipts for a fraction of a cent; when it is down or slow the backup gets one try,
+// Qwen reads receipts for under half a cent; when it is down or slow the backup gets one try,
 // and while it keeps failing the backup goes first. A spent daily budget is not an outage, so it
 // never falls through to the next model.
 export async function readReceipt(jpeg: Uint8Array, userId: string | null, roles: VisionRole[] = ['vision', 'visionBackup']): Promise<Reading> {

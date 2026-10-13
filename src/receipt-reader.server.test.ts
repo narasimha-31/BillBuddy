@@ -19,13 +19,13 @@ beforeEach(() => {
 });
 
 describe('readReceipt', () => {
-	it('uses GLM when it answers', async () => {
+	it('uses the main model when it answers', async () => {
 		call.mockResolvedValueOnce({ kind: 'store_receipt' });
 		await expect(readReceipt(jpeg, null)).resolves.toEqual({ kind: 'store_receipt' });
 		expect(roles()).toEqual(['vision']);
 	});
 
-	it('gives the backup model one try when GLM is down or slow', async () => {
+	it('gives the backup model one try when the main model is down or slow', async () => {
 		call.mockRejectedValueOnce(new AiUnavailable('provider timed out')).mockResolvedValueOnce({ kind: 'store_receipt' });
 		await expect(readReceipt(jpeg, null)).resolves.toEqual({ kind: 'store_receipt' });
 		expect(roles()).toEqual(['vision', 'visionBackup']);
@@ -49,7 +49,7 @@ describe('readReceipt', () => {
 		expect(roles()).toEqual(['vision']);
 	});
 
-	it('goes straight to the backup while GLM keeps failing', async () => {
+	it('goes straight to the backup while the main model keeps failing', async () => {
 		down.mockResolvedValue(true);
 		call.mockResolvedValueOnce({ kind: 'store_receipt' });
 		await readReceipt(jpeg, null);

@@ -1,8 +1,9 @@
 // Exact Token Factory ids, catalog prices (USD per 1M tokens) and how long to wait for an answer.
-// GLM normally reads a receipt in 3 to 9 seconds, so 20 seconds means it is down or overloaded
-// and the backup gets its turn.
+// Qwen reads a receipt in about 5 seconds, so 30 seconds means it is down and the backup gets its turn.
 export const MODELS = {
-	vision: { id: 'zai-org/GLM-5.3-Flash', input: 0.15, output: 0.5, seconds: 20 },
+	// Qwen over DeepSeek and GLM: on real crumpled receipts it got every name and amount right
+	// where DeepSeek shifted every amount by a line and invented items. GLM was down for hours.
+	vision: { id: 'Qwen/Qwen3.8-27B', input: 0.45, output: 3, seconds: 30 },
 	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 45 },
 	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
 	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
@@ -11,7 +12,7 @@ export const MODELS = {
 
 export type ModelRole = keyof typeof MODELS;
 
-// 50 cents a day across everyone: about 300 receipts, and a hard ceiling on the credits
+// 50 cents a day across everyone: about 100 receipts, and a hard ceiling on the credits
 export const DAILY_CAP_MICROS = 500_000;
 
 // a price per 1M tokens times tokens is exactly millionths of a dollar; round up so we never undercount
@@ -20,9 +21,9 @@ export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; com
 	return Math.ceil((usage.prompt_tokens ?? 0) * input + (usage.completion_tokens ?? 0) * output);
 }
 
-// 2 cents a day per person, about 12 receipts. Counted from the call log, which people
+// 5 cents a day per person, enough for the 10 receipts a day the database allows. Counted from the call log, which people
 // cannot touch, so deleting receipts and adding them again never buys more reads.
-export const USER_DAILY_CAP_MICROS = 20_000;
+export const USER_DAILY_CAP_MICROS = 50_000;
 
 export function overDailyCap(spentTodayMicros: number) {
 	return spentTodayMicros >= DAILY_CAP_MICROS;
