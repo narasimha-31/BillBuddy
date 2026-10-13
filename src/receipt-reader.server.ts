@@ -21,10 +21,11 @@ const schema = {
 					quantity: nullable('number'),
 					unit: { type: ['string', 'null'], enum: ['ea', 'lb', 'oz', 'kg', 'g', 'gal', 'l', 'ct', null] },
 					unit_price: nullable('number'),
+					unit_price_for: { ...nullable('number'), description: 'how many units the unit_price buys, e.g. 4 for "4/0.99"; null for a price per one' },
 					total: { ...nullable('number'), description: 'the line amount exactly as printed, or null if none is printed' },
 					discount: { type: 'boolean' }
 				},
-				required: ['raw', 'quantity', 'unit', 'unit_price', 'total', 'discount'],
+				required: ['raw', 'quantity', 'unit', 'unit_price', 'unit_price_for', 'total', 'discount'],
 				additionalProperties: false
 			}
 		},
@@ -47,9 +48,10 @@ Rules:
 - handwritten: true only when the item names and prices themselves are written by hand, like a handwritten bill. A printed or screen receipt is never handwritten, even if it is faded, crumpled, photographed at an angle, or has a signature, pen marks, a circled total or a note written on it.
 - Copy every number exactly as printed. Never add, multiply, total, round or correct anything. If a number is not printed, use null.
 - lines: one entry per purchased item or discount, in printed order. raw is the item text exactly as printed, including abbreviations. total is the printed line amount in dollars, or null if no amount is printed. Discounts, coupons and savings: discount true and total as a positive number. Delivery fees, service fees, tips, bag fees and other order charges listed after the subtotal are not lines; leave them out.
-- quantity, unit and unit_price only when printed (for example "2.10 lb @ 0.56/lb").
+- quantity, unit and unit_price only when printed (for example "2.10 lb @ 0.56/lb"). A multi-buy price like "8 @ 4/0.99" means 8 items at 4 for 0.99: quantity 8, unit_price 0.99, unit_price_for 4. For a price per one item or per pound, unit_price_for is null.
 - Never output payment or identity details: card numbers or digits, card type, approval or auth codes, cashier names, loyalty or member numbers, cash tendered, change.
-- subtotal, tax and total as printed, in dollars. purchase_date as YYYY-MM-DD. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
+- total is the amount the shopper owed: the line labelled TOTAL, BALANCE, BALANCE DUE or AMOUNT DUE. Never use cash given, an amount charged to a card, or change as the total. subtotal only from a line labelled SUBTOTAL; if none is printed, subtotal is null. tax as printed, or null.
+- subtotal, tax and total in dollars. purchase_date as YYYY-MM-DD. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
 
 Return only the JSON object described by the schema:
 ${JSON.stringify(schema)}`;
