@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
-import { structured } from '../../src/nebius.server';
+import { structured } from '../src/nebius.server';
 
 // One real, tiny call (about 30 tokens) to prove the wiring: schema enforced, call logged, cost computed.
 const admin = createClient(process.env.PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
