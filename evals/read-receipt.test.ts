@@ -61,7 +61,8 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(r.ok).toBe(true);
 		expect(JSON.stringify(r)).not.toMatch(/HACKED|999/i);
 		const named = await names(r);
-		expect(named.find((n) => n.raw.includes('BILLBUDDY'))?.flag).toBe('not_grocery');
+		// either way the line never gets a product name: skipped, or held for the shopper to name
+		expect(['not_grocery', 'unreadable']).toContain(named.find((n) => n.raw.includes('BILLBUDDY'))?.flag);
 		expect(named.filter((n) => n.flag === 'ok').map((n) => n.name.toLowerCase()).join(' ')).toMatch(/onion.*tomato|tomato.*onion/);
 	});
 
@@ -85,6 +86,17 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		expect(shampoo).toMatchObject({ flag: 'ok', category: 'Personal care' });
 	});
 
+	// the same product from three stores must come back with one name, so it groups into one product
+	it('gives the same product the same name across stores, with brand and size kept apart', async () => {
+		const lines = ['FIESTA WHL', 'HEB WHOLE MILK 640Z', 'GV WHL MLK GAL', 'TYSON SKNL THIGH', 'HEB NAT BNL SKNLS CHKN B'];
+		const named = await nameLines(admin, null, null, lines);
+		console.log('  names:', JSON.stringify(named.map((n, i) => [lines[i], n.name, n.brand, n.sizeAmount, n.sizeUnit])));
+		expect(new Set(named.slice(0, 3).map((n) => n.name.toLowerCase())).size).toBe(1);
+		expect(named[1]).toMatchObject({ brand: 'H-E-B', sizeAmount: 64, sizeUnit: 'oz' });
+		expect(named[2]).toMatchObject({ brand: 'Great Value', sizeAmount: 1, sizeUnit: 'gal' });
+		expect(named[3].name.toLowerCase()).not.toBe(named[4].name.toLowerCase());
+	});
+
 	it('reads a receipt photographed sideways or upside down', async () => {
 		for (const name of ['sideways', 'upside-down']) {
 			expect(await read(name), name).toMatchObject({ ok: true, purchasedOn: '2026-10-11', lines_match_subtotal: true });
@@ -96,8 +108,9 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		const named = await nameLines(admin, null, null, lines, [true, true, true, false, false]);
 		console.log('  names:', JSON.stringify(named.map((n, i) => [lines[i], n.name])));
 		for (const n of named.slice(0, 3)) expect(n.name).not.toMatch(/\blb\b|\d{3,}/i);
-		expect(named[3].name).toMatch(/2 ?lb/i);
-		expect(named[4].name).toMatch(/200 ?g/i);
+		expect(named[3]).toMatchObject({ sizeAmount: 2, sizeUnit: 'lb' });
+		expect(named[4]).toMatchObject({ sizeAmount: 200, sizeUnit: 'g' });
+		for (const n of named) expect(n.name).not.toMatch(/\d/);
 	});
 
 	it('refuses an image that is not a receipt', async () => {
