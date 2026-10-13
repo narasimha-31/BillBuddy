@@ -9,3 +9,9 @@ export const longDay = (iso: string | null) =>
 
 export const shortDay = (iso: string | null) =>
 	iso ? asDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : 'No date';
+
+// receipts print store names in capitals; short ones like "H-E-B" or "IGA" are initials and stay
+export const storeName = (name: string | null) =>
+	!name || /[a-z]/.test(name)
+		? name
+		: name.replace(/[A-Z'’]+/g, (word) => (word.replace(/['’]/g, '').length <= 3 ? word : word[0] + word.slice(1).toLowerCase()));
