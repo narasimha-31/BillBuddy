@@ -1,145 +1,170 @@
 <script lang="ts">
-	import { longDay as day, money } from '../../../format';
+	import { longDay as day, money, storeName } from '../../../format';
+	import AppShell from '../../AppShell.svelte';
 
 	let { data, form } = $props();
 
 	const channels: Record<string, string> = { in_store: 'In store', delivery: 'Delivery', pickup: 'Pickup', unknown: '' };
 
 	const r = $derived(data.receipt);
+	const store = $derived(storeName(r.store) ?? 'Receipt');
 	const allGood = $derived(data.math.lines_match_subtotal && data.math.totals_match !== false && !data.items.some((i) => i.issue));
 	const subtotalPlusTax = $derived((r.subtotal_cents ?? 0) + (r.tax_cents ?? 0));
 </script>
 
 <svelte:head>
-	<title>{r.store ?? 'Receipt'} · BillBuddy</title>
+	<title>{store} · BillBuddy</title>
 </svelte:head>
 
-<div class="shell">
-	<a href="/receipts" class="back">Back to receipts</a>
+<AppShell firstName={data.firstName}>
+	<main>
+		<a href="/receipts" class="back">All receipts</a>
 
-	<header class="summary">
-		<div>
-			<h1>{r.store ?? 'Receipt'}</h1>
-			<p class="meta">{day(r.purchased_on)}{channels[r.channel ?? ''] ? ` · ${channels[r.channel ?? '']}` : ''}</p>
-		</div>
-		{#if r.total_cents !== null}<p class="total">{money(r.total_cents)}</p>{/if}
-	</header>
+		<div class="layout">
+			<section class="summary" aria-labelledby="store">
+				<h1 id="store">{store}</h1>
+				<p class="meta">{day(r.purchased_on)}{channels[r.channel ?? ''] ? ` · ${channels[r.channel ?? '']}` : ''}</p>
+				{#if r.total_cents !== null}<p class="total">{money(r.total_cents)}</p>{/if}
 
-	<div class="checks">
-		{#if allGood}
-			<p class="good">Everything adds up.</p>
-		{:else}
-			{#if data.math.expected === null}
-				<p class="warn">We couldn't see the subtotal or total in the photo, so we can't double-check the items.</p>
-			{:else if !data.math.lines_match_subtotal}
-				<p class="warn">
-					The items add up to {money(data.math.sum)}, but {r.subtotal_cents === null
-						? `the total minus tax is ${money(data.math.expected)}`
-						: `the receipt says ${money(data.math.expected)}`}. Check the lines below.
-				</p>
-			{/if}
-			{#if data.math.totals_match === false}
-				<p class="warn">Subtotal plus tax is {money(subtotalPlusTax)}, but the total says {money(r.total_cents)}.</p>
-			{/if}
-			{#if data.items.some((i) => i.issue)}
-				<p class="warn">Some lines need a look. They're marked below.</p>
-			{/if}
-		{/if}
-		{#if r.skipped_lines}
-			<p class="note">{r.skipped_lines} {r.skipped_lines === 1 ? 'line was' : 'lines were'} skipped because {r.skipped_lines === 1 ? "it wasn't" : "they weren't"} a grocery item.</p>
-		{/if}
-	</div>
-
-	{#if form?.problem}<p class="error" role="alert">{form.problem}</p>{/if}
-
-	<form method="POST" action="?/confirm" id="confirm">
-		<ul class="lines">
-			{#each data.items as item (item.id)}
-				<li class:flagged={item.issue}>
-					<p class="printed">{item.raw_text}</p>
-					{#if item.kind === 'discount'}
-						<div class="row">
-							<span class="savings">Savings</span>
-							<span class="price">{money(item.total_cents)}</span>
-						</div>
+				<div class="checks">
+					{#if allGood}
+						<p class="good">Everything adds up.</p>
 					{:else}
-						<div class="row">
-							<input
-								name="name_{item.id}"
-								value={item.name ?? ''}
-								placeholder="What is this item?"
-								aria-label="Name for {item.raw_text}"
-								maxlength="120"
-								required
-							/>
-							<span class="price">{money(item.total_cents)}</span>
-						</div>
-						<div class="row small">
-							<select name="category_{item.id}" aria-label="Category for {item.raw_text}">
-								{#each data.categories as category (category)}
-									<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
-								{/each}
-							</select>
-							<span class="amount">
-								{#if item.unit === 'lb' && item.unit_price_cents !== null}
-									{item.quantity} lb × {money(item.unit_price_cents)}/lb
-								{:else if item.quantity !== 1}
-									{item.quantity} {item.unit}
-								{/if}
-							</span>
-						</div>
-						{#if item.issue === 'line_math'}
-							<p class="issue">{item.unit === 'ea' ? 'The quantity' : 'The weight'} times the price doesn't match the amount printed for this line.</p>
-						{:else if item.issue === 'unreadable'}
-							<p class="issue">We couldn't tell what this is. Add a name and we'll remember it next time.</p>
+						{#if data.math.expected === null}
+							<p class="warn">The subtotal and total weren't in the photo, so the items can't be checked against them.</p>
+						{:else if !data.math.lines_match_subtotal}
+							<p class="warn">
+								The items add up to {money(data.math.sum)}, but {r.subtotal_cents === null
+									? `the total minus tax is ${money(data.math.expected)}`
+									: `the receipt says ${money(data.math.expected)}`}.
+							</p>
 						{/if}
-						{#if item.computed}
-							<p class="hint">No amount was printed, so we worked it out from the weight and price.</p>
+						{#if data.math.totals_match === false}
+							<p class="warn">Subtotal plus tax is {money(subtotalPlusTax)}, but the total says {money(r.total_cents)}.</p>
+						{/if}
+						{#if data.items.some((i) => i.issue)}
+							<p class="warn">The marked lines don't add up on their own.</p>
 						{/if}
 					{/if}
-				</li>
-			{/each}
-		</ul>
-	</form>
+					{#if r.skipped_lines}
+						<p class="note">
+							{r.skipped_lines}
+							{r.skipped_lines === 1 ? 'line was' : 'lines were'} left out because {r.skipped_lines === 1 ? "it wasn't" : "they weren't"} a grocery item.
+						</p>
+					{/if}
+				</div>
 
-	<div class="actions">
-		<button form="confirm" class="primary">Looks right</button>
-		<form method="POST" action="?/delete">
-			<button class="quiet" onclick={(e) => !confirm('Delete this receipt? This cannot be undone.') && e.preventDefault()}>
-				Delete receipt
-			</button>
-		</form>
-	</div>
-</div>
+				{#if form?.problem}<p class="error" role="alert">{form.problem}</p>{/if}
+
+				<div class="actions">
+					<button form="confirm" class="primary">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
+					<form method="POST" action="?/delete">
+						<button class="quiet" onclick={(e) => !confirm('Delete this receipt? This cannot be undone.') && e.preventDefault()}>
+							Delete receipt
+						</button>
+					</form>
+				</div>
+			</section>
+
+			<div class="paper-shadow">
+				<form method="POST" action="?/confirm" id="confirm" class="receipt torn">
+					<p class="hint">Tap a name or aisle to change it. BillBuddy uses your names from then on.</p>
+					<ul class="lines">
+						{#each data.items as item (item.id)}
+							<li class:flagged={item.issue}>
+								<p class="printed">{item.raw_text}</p>
+								{#if item.kind === 'discount'}
+									<div class="row">
+										<span class="savings">Savings</span>
+										<span class="price">{money(item.total_cents)}</span>
+									</div>
+								{:else}
+									<div class="row">
+										<input
+											name="name_{item.id}"
+											value={item.name ?? ''}
+											placeholder={item.raw_text}
+											aria-label="Name for {item.raw_text}"
+											maxlength="120"
+										/>
+										<span class="price">{money(item.total_cents)}</span>
+									</div>
+									<div class="row small">
+										<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}">
+											{#each data.categories as category (category)}
+												<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
+											{/each}
+										</select>
+										<span class="amount">
+											{#if item.unit === 'lb' && item.unit_price_cents !== null}
+												{item.quantity} lb × {money(item.unit_price_cents)}/lb
+											{:else if item.quantity !== 1}
+												{item.quantity} {item.unit}
+											{/if}
+										</span>
+									</div>
+									{#if item.issue === 'line_math'}
+										<p class="issue">{item.unit === 'ea' ? 'The count' : 'The weight'} times the price doesn't match the amount printed.</p>
+									{/if}
+									{#if item.computed}
+										<p class="worked">No amount was printed, so it was worked out from the weight and price.</p>
+									{/if}
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					{#if r.subtotal_cents !== null || r.tax_cents !== null}
+						<dl class="sums">
+							{#if r.subtotal_cents !== null}<dt>Subtotal</dt><dd>{money(r.subtotal_cents)}</dd>{/if}
+							{#if r.tax_cents !== null}<dt>Tax</dt><dd>{money(r.tax_cents)}</dd>{/if}
+							{#if r.total_cents !== null}<dt class="grand">Total</dt><dd class="grand">{money(r.total_cents)}</dd>{/if}
+						</dl>
+					{/if}
+				</form>
+			</div>
+		</div>
+	</main>
+</AppShell>
 
 <style>
-	.shell {
-		margin: 0 auto;
-		max-width: 46rem;
-		padding: 1.5rem 1.25rem 4rem;
-	}
-
-	.back {
-		display: inline-block;
-		border: 1px solid rgb(43 38 32 / 0.3);
-		border-radius: 999px;
-		padding: 0.45rem 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--color-ink);
-	}
-
-	.summary {
-		display: flex;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 1rem;
+	main {
 		margin-top: 1.5rem;
 	}
 
+	.back {
+		font-size: 0.9rem;
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.layout {
+		display: grid;
+		gap: 2rem;
+		margin-top: 1rem;
+	}
+
+	/* the receipt takes the room; the summary and its buttons stay in view beside it */
+	@media (min-width: 960px) {
+		.layout {
+			grid-template-columns: minmax(0, 40rem) minmax(18rem, 24rem);
+			align-items: start;
+			gap: 3rem;
+		}
+
+		.summary {
+			position: sticky;
+			top: 1.5rem;
+			order: 2;
+		}
+	}
+
 	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: clamp(1.9rem, 3vw, 2.4rem);
+		font-weight: 650;
+		font-synthesis: none;
+		font-variation-settings: 'SOFT' 100;
 		color: var(--color-ink);
 	}
 
@@ -149,67 +174,136 @@
 	}
 
 	.total {
+		margin-top: 0.75rem;
 		font-family: var(--font-mono);
-		font-size: 1.75rem;
+		font-size: 2.25rem;
 		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 		color: var(--color-ink);
 	}
 
 	.checks {
 		display: grid;
 		gap: 0.5rem;
-		margin-top: 1.25rem;
+		margin-top: 1rem;
 	}
 
 	.checks p {
-		border-radius: 0.75rem;
-		padding: 0.75rem 1rem;
 		font-size: 0.95rem;
 	}
 
 	.good {
-		background: rgb(71 106 80 / 0.15);
-		color: var(--color-accent);
 		font-weight: 600;
+		color: var(--color-accent);
 	}
 
 	.warn {
-		background: rgb(253 251 245 / 0.65);
+		border-left: 3px solid var(--color-up);
+		padding-left: 0.75rem;
 		color: var(--color-ink);
 	}
 
 	.note {
-		background: transparent;
 		color: var(--color-muted);
 	}
 
 	.error {
 		margin-top: 1rem;
-		border-radius: 0.75rem;
-		background: rgb(253 251 245 / 0.8);
-		padding: 0.75rem 1rem;
-		color: var(--color-up);
 		font-weight: 600;
+		color: var(--color-up);
 	}
 
-	.lines {
-		display: grid;
-		gap: 0.6rem;
+	.actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
 		margin-top: 1.5rem;
 	}
 
-	.lines li {
-		border-radius: 0.875rem;
+	/* one column: summary, then the receipt, then the buttons, which stay in reach on long receipts */
+	@media (max-width: 959px) {
+		.layout {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.summary {
+			display: contents;
+		}
+
+		.paper-shadow {
+			order: 2;
+		}
+
+		.actions {
+			position: sticky;
+			bottom: 0;
+			z-index: 5;
+			order: 3;
+			border-top: 1px solid var(--color-line);
+			background: var(--color-bg);
+			padding: 0.85rem 0;
+		}
+	}
+
+	/* above the tab bar on phones */
+	@media (max-width: 640px) {
+		.actions {
+			bottom: calc(3.7rem + env(safe-area-inset-bottom));
+		}
+	}
+
+	.primary {
+		border-radius: 999px;
+		background: var(--color-ink);
+		padding: 0.7rem 1.6rem;
+		font-weight: 600;
+		color: var(--color-receipt);
+	}
+
+	.quiet {
+		font-size: 0.9rem;
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.primary:focus-visible,
+	.quiet:focus-visible,
+	.back:focus-visible {
+		outline: 2px solid var(--color-brand);
+		outline-offset: 2px;
+	}
+
+	.paper-shadow {
+		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.08)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.12));
+	}
+
+	.receipt {
 		background: var(--color-receipt);
-		padding: 0.9rem 1rem;
+		padding: 1.25rem 1.25rem 2rem;
 		color: var(--color-receipt-ink);
-		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+	}
+
+	.hint {
+		font-size: 0.85rem;
+		color: var(--color-receipt-muted);
+	}
+
+	.lines {
+		margin-top: 0.75rem;
+		border-top: 1px dashed var(--color-receipt-line);
+	}
+
+	.lines li {
+		border-bottom: 1px dashed var(--color-receipt-line);
+		padding: 0.75rem 0;
 	}
 
 	.lines li.flagged {
-		box-shadow:
-			0 0 0 2px rgb(148 69 42 / 0.45),
-			0 1px 2px rgb(0 0 0 / 0.06);
+		border-left: 3px solid var(--color-receipt-up);
+		padding-left: 0.75rem;
 	}
 
 	.printed {
@@ -223,7 +317,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
-		margin-top: 0.4rem;
+		margin-top: 0.3rem;
 	}
 
 	.row.small {
@@ -240,37 +334,52 @@
 		color: var(--color-receipt-ink);
 	}
 
+	/* 16px text: iOS Safari zooms the page on any smaller input */
 	input {
 		flex: 1;
-		padding: 0.35rem 0.5rem;
 		margin-left: -0.5rem;
+		padding: 0.3rem 0.5rem;
 		font-size: 1rem;
 		font-weight: 600;
 	}
 
+	input::placeholder {
+		font-family: var(--font-mono);
+		font-weight: 400;
+		color: var(--color-receipt-muted);
+	}
+
 	select {
-		padding: 0.2rem 0.35rem;
 		margin-left: -0.35rem;
+		padding: 0.2rem 0.35rem;
 		font-size: 0.85rem;
 		color: var(--color-receipt-muted);
 	}
 
-	input:hover,
-	select:hover {
-		border-color: var(--color-receipt-line);
+	@media (hover: hover) {
+		input:hover,
+		select:hover {
+			border-color: var(--color-receipt-line);
+		}
 	}
 
 	input:focus,
 	select:focus {
 		outline: none;
-		border-color: var(--color-accent);
-		background: rgb(255 255 255 / 0.5);
+		border-color: var(--color-brand);
+		background: var(--color-raised);
+	}
+
+	.price,
+	.amount,
+	.sums dd {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
 
 	.price {
-		font-family: var(--font-mono);
 		font-weight: 600;
-		white-space: nowrap;
 	}
 
 	.savings {
@@ -278,48 +387,28 @@
 		color: var(--color-receipt-down);
 	}
 
-	.amount {
-		font-family: var(--font-mono);
-		white-space: nowrap;
-	}
-
 	.issue {
-		margin-top: 0.5rem;
+		margin-top: 0.4rem;
 		font-size: 0.85rem;
 		color: var(--color-receipt-up);
 	}
 
-	.hint {
-		margin-top: 0.4rem;
+	.worked {
+		margin-top: 0.35rem;
 		font-size: 0.8rem;
 		color: var(--color-receipt-muted);
 	}
 
-	/* stays in reach on long receipts; solid so it never smudges the line underneath */
-	.actions {
-		position: sticky;
-		bottom: 0;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		margin-top: 1.5rem;
-		border-top: 1px dashed var(--color-line);
-		padding: 0.9rem 0 calc(0.9rem + env(safe-area-inset-bottom));
-		background: var(--color-bg);
+	.sums {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 0.3rem 1rem;
+		margin-top: 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.9rem;
 	}
 
-	.primary {
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.75rem 1.75rem;
-		font-weight: 600;
-		color: var(--color-receipt);
-	}
-
-	.quiet {
-		color: var(--color-muted);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+	.sums .grand {
+		font-weight: 700;
 	}
 </style>

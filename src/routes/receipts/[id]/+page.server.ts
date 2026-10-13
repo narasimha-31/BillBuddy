@@ -1,6 +1,7 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { CATEGORIES } from '../../../item-names';
 import { reconcile } from '../../../receipt-check';
+import { firstNameOf } from '../../../session.server';
 import { readEdits } from './review-edits';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -36,7 +37,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		rest.tax_cents,
 		rest.total_cents
 	);
-	return { receipt: { ...rest, store }, items: items.data, math, categories: [...CATEGORIES] };
+	return { firstName: firstNameOf(user), receipt: { ...rest, store }, items: items.data, math, categories: [...CATEGORIES] };
 };
 
 export const actions: Actions = {
