@@ -1,112 +1,145 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { comparisons } from '../store-prices';
+	import { historyOf, itemsBought } from '../../price-history';
+	import { money as cents, shortDay } from '../../format';
+	import PriceHistory from '../PriceHistory.svelte';
+	import { productFor, samplePurchases, sampleReceipts } from './sample-receipts';
 
-	// staples people buy most often come first; with real receipts this becomes the user's own top items
-	const everyday = ['milk', 'eggs', 'bananas', 'whiteBread', 'chicken', 'beef', 'cereal', 'cheddar', 'pasta', 'romaine'];
-	const rank = (key: string) => (everyday.includes(key) ? everyday.indexOf(key) : everyday.length);
-	const all = comparisons().sort((a, b) => rank(a.key) - rank(b.key));
+	const all = itemsBought(samplePurchases);
+	const chains = comparisons();
 	const FIRST = 10;
 
 	let query = $state('');
 	let showAll = $state(false);
-	let selected = $state(all.find((c) => c.key === 'eggs')!);
+	let selected = $state('Large eggs, 12 ct');
 
 	const searching = $derived(query.trim().length > 0);
 	const visible = $derived(
 		searching
-			? all.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()))
+			? all.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
 			: showAll
 				? all
 				: all.slice(0, FIRST)
 	);
-	const highest = $derived(Math.max(...selected.prices.map((p) => p.price), selected.usAverage ?? 0));
-	const per = $derived(selected.unit === 'LB' ? '/lb' : '');
+	const history = $derived(historyOf(samplePurchases, selected)!);
+	const typical = $derived(chains.find((c) => c.key === productFor(selected)) ?? null);
+	const highest = $derived(typical ? Math.max(...typical.prices.map((p) => p.price), typical.usAverage ?? 0) : 1);
+	const per = $derived(typical?.unit === 'LB' ? '/lb' : '');
 	const money = (n: number) => `$${n.toFixed(2)}`;
-	const title = (label: string) => label.charAt(0) + label.slice(1).toLowerCase();
 </script>
 
 <svelte:head>
 	<title>Demo · BillBuddy</title>
 </svelte:head>
 
-<main class="mx-auto max-w-3xl px-5 py-10">
+<main class="mx-auto max-w-6xl px-5 py-10">
 	<a href="/" class="back">Back</a>
 
-	<h1 class="blur-rise mt-8 text-2xl font-semibold text-ink sm:text-3xl">What does it cost where?</h1>
-	<p class="blur-rise mt-2 max-w-xl text-muted" style:--delay="120ms">
-		Pick an item and see its price at seven grocery chains. Once you scan your own receipts, this is
-		where your real prices show up.
-	</p>
+	<div class="layout">
+		<div>
+			<h1 class="blur-rise mt-8 text-2xl font-semibold text-ink sm:text-3xl">What did I pay last time?</h1>
+			<p class="blur-rise mt-2 max-w-xl text-muted" style:--delay="120ms">
+				This is a sample shopper with {sampleReceipts.length} receipts from the last three months. Pick something
+				they buy and see what they paid, where, and how the price moved. Your own receipts work the same way.
+			</p>
 
-	<label class="search blur-rise" style:--delay="220ms">
-		<svg viewBox="0 0 24 24" aria-hidden="true">
-			<circle cx="11" cy="11" r="7" />
-			<path d="m20 20-3.5-3.5" />
-		</svg>
-		<input bind:value={query} type="search" placeholder="Search eggs, milk, chicken" aria-label="Search an item" />
-	</label>
+			<label class="search blur-rise" style:--delay="220ms">
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<circle cx="11" cy="11" r="7" />
+					<path d="m20 20-3.5-3.5" />
+				</svg>
+				<input bind:value={query} type="search" placeholder="Search eggs, milk, chicken" aria-label="Search an item" />
+			</label>
 
-	<div class="chips blur-rise" style:--delay="300ms">
-		{#each visible as item (item.key)}
-			<button class="chip" class:selected={item.key === selected.key} onclick={() => (selected = item)}>
-				{item.label}
-			</button>
-		{:else}
-			<p class="text-sm text-muted">Nothing called "{query}" in the sample yet.</p>
-		{/each}
-		{#if !searching && all.length > FIRST}
-			<button class="chip more" onclick={() => (showAll = !showAll)}>
-				{showAll ? 'Fewer' : `More (${all.length - FIRST})`}
-			</button>
-		{/if}
-	</div>
+			<div class="chips blur-rise" style:--delay="300ms">
+				{#each visible as item (item.name)}
+					<button class="chip" class:selected={item.name === selected} onclick={() => (selected = item.name)}>
+						{item.name}
+					</button>
+				{:else}
+					<p class="text-sm text-muted">They never bought anything called "{query}".</p>
+				{/each}
+				{#if !searching && all.length > FIRST}
+					<button class="chip more" onclick={() => (showAll = !showAll)}>
+						{showAll ? 'Fewer' : `More (${all.length - FIRST})`}
+					</button>
+				{/if}
+			</div>
 
-	{#key selected.key}
-		<section class="card" in:fade={{ duration: 300 }}>
-			<header>
-				<h2>{selected.label}</h2>
-				<span>{selected.unit === 'LB' ? 'per lb' : 'each'}</span>
-			</header>
+			{#key selected}
+				<div class="mt-8" in:fade={{ duration: 300 }}>
+					<PriceHistory {history} />
+				</div>
 
-			<ul class="rows">
-				{#each selected.prices as row, i (row.store)}
-					<li class:cheapest={i === 0}>
-						<span class="store">
-							{row.store}
-							{#if i === 0}<em>cheapest</em>{/if}
-						</span>
-						<span class="track">
-							<span class="bar" style:--size={row.price / highest} style:--delay="{i * 60}ms"></span>
-							{#if selected.usAverage !== null}
-								<span class="average" style:left="{(selected.usAverage / highest) * 100}%"></span>
+				{#if typical}
+					<section class="card" in:fade={{ duration: 300 }}>
+						<header>
+							<h2>Typical price elsewhere</h2>
+							<span>{typical.unit === 'LB' ? 'per lb' : 'each'}</span>
+						</header>
+
+						<ul class="rows">
+							{#each typical.prices as row, i (row.store)}
+								<li class:cheapest={i === 0}>
+									<span class="store">
+										{row.store}
+										{#if i === 0}<em>cheapest</em>{/if}
+									</span>
+									<span class="track">
+										<span class="bar" style:--size={row.price / highest} style:--delay="{i * 60}ms"></span>
+										{#if typical.usAverage !== null}
+											<span class="average" style:left="{(typical.usAverage / highest) * 100}%"></span>
+										{/if}
+									</span>
+									<span class="price">{money(row.price)}</span>
+								</li>
+							{/each}
+						</ul>
+
+						<footer>
+							{#if typical.usAverage !== null}
+								<p class="legend">
+									<span class="tick"></span>
+									US average {money(typical.usAverage)}{per} · BLS, August 2026
+								</p>
 							{/if}
-						</span>
-						<span class="price">{money(row.price)}</span>
+							<p class="note">Typical 2026 shelf prices from store price reports. Real prices vary by city and week.</p>
+						</footer>
+					</section>
+				{/if}
+			{/key}
+		</div>
+
+		<aside class="receipts blur-rise" style:--delay="380ms">
+			<h2 class="font-semibold text-ink">Their receipts</h2>
+			<p class="mt-1 text-sm text-muted">Tap one to see what was printed and the name we gave it.</p>
+			<ul>
+				{#each sampleReceipts as receipt (receipt.id)}
+					<li>
+						<details>
+							<summary>
+								<span>
+									<strong>{receipt.store}</strong>
+									<small>{shortDay(receipt.date)}{receipt.via ? ` · ${receipt.via} delivery` : ''}</small>
+								</span>
+								<span class="total">{cents(receipt.totalCents)}</span>
+							</summary>
+							<ul class="lines">
+								{#each receipt.lines as line (line.raw)}
+									<li>
+										<span class="printed">{line.raw}</span>
+										<span class="named">{line.name}</span>
+										<span class="price">{cents(line.totalCents)}</span>
+									</li>
+								{/each}
+							</ul>
+						</details>
 					</li>
 				{/each}
 			</ul>
-
-			<footer>
-				{#if selected.usAverage !== null}
-					<p class="legend">
-						<span class="tick"></span>
-						US average {money(selected.usAverage)}{per} · BLS, August 2026
-					</p>
-				{/if}
-				<p class="takeaway">
-					{selected.prices[0].store} is cheapest. {title(selected.label)} costs {Math.round(
-						((selected.prices.at(-1)!.price - selected.prices[0].price) / selected.prices[0].price) * 100
-					)}% more at {selected.prices.at(-1)!.store}.
-				</p>
-			</footer>
-		</section>
-	{/key}
-
-	<p class="mt-6 text-xs leading-relaxed text-muted">
-		Sample prices are typical 2026 shelf prices from published store price reports and the Bureau of Labor
-		Statistics. Real prices vary by city and week.
-	</p>
+		</aside>
+	</div>
 </main>
 
 <style>
@@ -211,6 +244,11 @@
 
 		.chip.more:hover {
 			background: rgb(44 74 52 / 0.2);
+		}
+
+		details:not([open]) summary:hover {
+			background: rgb(253 251 245 / 0.8);
+			border-radius: 0.75rem;
 		}
 	}
 
@@ -355,9 +393,98 @@
 		height: 0.9rem;
 	}
 
-	.takeaway {
+	.note {
 		margin-top: 0.5rem;
-		color: var(--color-receipt-down);
+		color: var(--color-receipt-muted);
+	}
+
+	.layout {
+		display: grid;
+		gap: 2.5rem;
+	}
+
+	@media (min-width: 1024px) {
+		.layout {
+			grid-template-columns: minmax(0, 1fr) 22rem;
+			align-items: start;
+		}
+
+		.receipts {
+			position: sticky;
+			top: 1.5rem;
+			margin-top: 2rem;
+		}
+	}
+
+	.receipts > ul {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	details {
+		border-radius: 0.75rem;
+		background: rgb(253 251 245 / 0.55);
+	}
+
+	details[open] {
+		background: var(--color-receipt);
+	}
+
+	summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.75rem 1rem;
+		list-style: none;
+		color: var(--color-ink);
+	}
+
+	summary::-webkit-details-marker {
+		display: none;
+	}
+
+	summary small {
+		display: block;
+		font-size: 0.8rem;
+		color: var(--color-muted);
+	}
+
+	.total {
+		font-family: var(--font-mono);
+		font-weight: 700;
+	}
+
+	.lines {
+		display: grid;
+		gap: 0.6rem;
+		border-top: 1px dashed var(--color-receipt-line);
+		padding: 0.75rem 1rem 1rem;
+		color: var(--color-receipt-ink);
+	}
+
+	.lines li {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		column-gap: 0.75rem;
+	}
+
+	.printed {
+		grid-column: 1 / -1;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: var(--color-receipt-muted);
+	}
+
+	.named {
+		font-size: 0.9rem;
+		font-weight: 500;
+	}
+
+	.lines .price {
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
 	}
 
 	@media (max-width: 480px) {
