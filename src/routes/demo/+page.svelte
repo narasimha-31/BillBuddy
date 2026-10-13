@@ -3,25 +3,15 @@
 	import { comparisons } from '../store-prices';
 	import { historyOf, itemsBought } from '../../price-history';
 	import { money as cents, shortDay } from '../../format';
+	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
 	import { productFor, samplePurchases, sampleReceipts } from './sample-receipts';
 
 	const all = itemsBought(samplePurchases);
 	const chains = comparisons();
-	const FIRST = 10;
 
-	let query = $state('');
-	let showAll = $state(false);
 	let selected = $state('Large eggs, 12 ct');
 
-	const searching = $derived(query.trim().length > 0);
-	const visible = $derived(
-		searching
-			? all.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
-			: showAll
-				? all
-				: all.slice(0, FIRST)
-	);
 	const history = $derived(historyOf(samplePurchases, selected)!);
 	const typical = $derived(chains.find((c) => c.key === productFor(selected)) ?? null);
 	const highest = $derived(typical ? Math.max(...typical.prices.map((p) => p.price), typical.usAverage ?? 0) : 1);
@@ -44,27 +34,8 @@
 				they buy and see what they paid, where, and how the price moved. Your own receipts work the same way.
 			</p>
 
-			<label class="search blur-rise" style:--delay="220ms">
-				<svg viewBox="0 0 24 24" aria-hidden="true">
-					<circle cx="11" cy="11" r="7" />
-					<path d="m20 20-3.5-3.5" />
-				</svg>
-				<input bind:value={query} type="search" placeholder="Search eggs, milk, chicken" aria-label="Search an item" />
-			</label>
-
-			<div class="chips blur-rise" style:--delay="300ms">
-				{#each visible as item (item.name)}
-					<button class="chip" class:selected={item.name === selected} onclick={() => (selected = item.name)}>
-						{item.name}
-					</button>
-				{:else}
-					<p class="text-sm text-muted">They never bought anything called "{query}".</p>
-				{/each}
-				{#if !searching && all.length > FIRST}
-					<button class="chip more" onclick={() => (showAll = !showAll)}>
-						{showAll ? 'Fewer' : `More (${all.length - FIRST})`}
-					</button>
-				{/if}
+			<div class="blur-rise" style:--delay="220ms">
+				<ItemPicker items={all} bind:selected />
 			</div>
 
 			{#key selected}
@@ -156,78 +127,6 @@
 			border-color 150ms;
 	}
 
-	.search {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-top: 1.75rem;
-		border: 1px solid rgb(43 38 32 / 0.2);
-		border-radius: 0.875rem;
-		background: var(--color-receipt);
-		padding: 0 1.1rem;
-		box-shadow:
-			0 1px 2px rgb(0 0 0 / 0.06),
-			0 8px 24px -12px rgb(0 0 0 / 0.25);
-		transition:
-			border-color 150ms,
-			box-shadow 150ms;
-	}
-
-	.search:focus-within {
-		border-color: var(--color-accent);
-		box-shadow:
-			0 0 0 3px rgb(44 74 52 / 0.25),
-			0 8px 24px -12px rgb(0 0 0 / 0.25);
-	}
-
-	.search svg {
-		width: 1.25rem;
-		height: 1.25rem;
-		flex: none;
-		fill: none;
-		stroke: var(--color-receipt-muted);
-		stroke-width: 2;
-		stroke-linecap: round;
-	}
-
-	/* 16px text: iOS Safari zooms the page on any smaller input */
-	.search input {
-		flex: 1;
-		min-width: 0;
-		border: 0;
-		background: transparent;
-		padding: 0.95rem 0;
-		font-size: 1rem;
-		color: var(--color-receipt-ink);
-		outline: none;
-	}
-
-	.search input::placeholder {
-		color: var(--color-receipt-muted);
-	}
-
-	.chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 1.25rem;
-	}
-
-	.chip {
-		border: 1px solid rgb(43 38 32 / 0.25);
-		border-radius: 999px;
-		background: rgb(253 251 245 / 0.55);
-		padding: 0.5rem 0.95rem;
-		font: 500 0.75rem/1 var(--font-mono);
-		letter-spacing: 0.02em;
-		color: var(--color-ink);
-		transition:
-			background-color 150ms,
-			border-color 150ms,
-			transform 150ms,
-			box-shadow 150ms;
-	}
-
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
 	@media (hover: hover) {
 		.back:hover {
@@ -235,38 +134,10 @@
 			background: rgb(253 251 245 / 0.5);
 		}
 
-		.chip:hover {
-			border-color: rgb(43 38 32 / 0.55);
-			background: var(--color-receipt);
-			box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
-			transform: translateY(-1px);
-		}
-
-		.chip.more:hover {
-			background: rgb(44 74 52 / 0.2);
-		}
-
 		details:not([open]) summary:hover {
 			background: rgb(253 251 245 / 0.8);
 			border-radius: 0.75rem;
 		}
-	}
-
-	.chip:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
-	}
-
-	.chip.selected {
-		border-color: var(--color-ink);
-		background: var(--color-ink);
-		color: var(--color-receipt);
-	}
-
-	.chip.more {
-		border-style: dashed;
-		background: rgb(44 74 52 / 0.12);
-		color: var(--color-accent);
 	}
 
 	.card {
