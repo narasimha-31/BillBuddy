@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAILY_CAP_MICROS, costMicros, overDailyCap } from './ai-budget';
+import { DAILY_CAP_MICROS, USER_DAILY_CAP_MICROS, costMicros, overDailyCap, overUserCap } from './ai-budget';
 
 describe('costMicros', () => {
 	it('prices input and output tokens separately at the catalog rate', () => {
@@ -21,5 +21,13 @@ describe('overDailyCap', () => {
 	it('stops at the cap, not after it', () => {
 		expect(overDailyCap(DAILY_CAP_MICROS - 1)).toBe(false);
 		expect(overDailyCap(DAILY_CAP_MICROS)).toBe(true);
+	});
+});
+
+describe('overUserCap', () => {
+	it('stops one person well before they could use up the day for everyone', () => {
+		expect(overUserCap(USER_DAILY_CAP_MICROS - 1)).toBe(false);
+		expect(overUserCap(USER_DAILY_CAP_MICROS)).toBe(true);
+		expect(USER_DAILY_CAP_MICROS * 10).toBeLessThanOrEqual(DAILY_CAP_MICROS);
 	});
 });

@@ -18,6 +18,14 @@ export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; com
 	return Math.ceil((usage.prompt_tokens ?? 0) * input + (usage.completion_tokens ?? 0) * output);
 }
 
+// 5 cents a day per person, about 40 to 60 receipts. Counted from the call log, which people
+// cannot touch, so deleting receipts and adding them again never buys more reads.
+export const USER_DAILY_CAP_MICROS = 50_000;
+
 export function overDailyCap(spentTodayMicros: number) {
 	return spentTodayMicros >= DAILY_CAP_MICROS;
+}
+
+export function overUserCap(userSpentTodayMicros: number) {
+	return userSpentTodayMicros >= USER_DAILY_CAP_MICROS;
 }

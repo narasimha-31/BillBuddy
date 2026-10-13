@@ -1,6 +1,6 @@
 import { NEBIUS_API_KEY } from '$env/static/private';
 import { admin } from './admin.server';
-import { MODELS, costMicros, overDailyCap, type ModelRole } from './ai-budget';
+import { MODELS, costMicros, overDailyCap, overUserCap, type ModelRole } from './ai-budget';
 
 const BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
 
@@ -19,12 +19,12 @@ export class AiUnavailable extends Error {
 type Message = { role: 'system' | 'user'; content: string | unknown[] };
 type Request = { role: ModelRole; purpose: string; userId: string | null; messages: Message[]; schema: object; maxTokens?: number };
 
-async function spentTodayMicros() {
-	const startOfDay = new Date();
-	startOfDay.setUTCHours(0, 0, 0, 0);
-	const { data, error } = await admin.from('ai_calls').select('cost_micros').gte('created_at', startOfDay.toISOString());
+// today's spend for everyone, and for this person, summed by the database
+async function spentToday(userId: string | null) {
+	const { data, error } = await admin.rpc('ai_spent_today', { p_user_id: userId });
 	if (error) throw error;
-	return data.reduce((sum, row) => sum + row.cost_micros, 0);
+	const row = (data as { all_micros: number; user_micros: number }[])[0];
+	return { all: Number(row?.all_micros ?? 0), mine: Number(row?.user_micros ?? 0) };
 }
 
 // no answer in time, or no connection at all, counts as the provider being down; a timeout
@@ -47,7 +47,9 @@ async function post(body: object, seconds: number) {
 // One structured call. reasoning_effort "none" matters: with reasoning on, Nemotron ignores
 // response_format and bills the reasoning, so strict JSON (our injection defence) breaks.
 export async function structured<T>({ role, purpose, userId, messages, schema, maxTokens = 2000 }: Request): Promise<T> {
-	if (overDailyCap(await spentTodayMicros())) throw new AiUnavailable('daily AI budget reached', true);
+	const spent = await spentToday(userId);
+	if (overDailyCap(spent.all)) throw new AiUnavailable('daily AI budget reached', true);
+	if (overUserCap(spent.mine)) throw new AiUnavailable('daily AI budget for this person reached', true);
 
 	const body = {
 		model: MODELS[role].id,
