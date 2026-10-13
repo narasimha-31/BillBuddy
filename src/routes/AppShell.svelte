@@ -84,7 +84,8 @@
 	}
 
 	nav a[aria-current='page'] {
-		background: rgb(253 251 245 / 0.55);
+		background: var(--color-receipt);
+		box-shadow: 0 0 0 1px var(--color-line);
 		color: var(--color-ink);
 	}
 
@@ -94,13 +95,35 @@
 		}
 	}
 
-	@media (max-width: 480px) {
+	/* on phones the links move to a bar along the bottom, where the thumb reaches */
+	@media (max-width: 640px) {
+		.shell {
+			padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+		}
+
 		.wordmark {
 			font-size: 1.4rem;
 		}
 
+		.top :global(.account) {
+			margin-left: auto;
+		}
+
+		nav {
+			position: fixed;
+			inset: auto 0 0;
+			z-index: 10;
+			justify-content: space-around;
+			margin: 0;
+			border-top: 1px solid var(--color-line);
+			background: var(--color-raised);
+			padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+		}
+
 		nav a {
-			padding: 0.4rem 0.65rem;
+			flex: 1;
+			text-align: center;
+			padding: 0.6rem 0.5rem;
 		}
 	}
 </style>
