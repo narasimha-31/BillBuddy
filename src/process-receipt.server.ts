@@ -75,7 +75,8 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 			.select('keep_store_name, keep_photos')
 			.eq('user_id', userId)
 			.maybeSingle();
-		const storeId = settings?.keep_store_name && checked.store ? await storeFor(supabase, checked.store) : null;
+		// the store name is kept unless the person turned it off
+		const storeId = settings?.keep_store_name !== false && checked.store ? await storeFor(supabase, checked.store) : null;
 
 		const items = checked.lines.filter((l) => l.kind === 'item');
 		const names = await nameLines(

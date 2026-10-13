@@ -178,9 +178,9 @@ describe('row level security on items, name memory and settings', () => {
 		expect(otherUser.error).toBeNull();
 	});
 
-	it('starts every optional setting switched off and validates the zip code', async () => {
+	it('keeps store names by default, starts the other options off, and validates the zip code', async () => {
 		const fresh = await bob.from('user_settings').insert({}).select().single();
-		expect(fresh.data).toMatchObject({ keep_store_name: false, keep_store_location: false, keep_photos: false });
+		expect(fresh.data).toMatchObject({ keep_store_name: true, keep_store_location: false, keep_photos: false });
 		const badZip = await bob.from('user_settings').update({ zip_code: '1234' }).eq('user_id', fresh.data!.user_id);
 		expect(badZip.error?.code).toBe('23514');
 	});
