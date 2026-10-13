@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { USER_DAILY_CAP_MICROS } from './ai-budget';
 import { AiUnavailable, structured } from './nebius.server';
 
 const spent = vi.hoisted(() => ({ all_micros: 0, user_micros: 0 }));
@@ -49,7 +50,7 @@ describe('structured', () => {
 		vi.stubGlobal('fetch', fetch);
 		spent.all_micros = 1_000_000;
 		await expect(call()).rejects.toMatchObject({ budget: true });
-		Object.assign(spent, { all_micros: 60_000, user_micros: 50_000 });
+		Object.assign(spent, { all_micros: USER_DAILY_CAP_MICROS, user_micros: USER_DAILY_CAP_MICROS });
 		await expect(call()).rejects.toMatchObject({ budget: true, message: expect.stringContaining('person') });
 		expect(fetch).not.toHaveBeenCalled();
 	});
