@@ -129,7 +129,7 @@
 
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
 	@media (hover: hover) {
-		.chip:hover {
+		.chip:not(.selected):hover {
 			border-color: rgb(43 38 32 / 0.55);
 			background: var(--color-receipt);
 			box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
