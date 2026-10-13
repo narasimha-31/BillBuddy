@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
-import { readReceipt } from '../src/receipt-reader.server';
+import { readReceipt, type VisionRole } from '../src/receipt-reader.server';
 import { checkReading, type Checked } from '../src/receipt-check';
 import { nameLines } from '../src/item-names.server';
 
@@ -12,10 +12,12 @@ const admin = createClient(process.env.PUBLIC_SUPABASE_URL!, process.env.SUPABAS
 });
 const started = new Date().toISOString();
 const today = new Date('2026-10-11T12:00:00Z');
+// EVAL_VISION=visionBackup tests the backup model on its own; by default the app's normal order runs
+const roles = process.env.EVAL_VISION ? [process.env.EVAL_VISION as VisionRole] : undefined;
 
 async function read(name: string): Promise<Checked> {
 	const bytes = new Uint8Array(readFileSync(`evals/images/${name}.jpg`));
-	const result = checkReading(await readReceipt(bytes, null), today);
+	const result = checkReading(await readReceipt(bytes, null, roles), today);
 	console.log(`\n${name}:`, JSON.stringify(result));
 	return result;
 }
@@ -31,7 +33,7 @@ async function names(r: Checked) {
 afterAll(async () => {
 	const { data } = await admin
 		.from('ai_calls')
-		.select('input_tokens, output_tokens, cost_micros, duration_ms, ok')
+		.select('model, input_tokens, output_tokens, cost_micros, duration_ms, ok')
 		.in('purpose', ['read_receipt', 'name_items'])
 		.gte('created_at', started);
 	const rows = data ?? [];
