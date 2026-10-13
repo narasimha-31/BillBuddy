@@ -119,6 +119,38 @@ describe('checkReading', () => {
 		]);
 	});
 
+	it('moves only the details that are off, leaving the ones already in place', () => {
+		const read = [
+			line('DUROS HARINA RUEDA', 1.99, { quantity: 1.17, unit: 'lb', unit_price: 1.47 }),
+			line('ROMA TOMATOES', 1.72, { quantity: 1.19, unit: 'lb', unit_price: 2.97 }),
+			line('OKRA', 3.53),
+			line('OPO LONG SQUASH', 3.74, { quantity: 1.25, unit: 'lb', unit_price: 2.99 }),
+			line('WHITE POTATOES', 1.41, { quantity: 1.78, unit: 'lb', unit_price: 0.79 })
+		];
+		expect(realignDetails(read).map((l) => [l.raw, l.quantity, l.unit_price])).toEqual([
+			['DUROS HARINA RUEDA', null, null],
+			['ROMA TOMATOES', 1.17, 1.47],
+			['OKRA', 1.19, 2.97],
+			['OPO LONG SQUASH', 1.25, 2.99],
+			['WHITE POTATOES', 1.78, 0.79]
+		]);
+	});
+
+	it('takes the count from the amount and price when the count was misread', () => {
+		const read = [line('MARUCHAN RAMEN CHILI FLAV', 0.96, { quantity: 8, unit_price: 0.48 }), line('BAD MATH', 1, { quantity: 3, unit_price: 0.45 }), line('BANANAS', 1.5, { quantity: 8, unit: 'lb', unit_price: 0.5 })];
+		const result = checkReading(reading({ lines: read, subtotal: 3.46, total: 3.46 }), today);
+		expect(result.ok && result.lines.map((l) => [l.raw, l.quantity, l.issue])).toEqual([
+			['MARUCHAN RAMEN CHILI FLAV', 2, null],
+			['BAD MATH', 3, 'line_math'],
+			['BANANAS', 8, 'line_math']
+		]);
+	});
+
+	it('never moves a detail onto a line that has its own', () => {
+		const read = [line('A', 1.99, { quantity: 1.17, unit: 'lb', unit_price: 1.47 }), line('B', 1.72, { quantity: 1, unit_price: 1.72 })];
+		expect(realignDetails(read)).toEqual(read);
+	});
+
 	it('leaves details alone when they already fit, or when no single move explains all of them', () => {
 		const fine = [line('BANANAS', 1.18, { quantity: 2.1, unit: 'lb', unit_price: 0.56 }), line('MILK', 3.21)];
 		expect(realignDetails(fine)).toEqual(fine);

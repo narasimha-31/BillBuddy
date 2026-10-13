@@ -100,28 +100,41 @@ function rateCents(l: Pick<ReadLine, 'quantity' | 'unit_price' | 'unit_price_for
 }
 
 // Some stores print "1.17 lb @ 1.47 /lb" above its item (Fiesta), others below it (Walmart),
-// and the model can attach every such line to the wrong neighbour. If moving every detail one
-// line down, or one line up, makes all of them match their amounts while the reading as given
-// does not, the details are moved. Pure cent arithmetic; the model is never asked to do it.
+// and the model can attach such lines to the wrong neighbour, sometimes only a few of them.
+// Each run of neighbouring details that don't match their own amounts is moved one line down,
+// or one line up, when that makes every one of them match and the line it moves onto had no
+// detail of its own. Pure cent arithmetic; the model is never asked to do it.
 export function realignDetails(lines: ReadLine[]): ReadLine[] {
-	const withDetail = lines.map((l, i) => ({ i, rate: rateCents(l) })).filter((d) => d.rate !== null);
-	if (!withDetail.length) return lines;
-	const fits = (rate: number | null, target: ReadLine | undefined) => {
-		const total = target ? cents(target.total) : null;
-		return rate !== null && total !== null && !target!.discount && Math.abs(rate - total) <= 2;
+	const fits = (i: number, target: number) => {
+		const rate = rateCents(lines[i]);
+		const total = lines[target] && !lines[target].discount ? cents(lines[target].total) : null;
+		return rate !== null && total !== null && Math.abs(rate - total) <= 2;
 	};
-	const asRead = withDetail.filter((d) => fits(d.rate, lines[d.i])).length;
-	if (asRead === withDetail.length) return lines;
+	const misfit = (i: number) => rateCents(lines[i]) !== null && !fits(i, i);
+	const result = [...lines];
 
-	for (const shift of [1, -1]) {
-		if (withDetail.every((d) => fits(d.rate, lines[d.i + shift]))) {
-			return lines.map((l, i) => {
-				const source = lines[i - shift];
-				return { ...l, ...(source && rateCents(source) !== null ? detail(source) : noDetail) };
-			});
+	for (let start = 0; start < lines.length; start++) {
+		if (!misfit(start)) continue;
+		let end = start;
+		while (end + 1 < lines.length && misfit(end + 1)) end++;
+		const run = Array.from({ length: end - start + 1 }, (_, k) => start + k);
+
+		for (const shift of [1, -1]) {
+			const receiver = shift === 1 ? end + 1 : start - 1;
+			if (!lines[receiver] || rateCents(lines[receiver]) !== null) continue;
+			if (!run.every((i) => fits(i, i + shift))) continue;
+			for (const i of run) result[i] = { ...result[i], ...noDetail };
+			for (const i of run) result[i + shift] = { ...result[i + shift], ...detail(lines[i]) };
+			break;
 		}
+		start = end;
 	}
-	return lines;
+	return result;
+}
+
+function wholeCount(totalCents: number, priceCents: number) {
+	const count = Math.round(totalCents / priceCents);
+	return count >= 1 && count < 100 && Math.abs(count * priceCents - totalCents) <= 1 ? count : null;
 }
 
 export function checkReading(reading: Reading, today = new Date()): Checked {
@@ -148,15 +161,19 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 		if (amount === null || Math.abs(amount) > 100_000) continue;
 		if (!line.discount && amount < 0) continue;
 
+		// a misread count ("8" for "2"): the amount and the price each are printed, so the count follows
+		const mismatch = printed !== null && fromRate !== null && Math.abs(fromRate - printed) > 2;
+		const counted = mismatch && unit === 'ea' && per === 1 && priceCents ? wholeCount(printed, priceCents) : null;
+
 		lines.push({
 			raw,
-			quantity: printedQuantity ?? 1,
+			quantity: counted ?? printedQuantity ?? 1,
 			unit,
 			unitPriceCents,
 			totalCents: line.discount ? -Math.abs(amount) : amount,
 			kind: line.discount ? 'discount' : 'item',
 			computed: printed === null,
-			issue: printed !== null && fromRate !== null && Math.abs(fromRate - printed) > 2 ? 'line_math' : null
+			issue: mismatch && counted === null ? 'line_math' : null
 		});
 	}
 	if (!lines.some((l) => l.kind === 'item')) return { ok: false, reason: 'no_lines' };
