@@ -49,9 +49,9 @@ describe('itemRows', () => {
 		expect(JSON.stringify(rows)).not.toMatch(/SHITTY|BILLBUDDY/);
 	});
 
-	it('keeps unreadable lines for review without a made-up name', () => {
+	it('keeps a line the model could not name under its receipt text, without asking the shopper', () => {
 		const { rows } = itemRows([line('XQZ 4/', 250)], [named('XQZ 4/', 'unreadable')]);
-		expect(rows[0]).toMatchObject({ name: null, brand: null, category: null, issue: 'unreadable' });
+		expect(rows[0]).toMatchObject({ raw_text: 'XQZ 4/', name: null, brand: null, category: null, issue: null });
 	});
 
 	it('keeps a math issue found by the checks, over an unreadable name', () => {
