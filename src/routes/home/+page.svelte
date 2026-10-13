@@ -4,6 +4,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { money, shortDay, storeName } from '../../format';
 	import AppShell from '../AppShell.svelte';
+	import ReceiptUploader from '../ReceiptUploader.svelte';
 
 	let { data } = $props();
 
@@ -26,11 +27,9 @@
 		<h1>{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
 
 		<div class="board">
-			<a class="add" href="/receipts">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-				<span class="add-title">Add a receipt</span>
-				<span class="add-note">A photo, or send it from your phone. {data.today} of {data.dailyLimit} today.</span>
-			</a>
+			<div class="add">
+				<ReceiptUploader today={data.today} dailyLimit={data.dailyLimit} />
+			</div>
 
 			<section class="month" aria-labelledby="month-title">
 				<h2 id="month-title">Spent in {monthName}</h2>
@@ -141,57 +140,20 @@
 		color: var(--color-muted);
 	}
 
-	.add {
-		display: grid;
-		justify-items: center;
-		align-content: center;
-		gap: 0.4rem;
-		min-height: 11rem;
-		border: 1.5px dashed var(--color-line);
-		border-radius: 1rem;
-		background: var(--color-raised);
-		padding: 1.5rem;
-		text-align: center;
-		transition: border-color 150ms, background-color 150ms;
-	}
-
-	@media (hover: hover) {
-		.add:hover {
-			border-color: var(--color-brand);
-			background: var(--color-receipt);
-		}
-	}
-
-	.add:focus-visible,
 	li a:focus-visible,
 	.heading a:focus-visible {
 		outline: 2px solid var(--color-brand);
 		outline-offset: 2px;
 	}
 
-	.add svg {
-		width: 2rem;
-		height: 2rem;
-		fill: none;
-		stroke: var(--color-ink);
-		stroke-width: 1.5;
-		stroke-linejoin: round;
-	}
-
-	.add-title {
-		font-size: 1.15rem;
-		font-weight: 600;
-		color: var(--color-ink);
-	}
-
-	.add-note {
-		max-width: 26rem;
-		font-size: 0.9rem;
-		color: var(--color-muted);
-	}
-
 	.month {
-		align-self: center;
+		align-self: start;
+	}
+
+	@media (min-width: 900px) {
+		.month {
+			padding-top: 2.5rem;
+		}
 	}
 
 	.spent {

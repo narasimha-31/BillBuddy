@@ -67,6 +67,14 @@ body {
 	-webkit-font-smoothing: antialiased;
 }
 
+/* torn bottom edge, like paper pulled across the tear bar; the mask clips box-shadow, so shadows go on a wrapper */
+.torn {
+	--tear: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% 100% / 12px 7px repeat-x,
+		linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat;
+	-webkit-mask: var(--tear);
+	mask: var(--tear);
+}
+
 /* one-time entrance motion. Only opacity, transform, filter and clip-path change,
    so nothing around them moves while they play */
 .blur-rise {

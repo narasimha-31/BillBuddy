@@ -1,18 +1,14 @@
 <script lang="ts">
-	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import AppShell from '../AppShell.svelte';
-	import { preparePhoto } from './prepare-photo';
+	import ReceiptUploader from '../ReceiptUploader.svelte';
+	import { post, problems, readReceipt } from './reading';
 
 	let { data } = $props();
 
-	type State = 'working' | 'reading' | 'saved' | 'review' | 'duplicate' | 'failed' | 'paused';
-	type Upload = { id: number; name: string; state: State; note?: string };
-	let uploads = $state<Upload[]>([]);
+	let uploader: ReceiptUploader;
 	let reading = $state<string[]>([]);
-	let dragging = $state(false);
-	let picker: HTMLInputElement;
-	let nextId = 0;
+	const busy = (id: string, on: boolean) => (reading = on ? [...reading, id] : reading.filter((r) => r !== id));
 
 	// receipts sent from a phone arrive as pending rows; this page checks for them and reads each once
 	let phone = $state<{ qr: string; expiresAt: string; since: string } | null>(null);
@@ -42,7 +38,7 @@
 			for (const r of arrived) {
 				handled.add(r.id);
 				fromPhone++;
-				await read(r.id);
+				await uploader.readArrived(r.id);
 			}
 			if (arrived.length) await invalidateAll();
 			// one last check after the code expires, then stop
@@ -64,86 +60,15 @@
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
 
-	const problems: Record<string, string> = {
-		not_a_receipt: "that doesn't look like a receipt",
-		handwritten: "handwritten bills can't be read",
-		no_lines: 'no items found on it',
-		bad_photo: "the photo couldn't be opened"
-	};
-
-	async function post(action: string, body: FormData) {
-		const response = await fetch(`?/${action}`, { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } });
-		return deserialize(await response.text());
-	}
-
-	// reads a receipt that is already uploaded; returns the state to show for it
-	async function read(id: string): Promise<{ state: State; note?: string }> {
-		reading = [...reading, id];
-		try {
-			const body = new FormData();
-			body.set('id', id);
-			const result = await post('process', body);
-			if (result.type !== 'success' || !result.data) return { state: 'failed', note: 'try again in a moment' };
-			const outcome = result.data as { status: string; problem?: string; skipped?: number };
-			if (outcome.status === 'saved') return { state: 'saved', note: outcome.skipped ? `${outcome.skipped} line skipped` : undefined };
-			if (outcome.status === 'review') return { state: 'review' };
-			if (outcome.status === 'paused') return { state: 'paused' };
-			if (outcome.status === 'busy') return { state: 'reading', note: 'already being read' };
-			return { state: 'failed', note: problems[outcome.problem ?? ''] ?? 'try again' };
-		} finally {
-			reading = reading.filter((r) => r !== id);
-		}
-	}
-
-	async function add(files: Iterable<File>) {
-		const batch = [...files].filter((f) => f.type.startsWith('image/'));
-		for (const file of batch) {
-			const upload: Upload = { id: nextId++, name: file.name, state: 'working' };
-			uploads.unshift(upload);
-			const entry = uploads.find((u) => u.id === upload.id)!;
-			try {
-				const { jpeg, hash } = await preparePhoto(file);
-				const body = new FormData();
-				body.set('photo', jpeg, 'receipt.jpg');
-				body.set('hash', hash);
-				const result = await post('upload', body);
-				if (result.type === 'success' && result.data?.id) {
-					handled.add(String(result.data.id));
-					entry.state = 'reading';
-					Object.assign(entry, await read(String(result.data.id)));
-				} else if (result.type === 'failure' && result.status === 409) entry.state = 'duplicate';
-				else {
-					entry.state = 'failed';
-					entry.note = result.type === 'failure' ? String(result.data?.problem ?? '') : 'try again';
-				}
-			} catch {
-				entry.state = 'failed';
-				entry.note = 'this photo format could not be opened';
-			}
-		}
-		if (batch.length) await invalidateAll();
-	}
-
 	async function readAgain(id: string) {
-		await read(id);
+		busy(id, true);
+		try {
+			await readReceipt(id);
+		} finally {
+			busy(id, false);
+		}
 		await invalidateAll();
 	}
-
-	function dropped(event: DragEvent) {
-		event.preventDefault();
-		dragging = false;
-		if (event.dataTransfer) add(event.dataTransfer.files);
-	}
-
-	const statusText: Record<State, string> = {
-		working: 'getting it ready',
-		reading: 'reading',
-		saved: 'read',
-		review: 'read, check a few lines',
-		duplicate: 'already added',
-		failed: "couldn't read",
-		paused: "reading isn't available right now, it's saved in your list to try again"
-	};
 </script>
 
 <svelte:head>
@@ -156,54 +81,8 @@
 		<main>
 			<h1>Receipts</h1>
 
-			<button
-				type="button"
-				class="drop"
-				class:dragging
-				onclick={() => picker.click()}
-				ondragover={(e) => {
-					e.preventDefault();
-					dragging = true;
-				}}
-				ondragleave={() => (dragging = false)}
-				ondrop={dropped}
-			>
-				<svg viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M4 7h3l2-3h6l2 3h3v13H4z" />
-					<circle cx="12" cy="13" r="4" />
-				</svg>
-				<strong class="for-mouse">Drop receipt photos here</strong>
-				<strong class="for-touch">Add a receipt</strong>
-				<span class="pill for-mouse">Choose photos</span>
-				<span class="pill for-touch">Take or choose a photo</span>
-			</button>
-			<input
-				bind:this={picker}
-				type="file"
-				accept="image/*"
-				multiple
-				hidden
-				onchange={(e) => {
-					add(e.currentTarget.files ?? []);
-					e.currentTarget.value = '';
-				}}
-			/>
-
-			<p class="limits">
-				{data.today} of {data.dailyLimit} receipts today · photos up to 5 MB
-			</p>
-
 			<div class="scroll">
-				{#if uploads.length}
-					<ul class="uploads" aria-live="polite">
-						{#each uploads as upload (upload.id)}
-							<li class={upload.state}>
-								<span class="name">{upload.name}</span>
-								<span>{statusText[upload.state]}{upload.note ? `: ${upload.note}` : ''}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<ReceiptUploader bind:this={uploader} today={data.today} dailyLimit={data.dailyLimit} onreading={busy} />
 
 				{#if review.length}
 					<section>
@@ -250,7 +129,7 @@
 									<span class="paper-icon" aria-hidden="true"></span>
 									<span>
 										Receipt photo
-										<span class="status reason">{problems[receipt.problem ?? ''] ?? 'unreadable'}</span>
+										<span class="status reason">{problems[receipt.problem ?? ''] ?? "Couldn't be read."}</span>
 									</span>
 									<form method="POST" action="/receipts/{receipt.id}?/delete">
 										<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
@@ -261,7 +140,7 @@
 					</section>
 				{/if}
 
-				{#if !data.receipts.length && !uploads.length}
+				{#if !data.receipts.length}
 					<p class="empty">No receipts yet. Your first one takes a few seconds.</p>
 				{/if}
 
@@ -351,42 +230,6 @@
 		color: var(--color-ink);
 	}
 
-	.drop {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.75rem;
-		width: 100%;
-		margin-top: 1.25rem;
-		border: 2px dashed rgb(43 38 32 / 0.3);
-		border-radius: 1rem;
-		background: rgb(253 251 245 / 0.55);
-		padding: 3rem 1.5rem;
-		color: var(--color-ink);
-		transition:
-			background-color 150ms,
-			border-color 150ms;
-	}
-
-	.drop.dragging {
-		border-color: var(--color-accent);
-		background: rgb(253 251 245 / 0.85);
-	}
-
-	.drop svg {
-		width: 2.5rem;
-		height: 2.5rem;
-		fill: none;
-		stroke: var(--color-muted);
-		stroke-width: 1.5;
-		stroke-linejoin: round;
-	}
-
-	.drop strong {
-		font-size: 1.1rem;
-		font-weight: 600;
-	}
-
 	.pill {
 		border-radius: 999px;
 		background: var(--color-ink);
@@ -396,53 +239,11 @@
 		color: var(--color-receipt);
 	}
 
-	.for-touch {
-		display: none;
-	}
-
+	/* a phone can't scan a code shown on itself */
 	@media (pointer: coarse) {
-		.for-touch {
-			display: inline;
-		}
 		.for-mouse {
 			display: none;
 		}
-	}
-
-	@media (hover: hover) {
-		.drop:hover {
-			border-color: rgb(43 38 32 / 0.55);
-			background: rgb(253 251 245 / 0.8);
-		}
-	}
-
-	.uploads {
-		display: grid;
-		gap: 0.4rem;
-		margin-top: 1rem;
-		font-size: 0.875rem;
-	}
-
-	.uploads li {
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		border-radius: 0.5rem;
-		background: rgb(253 251 245 / 0.5);
-		padding: 0.6rem 0.9rem;
-		color: var(--color-muted);
-	}
-
-	.uploads .name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		color: var(--color-ink);
-	}
-
-
-	.uploads .failed {
-		color: var(--color-up);
 	}
 
 	section {
@@ -502,12 +303,6 @@
 		color: var(--color-receipt-muted);
 	}
 
-	.limits {
-		margin-top: 0.6rem;
-		font-size: 0.8rem;
-		color: var(--color-muted);
-	}
-
 	.reason {
 		display: block;
 		margin-top: 0.15rem;
@@ -527,11 +322,6 @@
 		font-size: 0.8rem;
 		font-weight: 500;
 		color: var(--color-receipt);
-	}
-
-	.uploads .saved,
-	.uploads .review {
-		color: var(--color-accent);
 	}
 
 	.empty {
@@ -609,17 +399,18 @@
 		color: var(--color-accent);
 	}
 
+	.scroll {
+		margin-top: 1.25rem;
+	}
+
 	@media (min-width: 1024px) {
 		.columns {
 			grid-template-columns: minmax(0, 1fr) 22rem;
 			gap: 3rem;
 		}
-		.drop {
-			padding: 3rem 2rem;
-		}
 	}
 
-	/* the heading, drop zone and limits stay put and only the receipt lists scroll; the side cards are sized to fit */
+	/* the heading stays put and the drop zone and receipt lists scroll under it; the side cards are sized to fit */
 	@media (min-width: 1024px) and (min-height: 600px) {
 		.columns {
 			flex: 1;
@@ -636,16 +427,11 @@
 		.scroll {
 			flex: 1;
 			min-height: 0;
-			margin-top: 0.5rem;
 			padding-right: 0.5rem;
 			overflow-y: auto;
 			scrollbar-gutter: stable;
 			scrollbar-width: thin;
 			scrollbar-color: var(--color-line) transparent;
-		}
-
-		.drop {
-			padding: 1.75rem 2rem;
 		}
 	}
 </style>
