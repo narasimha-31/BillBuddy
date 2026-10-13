@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, reconcile, type Reading } from './receipt-check';
+import { checkReading, realignDetails, reconcile, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -7,6 +7,7 @@ const line = (raw: string, total: number | null, extra: Partial<Reading['lines']
 	quantity: null,
 	unit: null,
 	unit_price: null,
+	unit_price_for: null,
 	discount: false,
 	...extra
 });
@@ -27,7 +28,15 @@ const today = new Date('2026-10-11T12:00:00Z');
 
 describe('reconcile', () => {
 	it('adds the lines in cents and compares them with the printed totals', () => {
-		expect(reconcile([321, 118, -50], 389, 32, 421)).toEqual({ sum: 389, lines_match_subtotal: true, totals_match: true });
+		expect(reconcile([321, 118, -50], 389, 32, 421)).toEqual({ sum: 389, expected: 389, lines_match_subtotal: true, totals_match: true });
+	});
+
+	// a real Fiesta receipt prints TAX 0.45 and BALANCE 46.99, and no subtotal
+	it('checks the items against the total minus tax when no subtotal is printed', () => {
+		const fiesta = [199, 172, 353, 199, 952, 374, 149, 141, 243, 170, 549, 59, 99, 86, 198, 449, 112, 150];
+		expect(reconcile(fiesta, null, 45, 4699)).toEqual({ sum: 4654, expected: 4654, lines_match_subtotal: true, totals_match: null });
+		expect(reconcile(fiesta.slice(1), null, 45, 4699).lines_match_subtotal).toBe(false);
+		expect(reconcile(fiesta, null, null, null).expected).toBeNull();
 	});
 
 	it('reports each mismatch separately', () => {
@@ -36,7 +45,7 @@ describe('reconcile', () => {
 	});
 
 	it('cannot confirm anything when the totals are missing', () => {
-		expect(reconcile([321], null, null, null)).toEqual({ sum: 321, lines_match_subtotal: false, totals_match: null });
+		expect(reconcile([321], null, null, null)).toEqual({ sum: 321, expected: null, lines_match_subtotal: false, totals_match: null });
 	});
 });
 
@@ -61,6 +70,67 @@ describe('checkReading', () => {
 	});
 
 	// a real Parivar receipt lost four items to the card number rule on 10-13
+	it('works out multi-buy prices like "8 @ 4/0.99" in cents', () => {
+		const result = checkReading(
+			reading({
+				lines: [
+					line('LIMES', 1.98, { quantity: 8, unit_price: 0.99, unit_price_for: 4 }),
+					line('CUCUMBERS', 0.99, { quantity: 2, unit_price: 0.99, unit_price_for: 2 }),
+					line('RAMEN CHILI', 1.5, { quantity: 3, unit_price: 0.5 }),
+					line('BAD MATH', 5, { quantity: 8, unit_price: 0.99, unit_price_for: 4 })
+				],
+				subtotal: 9.47,
+				total: 9.47
+			}),
+			today
+		);
+		expect(result.ok && result.lines.map((l) => [l.raw, l.unitPriceCents, l.issue])).toEqual([
+			['LIMES', 25, null],
+			['CUCUMBERS', 50, null],
+			['RAMEN CHILI', 50, null],
+			['BAD MATH', 25, 'line_math']
+		]);
+	});
+
+	// the real Fiesta receipt prints each "1.17 lb @ 1.47 /lb" above its item; the model hung each on the item above
+	it('moves weight and multi-buy details to the item they belong to when every one then adds up', () => {
+		const readByModel = [
+			line('DUROS HARINA RUEDA', 1.99, { quantity: 1.17, unit: 'lb', unit_price: 1.47 }),
+			line('ROMA TOMATOES', 1.72, { quantity: 1.19, unit: 'lb', unit_price: 2.97 }),
+			line('OKRA', 3.53),
+			line('TYSON SKNL THIGH', 9.52, { quantity: 1.25, unit: 'lb', unit_price: 2.99 }),
+			line('OPO LONG SQUASH', 3.74),
+			line('CILANTRO', 0.59, { quantity: 2, unit_price: 0.99, unit_price_for: 2 }),
+			line('CUCUMBERS', 0.99, { quantity: 8, unit_price: 0.99, unit_price_for: 4 }),
+			line('LIMES', 1.98, { quantity: 3, unit_price: 0.5 }),
+			line('RAMEN CHILI', 1.5)
+		];
+		const result = checkReading(reading({ lines: readByModel, subtotal: 25.56, total: 25.56 }), today);
+		expect(result.ok && result.lines.map((l) => [l.raw, l.quantity, l.unit, l.issue])).toEqual([
+			['DUROS HARINA RUEDA', 1, 'ea', null],
+			['ROMA TOMATOES', 1.17, 'lb', null],
+			['OKRA', 1.19, 'lb', null],
+			['TYSON SKNL THIGH', 1, 'ea', null],
+			['OPO LONG SQUASH', 1.25, 'lb', null],
+			['CILANTRO', 1, 'ea', null],
+			['CUCUMBERS', 2, 'ea', null],
+			['LIMES', 8, 'ea', null],
+			['RAMEN CHILI', 3, 'ea', null]
+		]);
+	});
+
+	it('leaves details alone when they already fit, or when no single move explains all of them', () => {
+		const fine = [line('BANANAS', 1.18, { quantity: 2.1, unit: 'lb', unit_price: 0.56 }), line('MILK', 3.21)];
+		expect(realignDetails(fine)).toEqual(fine);
+		const messy = [line('A', 1, { quantity: 2, unit_price: 0.5 }), line('B', 3, { quantity: 9, unit_price: 9 }), line('C', 1)];
+		expect(realignDetails(messy)).toEqual(messy);
+	});
+
+	it('ignores a silly "for" count instead of dividing by it', () => {
+		const result = checkReading(reading({ lines: [line('EGGS', 2.1, { quantity: 1, unit_price: 2.1, unit_price_for: 0 }), line('MILK', 3, { quantity: 1, unit_price: 3, unit_price_for: 5000 })], subtotal: 5.1, total: 5.1 }), today);
+		expect(result.ok && result.lines.map((l) => [l.unitPriceCents, l.issue])).toEqual([[210, null], [300, null]]);
+	});
+
 	it('keeps items printed with a barcode, minus the barcode', () => {
 		const printed = ['FS LAXMI TOOR DAL PLAIN 2 LB-723246183084', 'FS LAX MUSTARD SEED 200GM-723246211558', 'FS SWAD ORANGE FOOD COLOUR 25G-051179360037', 'ORGANIC MILK 0123456789012', 'FS TOMATOES 1LB-3011'];
 		const result = checkReading(reading({ lines: printed.map((p) => line(p, 2)) }), today);
@@ -117,9 +187,10 @@ describe('checkReading', () => {
 		expect(checkReading(reading({ tax: 0.36, total: 9.75 }), today)).toMatchObject({ totals_match: false, needs_review: true });
 	});
 
-	it('leaves the totals check open when the photo cut off a total', () => {
+	it('leaves the totals check open when the photo cut off a total, and falls back to total minus tax', () => {
 		expect(checkReading(reading({ total: null }), today)).toMatchObject({ totals_match: null });
-		expect(checkReading(reading({ subtotal: null }), today)).toMatchObject({ lines_match_subtotal: false, totals_match: null, needs_review: true });
+		expect(checkReading(reading({ subtotal: null }), today)).toMatchObject({ lines_match_subtotal: true, totals_match: null, needs_review: false });
+		expect(checkReading(reading({ subtotal: null, total: null }), today)).toMatchObject({ lines_match_subtotal: false, needs_review: true });
 	});
 
 	it('keeps discounts negative and rejects negative prices on normal items', () => {

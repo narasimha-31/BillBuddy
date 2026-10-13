@@ -5,7 +5,7 @@ export type Reading = {
 	store: string | null;
 	purchase_date: string | null;
 	channel: 'in_store' | 'delivery' | 'pickup' | 'unknown';
-	lines: { raw: string; quantity: number | null; unit: string | null; unit_price: number | null; total: number | null; discount: boolean }[];
+	lines: { raw: string; quantity: number | null; unit: string | null; unit_price: number | null; unit_price_for: number | null; total: number | null; discount: boolean }[];
 	subtotal: number | null;
 	tax: number | null;
 	total: number | null;
@@ -73,14 +73,55 @@ function validDate(value: string | null, today = new Date()) {
 }
 
 // The receipt-level math, shared by processing and the review screen so they can never disagree.
+// Many receipts print no subtotal (Fiesta prints only TAX and BALANCE), so the items are then
+// checked against the total minus tax, worked out here rather than by the model.
 export function reconcile(lineTotals: number[], subtotalCents: number | null, taxCents: number | null, totalCents: number | null) {
 	const sum = lineTotals.reduce((total, cents) => total + cents, 0);
-	const tolerance = Math.max(5, Math.round((subtotalCents ?? 0) * 0.01));
+	const expected = subtotalCents ?? (totalCents === null ? null : totalCents - (taxCents ?? 0));
+	const tolerance = Math.max(5, Math.round((expected ?? 0) * 0.01));
 	return {
 		sum,
-		lines_match_subtotal: subtotalCents !== null && Math.abs(sum - subtotalCents) <= tolerance,
+		expected,
+		lines_match_subtotal: expected !== null && Math.abs(sum - expected) <= tolerance,
 		totals_match: subtotalCents === null || totalCents === null ? null : Math.abs(subtotalCents + (taxCents ?? 0) - totalCents) <= 2
 	};
+}
+
+type ReadLine = Reading['lines'][number];
+const detail = (l: ReadLine) => ({ quantity: l.quantity, unit: l.unit, unit_price: l.unit_price, unit_price_for: l.unit_price_for });
+const noDetail = { quantity: null, unit: null, unit_price: null, unit_price_for: null };
+
+// quantity x unit price in cents, or null when the line has no such detail
+function rateCents(l: Pick<ReadLine, 'quantity' | 'unit_price' | 'unit_price_for'>) {
+	const price = cents(l.unit_price);
+	if (!l.quantity || l.quantity <= 0 || price === null) return null;
+	const per = l.unit_price_for && l.unit_price_for > 1 && l.unit_price_for <= 100 ? l.unit_price_for : 1;
+	return Math.round((l.quantity * price) / per);
+}
+
+// Some stores print "1.17 lb @ 1.47 /lb" above its item (Fiesta), others below it (Walmart),
+// and the model can attach every such line to the wrong neighbour. If moving every detail one
+// line down, or one line up, makes all of them match their amounts while the reading as given
+// does not, the details are moved. Pure cent arithmetic; the model is never asked to do it.
+export function realignDetails(lines: ReadLine[]): ReadLine[] {
+	const withDetail = lines.map((l, i) => ({ i, rate: rateCents(l) })).filter((d) => d.rate !== null);
+	if (!withDetail.length) return lines;
+	const fits = (rate: number | null, target: ReadLine | undefined) => {
+		const total = target ? cents(target.total) : null;
+		return rate !== null && total !== null && !target!.discount && Math.abs(rate - total) <= 2;
+	};
+	const asRead = withDetail.filter((d) => fits(d.rate, lines[d.i])).length;
+	if (asRead === withDetail.length) return lines;
+
+	for (const shift of [1, -1]) {
+		if (withDetail.every((d) => fits(d.rate, lines[d.i + shift]))) {
+			return lines.map((l, i) => {
+				const source = lines[i - shift];
+				return { ...l, ...(source && rateCents(source) !== null ? detail(source) : noDetail) };
+			});
+		}
+	}
+	return lines;
 }
 
 export function checkReading(reading: Reading, today = new Date()): Checked {
@@ -89,15 +130,18 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 
 	// All arithmetic happens here, in whole cents. The model only copies printed numbers.
 	const lines: CheckedLine[] = [];
-	for (const line of reading.lines.slice(0, MAX_LINES)) {
+	for (const line of realignDetails(reading.lines.slice(0, MAX_LINES))) {
 		// one printed line stays one line: a hidden newline could pose as extra numbered lines downstream
 		const raw = line.raw.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').replace(LONG_NUMBER, '').trim().slice(0, 120);
 		if (!/[a-z]{2}/i.test(raw) || PAYMENT.test(raw)) continue;
 
 		const unit = line.unit && UNITS.has(line.unit.toLowerCase()) ? line.unit.toLowerCase() : 'ea';
 		const printedQuantity = line.quantity && line.quantity > 0 && line.quantity < 1000 ? line.quantity : null;
-		const unitPriceCents = cents(line.unit_price);
-		const fromRate = printedQuantity !== null && unitPriceCents !== null ? Math.round(printedQuantity * unitPriceCents) : null;
+		// a multi-buy price like "8 @ 4/0.99" is 0.99 for every 4, not 0.99 each
+		const per = line.unit_price_for && line.unit_price_for > 1 && line.unit_price_for <= 100 ? line.unit_price_for : 1;
+		const priceCents = cents(line.unit_price);
+		const unitPriceCents = priceCents === null ? null : Math.round(priceCents / per);
+		const fromRate = printedQuantity !== null && priceCents !== null ? Math.round((printedQuantity * priceCents) / per) : null;
 
 		const printed = cents(line.total);
 		const amount = printed ?? fromRate;
