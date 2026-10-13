@@ -456,3 +456,32 @@ describe('phone links', () => {
 		expect(second.error?.code).toBe('23505');
 	});
 });
+
+describe('product grouping', () => {
+	it('lists each of the caller\'s products once, with how often and how many stores, and nobody else\'s', async () => {
+		const zoe = await signedInUser('zoe');
+		const zoeId = userIds[userIds.length - 1];
+		const store = async (name: string) => (await admin.from('stores').insert({ user_id: zoeId, name }).select('id').single()).data!.id as string;
+		const [fiesta, heb] = [await store('Fiesta'), await store('H-E-B')];
+		const receipt = async (storeId: string, day: string) =>
+			(await admin.from('receipts').insert({ user_id: zoeId, store_id: storeId, purchased_on: day, created_at: '2026-09-01T00:00:00Z' }).select('id').single()).data!.id as string;
+		const item = (receiptId: string, position: number, name: string) => ({
+			user_id: zoeId, receipt_id: receiptId, position, kind: 'item', raw_text: name.toUpperCase(), name, brand: null, category: 'Dairy & eggs',
+			quantity: 1, unit: 'ea', unit_price_cents: null, total_cents: 199, computed: false, issue: null, size_amount: null, size_unit: null
+		});
+		const a = await receipt(fiesta, '2026-10-02');
+		const b = await receipt(heb, '2026-09-20');
+		const { error } = await admin.from('receipt_items').insert([item(a, 0, 'Whole milk'), item(a, 1, 'Limes'), item(b, 0, 'Whole milk')]);
+		if (error) throw error;
+
+		const { data } = await zoe.rpc('my_products');
+		expect(data).toEqual([
+			{ name: 'Whole milk', times: 2, last_bought: '2026-10-02', stores: 2 },
+			{ name: 'Limes', times: 1, last_bought: '2026-10-02', stores: 1 }
+		]);
+		const others = await bob.rpc('my_products');
+		expect((others.data ?? []).some((p: { name: string }) => p.name === 'Limes')).toBe(false);
+		const anon = createClient(url, publishable, noSession);
+		expect((await anon.rpc('my_products')).error).not.toBeNull();
+	});
+});
