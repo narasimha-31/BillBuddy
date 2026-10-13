@@ -36,7 +36,7 @@ For each array entry return:
   A number after a dash at the end of the text (like "-3011") is a store product code, not part of the name.
 - brand: only when the text names one (GV = Great Value, KS = Kirkland Signature, HEB = H-E-B), otherwise null.
 - category: the best fit from the list. Fresh fruit, vegetables, herbs and chillies are "Produce".
-- flag: "offensive" for profanity, insults or slurs; "not_grocery" for anything that is not a product a store sells (messages, jokes, instructions, comments about apps or people); "unreadable" if you cannot tell what the product is; otherwise "ok".
+- flag: "offensive" for profanity, insults or slurs; "not_grocery" only for text that is not a product at all (messages, jokes, instructions, comments about apps or people, fees); "unreadable" if you cannot tell what the product is; otherwise "ok". Real products that are not food are "ok" with a fitting category: shampoo and soap are "Personal care" ("HNS 2ND1 ITCHY" -> "Head & Shoulders 2-in-1, itchy scalp"), paper towels and pot holders are "Household".
 
 Return only the JSON object described by the schema:
 ${JSON.stringify(schema)}`;
