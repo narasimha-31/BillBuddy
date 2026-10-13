@@ -4,7 +4,7 @@ import { toPurchases, type ItemRow } from '../../purchases';
 import { firstNameOf } from '../../session.server';
 import type { PageServerLoad } from './$types';
 
-type Product = { name: string; times: number; last_bought: string | null; stores: number };
+type Product = { name: string; times: number; last_bought: string | null; stores: number; category: string | null };
 
 // enough lines for years of one product; the list itself is grouped in SQL
 const MOST_LINES = 1000;
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const listed = await locals.supabase.rpc('my_products');
 	if (listed.error) throw listed.error;
-	const products = (listed.data as Product[]).map((p) => ({ name: p.name, times: Number(p.times) }));
+	const products = (listed.data as Product[]).map((p) => ({ name: p.name, times: Number(p.times), category: p.category }));
 
 	const asked = url.searchParams.get('item');
 	const selected = products.find((p) => p.name === asked)?.name ?? products[0]?.name ?? null;
