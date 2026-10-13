@@ -18,8 +18,14 @@ describe('readEdits', () => {
 		expect(result.ok && result.edits.map((e) => e.id)).toEqual(['a']);
 	});
 
-	it('refuses an empty name, an overlong name and an unknown category', () => {
-		expect(readEdits(form({ name_a: '   ', category_a: 'Produce' }), ['a'])).toEqual({ ok: false, problem: 'every line needs a name' });
+	it('leaves a line with a blank name as printed instead of asking for one', () => {
+		expect(readEdits(form({ name_a: '   ', category_a: 'Produce', name_b: 'Milk', category_b: 'Dairy & eggs' }), ['a', 'b'])).toEqual({
+			ok: true,
+			edits: [{ id: 'b', name: 'Milk', category: 'Dairy & eggs' }]
+		});
+	});
+
+	it('refuses an overlong name and an unknown category', () => {
 		expect(readEdits(form({ name_a: 'x'.repeat(121), category_a: 'Produce' }), ['a'])).toEqual({ ok: false, problem: 'a name is too long' });
 		expect(readEdits(form({ name_a: 'Milk', category_a: 'Weapons' }), ['a'])).toEqual({ ok: false, problem: 'pick a category from the list' });
 	});
