@@ -23,25 +23,29 @@
 	<title>Demo · BillBuddy</title>
 </svelte:head>
 
-<main class="mx-auto max-w-6xl px-5 py-10">
-	<a href="/" class="back">Back</a>
+<header class="top">
+	<a href="/" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
+	<a href="/" class="start">Use it with your receipts</a>
+</header>
 
-	<div class="layout">
-		<div>
-			<h1 class="blur-rise mt-8 text-2xl font-semibold text-ink sm:text-3xl">What did I pay last time?</h1>
-			<p class="blur-rise mt-2 max-w-xl text-muted" style:--delay="120ms">
-				This is a sample shopper with {sampleReceipts.length} receipts from the last three months. Pick something
-				they buy and see what they paid, where, and how the price moved. Your own receipts work the same way.
-			</p>
+<main class="layout">
+	<div class="intro">
+		<h1>What did I pay last time?</h1>
+		<p>
+			A sample shopper with {sampleReceipts.length} receipts from the last three months. Pick something they buy to see
+			what they paid, where, and how the price moved. Your own receipts work the same way.
+		</p>
+	</div>
 
-			<div class="blur-rise" style:--delay="220ms">
-				<ItemPicker items={all} bind:selected />
+	<div class="picker">
+		<ItemPicker items={all} bind:selected />
+	</div>
+
+	<div class="result">
+		{#key selected}
+			<div in:fade={{ duration: 250 }}>
+				<PriceHistory {history} />
 			</div>
-
-			{#key selected}
-				<div class="mt-8" in:fade={{ duration: 300 }}>
-					<PriceHistory {history} />
-				</div>
 
 				{#if typical}
 					<section class="card" in:fade={{ duration: 300 }}>
@@ -79,12 +83,12 @@
 						</footer>
 					</section>
 				{/if}
-			{/key}
-		</div>
+		{/key}
+	</div>
 
-		<aside class="receipts blur-rise" style:--delay="380ms">
-			<h2 class="font-semibold text-ink">Their receipts</h2>
-			<p class="mt-1 text-sm text-muted">Tap one to see what was printed and the name we gave it.</p>
+	<aside class="receipts">
+		<h2>Their receipts</h2>
+		<p>Tap one to see what was printed and the name BillBuddy gave it.</p>
 			<ul>
 				{#each sampleReceipts as receipt (receipt.id)}
 					<li>
@@ -109,34 +113,87 @@
 					</li>
 				{/each}
 			</ul>
-		</aside>
-	</div>
+	</aside>
 </main>
 
 <style>
-	.back {
-		display: inline-block;
-		border: 1px solid rgb(43 38 32 / 0.3);
-		border-radius: 999px;
-		padding: 0.45rem 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
+	.top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin: 0 auto;
+		max-width: 90rem;
+		border-bottom: 1px dashed var(--color-line);
+		padding: 1.5rem 1.25rem 1.25rem;
+	}
+
+	@media (min-width: 1024px) {
+		.top {
+			padding: 2rem 2.5rem 1.25rem;
+		}
+	}
+
+	.wordmark {
+		font-family: var(--font-display);
+		font-size: 1.75rem;
+		font-weight: 700;
+		font-synthesis: none;
+		font-variation-settings: 'SOFT' 100;
 		color: var(--color-ink);
-		transition:
-			background-color 150ms,
-			border-color 150ms;
+	}
+
+	.wordmark span {
+		color: var(--color-brand);
+	}
+
+	.start {
+		border-radius: 999px;
+		background: var(--color-ink);
+		padding: 0.55rem 1.1rem;
+		font-size: 0.9rem;
+		font-weight: 500;
+		color: var(--color-receipt);
+	}
+
+	.wordmark:focus-visible,
+	.start:focus-visible,
+	summary:focus-visible {
+		outline: 2px solid var(--color-brand);
+		outline-offset: 2px;
+	}
+
+	h1 {
+		font-family: var(--font-display);
+		font-size: clamp(1.9rem, 3vw, 2.4rem);
+		font-weight: 650;
+		font-synthesis: none;
+		font-variation-settings: 'SOFT' 100;
+		color: var(--color-ink);
+	}
+
+	.intro p,
+	.receipts > p {
+		margin-top: 0.5rem;
+		max-width: 36rem;
+		color: var(--color-muted);
+	}
+
+	.receipts > p {
+		font-size: 0.9rem;
+	}
+
+	.receipts h2 {
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--color-muted);
 	}
 
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
 	@media (hover: hover) {
-		.back:hover {
-			border-color: var(--color-ink);
-			background: rgb(253 251 245 / 0.5);
-		}
-
 		details:not([open]) summary:hover {
-			background: rgb(253 251 245 / 0.8);
 			border-radius: 0.75rem;
+			background: var(--color-receipt);
 		}
 	}
 
@@ -147,9 +204,7 @@
 		padding: 1.5rem;
 		font-family: var(--font-mono);
 		color: var(--color-receipt-ink);
-		box-shadow:
-			0 1px 2px rgb(0 0 0 / 0.06),
-			0 18px 40px -18px rgb(0 0 0 / 0.35);
+		box-shadow: 0 0 0 1px var(--color-receipt-line);
 	}
 
 	.card header {
@@ -194,7 +249,7 @@
 
 	.store em {
 		border-radius: 999px;
-		background: rgb(71 106 80 / 0.14);
+		background: color-mix(in srgb, var(--color-receipt-down) 14%, transparent);
 		padding: 0.1rem 0.4rem;
 		font-size: 0.625rem;
 		font-style: normal;
@@ -205,7 +260,7 @@
 		position: relative;
 		height: 0.6rem;
 		border-radius: 999px;
-		background: rgb(207 201 186 / 0.45);
+		background: color-mix(in srgb, var(--color-receipt-line) 60%, transparent);
 	}
 
 	.price {
@@ -223,7 +278,7 @@
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
-		background: rgb(46 48 44 / 0.7);
+		background: color-mix(in srgb, var(--color-receipt-ink) 70%, transparent);
 		transform-origin: left;
 		transform: scaleX(var(--size));
 		animation: grow 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
@@ -271,19 +326,37 @@
 
 	.layout {
 		display: grid;
-		gap: 2.5rem;
+		gap: 2rem;
+		margin: 0 auto;
+		max-width: 90rem;
+		padding: 2rem 1.25rem 4rem;
 	}
 
-	@media (min-width: 1024px) {
+	/* the list and receipts on the left, what was paid on the right, like the Prices page */
+	@media (min-width: 960px) {
 		.layout {
-			grid-template-columns: minmax(0, 1fr) 22rem;
+			grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
+			grid-template-areas: 'intro result' 'picker result' 'receipts result';
+			grid-template-rows: auto auto 1fr;
 			align-items: start;
+			column-gap: 3rem;
+			padding: 2rem 2.5rem 4rem;
+		}
+
+		.intro {
+			grid-area: intro;
+		}
+
+		.picker {
+			grid-area: picker;
+		}
+
+		.result {
+			grid-area: result;
 		}
 
 		.receipts {
-			position: sticky;
-			top: 1.5rem;
-			margin-top: 2rem;
+			grid-area: receipts;
 		}
 	}
 
@@ -295,7 +368,7 @@
 
 	details {
 		border-radius: 0.75rem;
-		background: rgb(253 251 245 / 0.55);
+		background: var(--color-raised);
 	}
 
 	details[open] {
