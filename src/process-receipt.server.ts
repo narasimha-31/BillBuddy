@@ -98,7 +98,7 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		const learned = names
 			.map((n, i) => ({ n, raw: items[i].raw }))
 			.filter(({ n }) => n.from === 'ai' && n.flag === 'ok')
-			.map(({ n, raw }) => ({ store_id: storeId, raw_text: raw, name: n.name, brand: n.brand, category: n.category }));
+			.map(({ n, raw }) => ({ store_id: storeId, raw_text: raw, name: n.name, brand: n.brand, category: n.category, size_amount: n.sizeAmount, size_unit: n.sizeUnit }));
 		if (learned.length) {
 			const memory = await supabase.from('name_memory').upsert(learned, { onConflict: 'user_id,store_id,raw_text' });
 			if (memory.error) console.error('name memory not saved', memory.error.message);

@@ -50,7 +50,7 @@ export const actions: Actions = {
 		if (!receipt.data) httpError(404, 'Not found');
 		const storeId: string | null = receipt.data.store_id;
 
-		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, category').eq('receipt_id', params.id);
+		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, brand, category, size_amount, size_unit').eq('receipt_id', params.id);
 		if (items.error) throw items.error;
 
 		const editable = items.data.filter((i) => i.kind === 'item');
@@ -70,13 +70,19 @@ export const actions: Actions = {
 		}
 
 		if (changed.length) {
-			const memory = changed.map((edit) => ({
-				store_id: storeId,
-				raw_text: editable.find((i) => i.id === edit.id)!.raw_text,
-				name: edit.name,
-				category: edit.category,
-				updated_at: new Date().toISOString()
-			}));
+			const memory = changed.map((edit) => {
+				const before = editable.find((i) => i.id === edit.id)!;
+				return {
+					store_id: storeId,
+					raw_text: before.raw_text,
+					name: edit.name,
+					brand: before.brand,
+					category: edit.category,
+					size_amount: before.size_amount,
+					size_unit: before.size_unit,
+					updated_at: new Date().toISOString()
+				};
+			});
 			const { error } = await locals.supabase.from('name_memory').upsert(memory, { onConflict: 'user_id,store_id,raw_text' });
 			if (error) throw error;
 		}
