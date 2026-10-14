@@ -93,30 +93,25 @@
 </svelte:head>
 
 <AppShell fit firstName={data.firstName}>
-
 	<div class="columns">
 		<main>
-			<h1>Receipts</h1>
+			<h1 class="large-title">Receipts</h1>
 
-			<div class="upload">
+			<div class="upload surface">
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
 			</div>
 
 			<div class="scroll">
-
 				{#if review.length}
 					<section>
-						<h2>Needs a quick look</h2>
-						<ul class="list">
+						<h2 class="list-label">Needs a quick look</h2>
+						<ul class="group">
 							{#each review as receipt (receipt.id)}
 								<li>
-									<a href="/receipts/{receipt.id}" class="open">
-										<span class="paper-icon" aria-hidden="true"></span>
-										<span class="who">
-											<span class="store">{storeName(receipt.store) ?? 'Store not printed'}</span>
-											<span class="when">{shortDay(receipt.purchased_on)}</span>
-										</span>
-										<span class="status">Check the amounts</span>
+									<a class="row" href="/receipts/{receipt.id}">
+										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
+										<span class="row-value attention">Check the amounts</span>
+										<span class="row-sub">{shortDay(receipt.purchased_on)}</span>
 									</a>
 								</li>
 							{/each}
@@ -126,17 +121,18 @@
 
 				{#if waiting.length}
 					<section>
-						<h2>Waiting to be read</h2>
-						<ul class="list">
+						<h2 class="list-label">Waiting to be read</h2>
+						<ul class="group">
 							{#each waiting as receipt (receipt.id)}
-								<li>
-									<span class="paper-icon" aria-hidden="true"></span>
-									<span>Receipt photo</span>
-									{#if reading.includes(receipt.id) || stillReading(receipt)}
-										<span class="status">reading</span>
-									{:else}
-										<button class="read-now" onclick={() => readAgain(receipt.id)}>Read now</button>
-									{/if}
+								<li class="row">
+									<span class="row-title">Receipt photo</span>
+									<span class="row-value">
+										{#if reading.includes(receipt.id) || stillReading(receipt)}
+											<span class="status">Reading</span>
+										{:else}
+											<button class="small-button" onclick={() => readAgain(receipt.id)}>Read now</button>
+										{/if}
+									</span>
 								</li>
 							{/each}
 						</ul>
@@ -145,18 +141,17 @@
 
 				{#if unreadable.length}
 					<section>
-						<h2>Couldn't read</h2>
-						<ul class="list">
+						<h2 class="list-label">Couldn’t read</h2>
+						<ul class="group">
 							{#each unreadable as receipt (receipt.id)}
-								<li>
-									<span class="paper-icon" aria-hidden="true"></span>
-									<span>
-										Receipt photo
-										<span class="status reason">{problems[receipt.problem ?? ''] ?? "Couldn't be read."}</span>
+								<li class="row">
+									<span class="row-title">Receipt photo</span>
+									<span class="row-value">
+										<form method="POST" action="/receipts/{receipt.id}?/delete">
+											<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
+										</form>
 									</span>
-									<form method="POST" action="/receipts/{receipt.id}?/delete">
-										<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
-									</form>
+									<span class="row-sub">{problems[receipt.problem ?? ''] ?? 'It couldn’t be read.'}</span>
 								</li>
 							{/each}
 						</ul>
@@ -164,22 +159,22 @@
 				{/if}
 
 				{#if !data.receipts.length}
-					<p class="empty">No receipts yet. Your first one takes a few seconds.</p>
+					<p class="empty surface">No receipts yet. Your first one takes a few seconds.</p>
 				{/if}
 
 				{#each months as month (month.key)}
 					<section>
-						<h2 class="month">{month.label}<span>{money(month.totalCents)}</span></h2>
-						<ul class="list">
+						<div class="list-label-row">
+							<h2 class="list-label">{month.label}</h2>
+							<span class="month-total">{money(month.totalCents)}</span>
+						</div>
+						<ul class="group">
 							{#each month.receipts as receipt (receipt.id)}
 								<li>
-									<a href="/receipts/{receipt.id}" class="open">
-										<span class="paper-icon" aria-hidden="true"></span>
-										<span class="who">
-											<span class="store">{storeName(receipt.store) ?? 'Store not printed'}</span>
-											<span class="when">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · delivery' : ''}</span>
-										</span>
-										<span class="amount">{money(receipt.total_cents)}</span>
+									<a class="row" href="/receipts/{receipt.id}">
+										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
+										<span class="row-value">{money(receipt.total_cents)}</span>
+										<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
 									</a>
 								</li>
 							{/each}
@@ -190,7 +185,7 @@
 		</main>
 
 		<aside>
-			<div class="card for-mouse phone">
+			<div class="card surface for-mouse phone">
 				<h2>Use your phone</h2>
 				{#if phone}
 					<div class="code">
@@ -207,10 +202,10 @@
 							? 'That code has expired. Make a new one any time.'
 							: 'Snap receipts with your phone and they show up here.'}
 					</p>
-					<button class="pill" onclick={showPhoneCode}>Show a code</button>
+					<button class="pill-button" onclick={showPhoneCode}>Show a code</button>
 				{/if}
 			</div>
-			<div class="card">
+			<div class="card surface">
 				<h2>Good photo, good reading</h2>
 				<ul>
 					<li>Lay it flat in good light.</li>
@@ -218,7 +213,7 @@
 					<li>Smooth out folds, they hide prices.</li>
 				</ul>
 			</div>
-			<div class="card">
+			<div class="card surface">
 				<h2>Your privacy</h2>
 				<ul>
 					<li>Card details are never saved.</li>
@@ -232,172 +227,74 @@
 </AppShell>
 
 <style>
-	.link {
-		color: var(--color-muted);
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-
 	.columns {
 		display: grid;
-		gap: 2.5rem;
-		margin-top: 2rem;
+		gap: 2rem;
 	}
 
-	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
-		color: var(--color-ink);
-	}
-
-	h2 {
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: var(--color-ink);
-	}
-
-	.pill {
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.6rem 1.25rem;
-		font-size: 0.9rem;
-		font-weight: 500;
-		color: var(--color-on-ink);
-	}
-
-	/* a phone can't scan a code shown on itself */
-	@media (pointer: coarse) {
-		.for-mouse {
-			display: none;
-		}
+	.upload {
+		margin-top: 1.25rem;
+		padding: 1rem;
 	}
 
 	section {
-		margin-top: 2rem;
+		margin-top: 1.75rem;
 	}
 
-	.list {
-		display: grid;
-		gap: 0.5rem;
-		margin-top: 0.75rem;
+	.scroll {
+		margin-top: 0.25rem;
 	}
 
-	.list li {
-		display: grid;
-		grid-template-columns: auto 1fr auto;
-		align-items: center;
-		gap: 0.9rem;
-		border-radius: 0.75rem;
-		background: var(--color-receipt);
-		padding: 0.85rem 1rem;
-		color: var(--color-receipt-ink);
-		box-shadow: 0 0 0 1px var(--color-receipt-line);
-	}
-
-	/* a whole row that opens the receipt */
-	.list li:has(> .open) {
-		display: block;
-		padding: 0;
-	}
-
-	.open {
-		display: grid;
-		grid-template-columns: auto 1fr auto;
-		align-items: center;
-		gap: 0.9rem;
-		border-radius: 0.75rem;
-		padding: 0.85rem 1rem;
-		transition: background-color 150ms;
-	}
-
-	@media (hover: hover) {
-		.open:hover {
-			background: var(--color-raised);
-		}
-	}
-
-	.paper-icon {
-		width: 1.25rem;
-		height: 1.6rem;
-		border: 1.5px solid var(--color-receipt-muted);
-		border-radius: 2px;
+	.attention {
+		font-size: 0.9375rem;
+		color: var(--color-up);
 	}
 
 	.status {
-		font-size: 0.8rem;
-		color: var(--color-receipt-muted);
-	}
-
-	.who {
-		display: grid;
-		min-width: 0;
-	}
-
-	.store {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		font-weight: 550;
-	}
-
-	.when {
-		font-size: 0.8rem;
-		color: var(--color-receipt-muted);
-	}
-
-	.amount {
-		font-family: var(--font-mono);
-		font-variant-numeric: tabular-nums;
-	}
-
-	.month {
-		display: flex;
-		justify-content: space-between;
-		padding-right: 1rem;
-	}
-
-	.month span {
-		font-family: var(--font-mono);
-		font-weight: 400;
+		font-size: 0.9375rem;
 		color: var(--color-muted);
 	}
 
-	.reason {
-		display: block;
-		margin-top: 0.15rem;
+	.small-button {
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		padding: 0.35rem 0.85rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-accent);
 	}
 
 	.remove {
-		font-size: 0.8rem;
-		color: var(--color-receipt-muted);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		font-size: 0.9375rem;
+		color: var(--color-up);
 	}
 
-	.read-now {
-		border-radius: 999px;
-		background: var(--color-receipt-ink);
-		padding: 0.35rem 0.85rem;
-		font-size: 0.8rem;
-		font-weight: 500;
-		color: var(--color-receipt);
+	.month-total {
+		font-size: 0.8125rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-muted);
 	}
 
 	.empty {
 		margin-top: 1.5rem;
+		padding: 1rem 1.1rem;
 		color: var(--color-muted);
 	}
 
 	aside {
 		display: grid;
 		align-content: start;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.card {
-		border-radius: 1rem;
-		background: var(--color-raised);
-		padding: 1rem 1.25rem;
+		padding: 1.1rem 1.25rem;
+	}
+
+	.card h2 {
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--color-ink);
 	}
 
 	.card ul {
@@ -406,25 +303,26 @@
 		margin: 0.5rem 0 0;
 		padding-left: 1.1rem;
 		list-style: disc;
-		font-size: 0.9rem;
+		font-size: 0.9375rem;
 		line-height: 1.5;
 		color: var(--color-muted);
 	}
 
-	.card .link {
+	.link {
 		display: inline-block;
 		margin-top: 0.75rem;
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
+		color: var(--color-accent);
 	}
 
 	.phone p {
-		margin-top: 0.6rem;
-		font-size: 0.9rem;
+		margin-top: 0.5rem;
+		font-size: 0.9375rem;
 		line-height: 1.5;
 		color: var(--color-muted);
 	}
 
-	.phone .pill {
+	.phone .pill-button {
 		margin-top: 0.9rem;
 	}
 
@@ -442,9 +340,10 @@
 	.qr {
 		flex: none;
 		width: 8.5rem;
-		border-radius: 0.75rem;
-		background: var(--color-receipt);
-		padding: 0.5rem;
+		border-radius: 12px;
+		background: #fff;
+		padding: 0.4rem;
+		box-shadow: 0 0 0 1px var(--color-line);
 	}
 
 	.qr :global(svg) {
@@ -458,14 +357,17 @@
 		color: var(--color-accent);
 	}
 
-	.upload {
-		margin-top: 1.25rem;
+	/* a phone can't scan a code shown on itself */
+	@media (pointer: coarse) {
+		.for-mouse {
+			display: none;
+		}
 	}
 
 	@media (min-width: 1024px) {
 		.columns {
 			grid-template-columns: minmax(0, 1fr) 22rem;
-			gap: 3rem;
+			gap: 2.5rem;
 		}
 	}
 
@@ -497,7 +399,6 @@
 			margin-top: 0.5rem;
 			padding-right: 0.5rem;
 			overflow-y: auto;
-			scrollbar-gutter: stable;
 			scrollbar-width: thin;
 			scrollbar-color: var(--color-line) transparent;
 		}
