@@ -22,7 +22,7 @@
 	<title>Home · BillBuddy</title>
 </svelte:head>
 
-<AppShell firstName={data.firstName}>
+<AppShell fit firstName={data.firstName}>
 	<main>
 		<h1>{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
 
@@ -239,5 +239,42 @@
 		color: var(--color-ink);
 		text-decoration: underline;
 		text-underline-offset: 3px;
+	}
+
+	/* on a laptop the page is one screen tall; the two lists scroll inside their columns instead */
+	@media (min-width: 1024px) and (min-height: 600px) {
+		main {
+			display: flex;
+			flex: 1;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.board {
+			flex: 1;
+			min-height: 0;
+			grid-template-rows: auto minmax(0, 1fr);
+		}
+
+		.add {
+			max-height: 50dvh;
+			overflow-y: auto;
+		}
+
+		.changes,
+		.recent {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.changes ul,
+		.recent ul {
+			min-height: 0;
+			overflow-y: auto;
+			scrollbar-gutter: stable;
+			scrollbar-width: thin;
+			scrollbar-color: var(--color-line) transparent;
+		}
 	}
 </style>

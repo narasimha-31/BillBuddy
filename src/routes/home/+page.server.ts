@@ -20,9 +20,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.eq('status', 'saved')
 			.order('purchased_on', { ascending: false, nullsFirst: false })
 			.order('created_at', { ascending: false })
-			.limit(5),
+			.limit(20),
 		locals.supabase.from('receipts').select('total_cents, store_id').eq('status', 'saved').gte('purchased_on', monthStart),
-		locals.supabase.rpc('my_price_changes', { how_many: 5 }),
+		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
 		locals.supabase.rpc('my_upload_window')
 	]);
 	for (const answer of [recent, month, changes, uploaded]) if (answer.error) throw answer.error;
