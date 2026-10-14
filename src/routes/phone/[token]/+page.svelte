@@ -113,11 +113,8 @@
 
 	h1 {
 		margin-top: 2rem;
-		font-family: var(--font-display);
-		font-size: 1.75rem;
-		font-weight: 650;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+		font-size: 1.5rem;
+		font-weight: 600;
 		color: var(--color-ink);
 	}
 
@@ -134,7 +131,7 @@
 		padding: 1.1rem 1.5rem;
 		font-size: 1.1rem;
 		font-weight: 600;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.small {

@@ -160,11 +160,8 @@
 	}
 
 	h1 {
-		font-family: var(--font-display);
-		font-size: clamp(1.9rem, 3vw, 2.4rem);
-		font-weight: 650;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+		font-size: 1.75rem;
+		font-weight: 600;
 		color: var(--color-ink);
 	}
 
@@ -259,7 +256,7 @@
 		background: var(--color-ink);
 		padding: 0.7rem 1.6rem;
 		font-weight: 600;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.quiet {
@@ -280,7 +277,9 @@
 		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.08)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.12));
 	}
 
+	/* paper stays light at night, so its fields keep light form controls */
 	.receipt {
+		color-scheme: light;
 		background: var(--color-receipt);
 		padding: 1.25rem 1.25rem 2rem;
 		color: var(--color-receipt-ink);

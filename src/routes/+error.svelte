@@ -57,6 +57,6 @@
 		background: var(--color-ink);
 		padding: 0.6rem 1.25rem;
 		font-weight: 500;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 </style>

@@ -226,7 +226,7 @@
 		padding: 0.55rem 1.2rem;
 		font-size: 0.9rem;
 		font-weight: 500;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.for-touch {

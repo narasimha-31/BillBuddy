@@ -153,7 +153,7 @@
 		padding: 0.55rem 1.1rem;
 		font-size: 0.9rem;
 		font-weight: 500;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.wordmark:focus-visible,
@@ -164,11 +164,8 @@
 	}
 
 	h1 {
-		font-family: var(--font-display);
-		font-size: clamp(1.9rem, 3vw, 2.4rem);
-		font-weight: 650;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+		font-size: 1.75rem;
+		font-weight: 600;
 		color: var(--color-ink);
 	}
 

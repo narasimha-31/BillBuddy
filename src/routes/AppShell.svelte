@@ -85,7 +85,7 @@
 	}
 
 	nav a[aria-current='page'] {
-		background: var(--color-receipt);
+		background: var(--color-raised);
 		box-shadow: 0 0 0 1px var(--color-line);
 		color: var(--color-ink);
 	}

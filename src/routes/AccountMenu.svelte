@@ -75,7 +75,7 @@
 		border-radius: 999px;
 		background: var(--color-brand);
 		font-weight: 600;
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.menu {

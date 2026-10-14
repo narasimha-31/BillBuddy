@@ -113,14 +113,7 @@
 
 <style>
 	/* paper: grain, uneven tone and curl shading, layered over the paper colour */
-	/* real thermal paper is light, so the sample stays light paper in dark mode too */
 	.receipt {
-		--color-receipt: #fcfbf7;
-		--color-receipt-ink: #2e302c;
-		--color-receipt-muted: #5c6059;
-		--color-receipt-line: #dcd8cc;
-		--color-receipt-up: #94452a;
-		--color-receipt-down: #476a50;
 		--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .29 0 0 0 0 .22 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 		--tone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .36 0 0 0 0 .28 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23t)'/%3E%3C/svg%3E");
 		background-image:

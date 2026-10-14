@@ -79,7 +79,7 @@
 		gap: 0.75rem;
 		border: 1px solid var(--color-line);
 		border-radius: 0.875rem;
-		background: var(--color-receipt);
+		background: var(--color-raised);
 		padding: 0 1.1rem;
 		transition: border-color 150ms;
 	}
@@ -94,7 +94,7 @@
 		height: 1.25rem;
 		flex: none;
 		fill: none;
-		stroke: var(--color-receipt-muted);
+		stroke: var(--color-muted);
 		stroke-width: 2;
 		stroke-linecap: round;
 	}
@@ -107,12 +107,12 @@
 		background: transparent;
 		padding: 0.85rem 0;
 		font-size: 1rem;
-		color: var(--color-receipt-ink);
+		color: var(--color-ink);
 		outline: none;
 	}
 
 	.search input::placeholder {
-		color: var(--color-receipt-muted);
+		color: var(--color-muted);
 	}
 
 	h2 {
@@ -150,7 +150,7 @@
 	.chip.selected {
 		border-color: var(--color-ink);
 		background: var(--color-ink);
-		color: var(--color-receipt);
+		color: var(--color-on-ink);
 	}
 
 	.none {
