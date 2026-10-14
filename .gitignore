@@ -15,3 +15,6 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 *.log
+
+# local browser checks (Playwright), never committed
+browser-checks/
