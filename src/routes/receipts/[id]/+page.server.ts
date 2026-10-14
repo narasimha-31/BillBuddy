@@ -88,6 +88,10 @@ export const actions: Actions = {
 			if (error) throw error;
 		}
 
+		// the shopper has seen the guessed names, so they stop being marked
+		const seen = await locals.supabase.from('receipt_items').update({ issue: null }).eq('receipt_id', params.id).in('issue', ['unsure', 'unreadable']);
+		if (seen.error) throw seen.error;
+
 		const { error } = await locals.supabase.from('receipts').update({ status: 'saved' }).eq('id', params.id);
 		if (error) throw error;
 		redirect(303, '/receipts');

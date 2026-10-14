@@ -8,7 +8,11 @@
 
 	const r = $derived(data.receipt);
 	const store = $derived(storeName(r.store) ?? 'Receipt');
-	const allGood = $derived(data.math.lines_match_subtotal && data.math.totals_match !== false && !data.items.some((i) => i.issue));
+	const offLines = $derived(data.items.some((i) => i.issue === 'line_math'));
+	const allGood = $derived(data.math.lines_match_subtotal && data.math.totals_match !== false && !offLines);
+	// names BillBuddy guessed come first, so they can be checked without hunting down the receipt
+	const toCheck = $derived(data.items.filter((i) => i.issue === 'unsure' || i.issue === 'unreadable'));
+	const rest = $derived(data.items.filter((i) => i.issue !== 'unsure' && i.issue !== 'unreadable'));
 	const subtotalPlusTax = $derived((r.subtotal_cents ?? 0) + (r.tax_cents ?? 0));
 </script>
 
@@ -42,9 +46,16 @@
 						{#if data.math.totals_match === false}
 							<p class="warn">Subtotal plus tax is {money(subtotalPlusTax)}, but the total says {money(r.total_cents)}.</p>
 						{/if}
-						{#if data.items.some((i) => i.issue)}
+						{#if offLines}
 							<p class="warn">The marked lines don't add up on their own.</p>
 						{/if}
+					{/if}
+					{#if toCheck.length}
+						<p class="warn">
+							BillBuddy wasn't sure about {toCheck.length === 1 ? '1 name' : `${toCheck.length} names`}. {toCheck.length === 1
+								? "It's"
+								: "They're"} at the top of the receipt.
+						</p>
 					{/if}
 					{#if r.skipped_lines}
 						<p class="note">
@@ -68,10 +79,22 @@
 
 			<div class="paper-shadow">
 				<form method="POST" action="?/confirm" id="confirm" class="receipt torn">
-					<p class="hint">Tap a name or aisle to change it. BillBuddy uses your names from then on.</p>
+					{#if toCheck.length}
+						<h2>Check these names</h2>
+						<p class="hint">BillBuddy guessed these. Fix any that are wrong and it remembers next time.</p>
+						<ul class="lines">
+							{#each toCheck as item (item.id)}{@render line(item)}{/each}
+						</ul>
+						<h2 class="rest">The rest of the receipt</h2>
+					{:else}
+						<p class="hint">Tap a name or aisle to change it. BillBuddy uses your names from then on.</p>
+					{/if}
 					<ul class="lines">
-						{#each data.items as item (item.id)}
-							<li class:flagged={item.issue}>
+						{#each rest as item (item.id)}{@render line(item)}{/each}
+					</ul>
+
+					{#snippet line(item: (typeof data.items)[number])}
+							<li class:flagged={item.issue === 'line_math'} class:guessed={item.issue === 'unsure' || item.issue === 'unreadable'}>
 								<p class="printed">{item.raw_text}</p>
 								{#if item.kind === 'discount'}
 									<div class="row">
@@ -111,8 +134,7 @@
 									{/if}
 								{/if}
 							</li>
-						{/each}
-					</ul>
+					{/snippet}
 					{#if r.subtotal_cents !== null || r.tax_cents !== null}
 						<dl class="sums">
 							{#if r.subtotal_cents !== null}<dt>Subtotal</dt><dd>{money(r.subtotal_cents)}</dd>{/if}
@@ -296,6 +318,20 @@
 	.lines li {
 		border-bottom: 1px dashed var(--color-receipt-line);
 		padding: 0.75rem 0;
+	}
+
+	.receipt h2 {
+		font-size: 0.95rem;
+		font-weight: 600;
+	}
+
+	.receipt h2.rest {
+		margin-top: 1.75rem;
+	}
+
+	.lines li.guessed {
+		border-left: 3px solid var(--color-brand);
+		padding-left: 0.75rem;
 	}
 
 	.lines li.flagged {
