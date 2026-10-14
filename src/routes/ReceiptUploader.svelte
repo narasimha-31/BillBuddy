@@ -150,7 +150,7 @@
 					{:else if entry.printed}
 						{@const p = entry.printed}
 						<div class="shadow">
-							<article class="printout torn print-feed">
+							<article class="printout print-feed">
 								<header>
 									<span>{storeName(p.store) ?? 'Receipt'}</span>
 									<span>{shortDay(p.date)}</span>

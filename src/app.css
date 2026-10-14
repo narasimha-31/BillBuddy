@@ -1,54 +1,32 @@
 @import 'tailwindcss';
 
-/* fonts ship with the app and are preloaded in app.html; "block" waits for them
-   instead of painting a fallback first, which is what made the text jump on load */
-@font-face {
-	font-family: 'Fraunces';
-	src: url('/fonts/fraunces-soft.woff2') format('woff2');
-	font-weight: 100 900;
-	font-display: block;
-}
-
-@font-face {
-	font-family: 'IBM Plex Mono';
-	src: url('/fonts/ibm-plex-mono-400.woff2') format('woff2');
-	font-weight: 400;
-	font-display: block;
-}
-
-@font-face {
-	font-family: 'IBM Plex Mono';
-	src: url('/fonts/ibm-plex-mono-700.woff2') format('woff2');
-	font-weight: 700;
-	font-display: block;
-}
-
-/* Thermal-paper grey-white page with brighter receipt paper on top. Text pairs are WCAG AA. */
+/* Bright and calm: soft white page, grey bands, near-black text, one deep green for actions
+   and savings, red only for a price that went up. Text pairs are WCAG AA. */
 @theme {
-	--color-bg: #ecebe5;
-	--color-ink: #2a2a26;
-	--color-muted: #5a5952;
-	--color-line: #cfccc1;
-	--color-accent: #2c4a34;
-	--color-brand: #3b4a8c;
-	--color-up: #94452a;
-	--color-raised: #f6f5f0;
-	--color-on-ink: #fcfbf7;
+	--color-bg: #fbfbfd;
+	--color-ink: #1d1d1f;
+	--color-muted: #6e6e73;
+	--color-line: #d2d2d7;
+	--color-accent: #1f7a4d;
+	--color-brand: #1f7a4d;
+	--color-up: #b42318;
+	--color-raised: #f5f5f7;
+	--color-on-ink: #fbfbfd;
 
-	--color-receipt: #fcfbf7;
-	--color-receipt-ink: #2e302c;
-	--color-receipt-muted: #5c6059;
-	--color-receipt-line: #dcd8cc;
-	--color-receipt-up: #94452a;
-	--color-receipt-down: #476a50;
+	--color-receipt: #fdfdfd;
+	--color-receipt-ink: #1d1d1f;
+	--color-receipt-muted: #6e6e73;
+	--color-receipt-line: #e5e5ea;
+	--color-receipt-up: #b42318;
+	--color-receipt-down: #1f7a4d;
 
-	--color-glow: rgb(255 240 210 / 0.35);
+	--color-glow: transparent;
 
-	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-	--font-display: 'Fraunces', Georgia, serif;
+	/* the system face: SF Pro on Apple devices, Segoe on Windows, no download */
+	--font-sans: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--font-mono: var(--font-sans);
+	--font-display: system-ui, -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
-
 
 :root {
 	color-scheme: light;
@@ -64,18 +42,11 @@ label[for] {
 
 body {
 	overflow-x: clip;
+	font-variant-numeric: tabular-nums;
 	background: var(--color-bg);
 	color: var(--color-ink);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
-}
-
-/* torn bottom edge, like paper pulled across the tear bar; the mask clips box-shadow, so shadows go on a wrapper */
-.torn {
-	--tear: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% 100% / 12px 7px repeat-x,
-		linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat;
-	-webkit-mask: var(--tear);
-	mask: var(--tear);
 }
 
 /* one-time entrance motion. Only opacity, transform, filter and clip-path change,
