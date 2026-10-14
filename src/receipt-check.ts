@@ -3,7 +3,8 @@ export type Reading = {
 	kind: 'store_receipt' | 'online_order' | 'not_a_receipt';
 	handwritten: boolean;
 	store: string | null;
-	purchase_date: string | null;
+	// copied as printed ("10/02/26"); readDate() turns it into a date
+	date_printed: string | null;
 	channel: 'in_store' | 'delivery' | 'pickup' | 'unknown';
 	lines: { raw: string; quantity: number | null; unit: string | null; unit_price: number | null; unit_price_for: number | null; total: number | null; discount: boolean }[];
 	subtotal: number | null;
@@ -64,12 +65,29 @@ const PAYMENT = new RegExp(
 const cents = (dollars: number | null) =>
 	dollars === null || !Number.isFinite(dollars) ? null : Math.round(dollars * 100);
 
-function validDate(value: string | null, today = new Date()) {
-	if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-	const date = new Date(`${value}T12:00:00Z`);
-	if (Number.isNaN(date.getTime())) return null;
-	const latest = new Date(today.getTime() + 2 * 86_400_000);
-	return date.getUTCFullYear() >= 2015 && date <= latest ? value : null;
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+// a real calendar day between 2015 and two days from now, or null
+function dayOf(year: number, month: number, day: number, today: Date) {
+	if (year < 100) year += 2000;
+	const date = new Date(Date.UTC(year, month - 1, day, 12));
+	if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+	if (year < 2015 || date.getTime() > today.getTime() + 2 * 86_400_000) return null;
+	return date.toISOString().slice(0, 10);
+}
+
+// US receipts print the month first: "10/02/26" is October 2, 2026.
+export function readDate(printed: string | null, today = new Date()): string | null {
+	const text = printed?.trim().toLowerCase() ?? '';
+	const iso = text.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+	if (iso) return dayOf(+iso[1], +iso[2], +iso[3], today);
+
+	const numeric = text.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/);
+	if (numeric) return dayOf(+numeric[3], +numeric[1], +numeric[2], today);
+
+	const month = (word: string) => MONTHS.indexOf(word.slice(0, 3)) + 1;
+	const named = text.match(/\b([a-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4}|\d{2})\b/);
+	return named && month(named[1]) ? dayOf(+named[3], month(named[1]), +named[2], today) : null;
 }
 
 // The receipt-level math, shared by processing and the review screen so they can never disagree.
@@ -196,7 +214,7 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 	return {
 		ok: true,
 		store: reading.store?.trim().slice(0, 120) || null,
-		purchasedOn: validDate(reading.purchase_date, today),
+		purchasedOn: readDate(reading.date_printed, today),
 		channel: reading.channel,
 		lines,
 		subtotalCents,

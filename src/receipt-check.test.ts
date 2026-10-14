@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, realignDetails, reconcile, type Reading } from './receipt-check';
+import { checkReading, readDate, realignDetails, reconcile, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -16,7 +16,7 @@ const reading = (overrides: Partial<Reading> = {}): Reading => ({
 	kind: 'store_receipt',
 	handwritten: false,
 	store: 'Walmart',
-	purchase_date: '2026-10-09',
+	date_printed: '10/09/2026',
 	channel: 'in_store',
 	lines: [line('GV WHL MLK GAL', 3.21), line('BANANAS', 1.18, { quantity: 2.1, unit: 'lb', unit_price: 0.56 })],
 	subtotal: 4.39,
@@ -256,10 +256,27 @@ describe('checkReading', () => {
 		]);
 	});
 
+	it('reads printed dates month first, the way US receipts print them', () => {
+		expect(readDate('10/02/26', today)).toBe('2026-10-02');
+		expect(readDate('10-02-2026 14:05', today)).toBe('2026-10-02');
+		expect(readDate('09-20-26', today)).toBe('2026-09-20');
+		expect(readDate('9/19/2026', today)).toBe('2026-09-19');
+		expect(readDate('Sep 20, 2026', today)).toBe('2026-09-20');
+		expect(readDate('OCT. 2 2026', today)).toBe('2026-10-02');
+		expect(readDate('2026-10-02', today)).toBe('2026-10-02');
+	});
+
+	it('never turns a month-first date around or rolls a missing day into the next month', () => {
+		expect(readDate('25/10/26', today)).toBeNull();
+		expect(readDate('02/30/26', today)).toBeNull();
+		expect(readDate('13/01/26', today)).toBeNull();
+		expect(readDate(null, today)).toBeNull();
+	});
+
 	it('drops impossible dates instead of storing them', () => {
-		expect(checkReading(reading({ purchase_date: '2031-01-01' }), today)).toMatchObject({ purchasedOn: null });
-		expect(checkReading(reading({ purchase_date: '1999-05-05' }), today)).toMatchObject({ purchasedOn: null });
-		expect(checkReading(reading({ purchase_date: '10/09/2026' }), today)).toMatchObject({ purchasedOn: null });
+		expect(checkReading(reading({ date_printed: '01/01/2031' }), today)).toMatchObject({ purchasedOn: null });
+		expect(checkReading(reading({ date_printed: '05/05/1999' }), today)).toMatchObject({ purchasedOn: null });
+		expect(checkReading(reading({ date_printed: 'THANK YOU' }), today)).toMatchObject({ purchasedOn: null });
 	});
 
 	it('refuses a reading with no real item lines', () => {
