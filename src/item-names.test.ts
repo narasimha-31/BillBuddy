@@ -65,6 +65,14 @@ describe('applyNames', () => {
 		expect(named[1]).toEqual({ name: 'GRN CHILI HOT', brand: null, category: 'Other', ...noSize, flag: 'unreadable', from: 'ai' });
 	});
 
+	it('keeps a guessed name with its unsure flag, and treats any other flag as ok', () => {
+		const named = applyNames(['CF ORGT SAUCE', 'BANANAS'], new Map(), answer([
+			{ index: 0, name: 'Original sauce', brand: 'Chick-fil-A', category: 'Pantry', flag: 'unsure' },
+			{ index: 1, name: 'Bananas', brand: null, category: 'Produce', flag: 'certain' }
+		]));
+		expect(named.map((n) => [n.name, n.flag])).toEqual([['Original sauce', 'unsure'], ['Bananas', 'ok']]);
+	});
+
 	it('ignores items the model invented for lines that do not exist', () => {
 		const named = applyNames(['BANANAS'], new Map(), answer([
 			{ index: 0, name: 'Bananas', brand: null, category: 'Produce', flag: 'ok' },

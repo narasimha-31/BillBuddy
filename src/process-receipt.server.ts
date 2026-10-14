@@ -106,7 +106,7 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		const keepPhoto = settings?.keep_photos === true;
 		if (!keepPhoto) await dropPhoto();
 
-		const needsReview = checked.needs_review || rows.some((r) => r.issue !== null);
+		const needsReview = checked.needs_review || rows.some((r) => r.issue === 'line_math');
 		await finish({
 			status: needsReview ? 'review' : 'saved',
 			store_id: storeId,

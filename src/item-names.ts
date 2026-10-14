@@ -19,7 +19,7 @@ export const SIZE_UNITS = ['oz', 'fl oz', 'lb', 'g', 'kg', 'gal', 'l', 'ml', 'ct
 
 export type Category = (typeof CATEGORIES)[number];
 export type SizeUnit = (typeof SIZE_UNITS)[number];
-export type Flag = 'ok' | 'offensive' | 'not_grocery' | 'unreadable';
+export type Flag = 'ok' | 'unsure' | 'offensive' | 'not_grocery' | 'unreadable';
 // name is the generic product every store shares ("Whole milk"); brand and pack size are kept apart
 export type Named = {
 	name: string;
@@ -131,7 +131,7 @@ export function applyNames(raws: string[], remembered: Map<number, Named>, answe
 		if (item.flag === 'not_grocery') return hidden('not_grocery', 'ai');
 
 		const category = (CATEGORIES as readonly string[]).includes(item.category) ? (item.category as Category) : 'Other';
-		const flag: Flag = item.flag === 'unreadable' ? 'unreadable' : 'ok';
+		const flag: Flag = item.flag === 'unreadable' || item.flag === 'unsure' ? item.flag : 'ok';
 		return { name, brand, category, ...size(item.size_amount, item.size_unit), flag, from: 'ai' };
 	});
 }

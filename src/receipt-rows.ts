@@ -15,7 +15,8 @@ export type ItemRow = {
 	unit_price_cents: number | null;
 	total_cents: number;
 	computed: boolean;
-	issue: 'line_math' | null;
+	// line_math holds the receipt for review; unsure only puts the line first for the shopper to check
+	issue: 'line_math' | 'unsure' | null;
 };
 
 // Pairs checked lines with their names (names cover item lines only, in order). Offensive and
@@ -44,7 +45,7 @@ export function itemRows(lines: CheckedLine[], names: Named[]): { rows: ItemRow[
 			category: unreadable ? null : named.category,
 			size_amount: unreadable ? null : named.sizeAmount,
 			size_unit: unreadable ? null : named.sizeUnit,
-			issue: line.issue
+			issue: line.issue ?? (unreadable || named.flag === 'unsure' ? 'unsure' : null)
 		});
 	}
 	return { rows, skipped };
