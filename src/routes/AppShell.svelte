@@ -121,7 +121,8 @@
 		display: none;
 	}
 
-	/* on phones the same links become a tab bar along the bottom, where the thumb reaches */
+	/* on phones the same links become a floating tab bar, lifted clear of the home indicator
+	   and the browser's own toolbar, the way iOS apps place it */
 	@media (max-width: 640px) {
 		/* a blur on the header would pin the fixed tab bar to the header instead of the screen */
 		.top {
@@ -130,7 +131,7 @@
 		}
 
 		.page {
-			padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+			padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 		}
 
 		.top-inner :global(.account) {
@@ -139,36 +140,41 @@
 
 		nav {
 			position: fixed;
-			inset: auto 0 0;
+			right: 1rem;
+			bottom: calc(0.85rem + env(safe-area-inset-bottom));
+			left: 1rem;
 			z-index: 20;
 			margin: 0;
-			border-radius: 0;
-			background: color-mix(in srgb, var(--color-raised) 96%, transparent);
-			backdrop-filter: saturate(1.8) blur(20px);
-			box-shadow: 0 -1px 0 rgb(0 0 0 / 0.08);
-			padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+			border-radius: 999px;
+			background: color-mix(in srgb, #fff 78%, transparent);
+			backdrop-filter: saturate(1.8) blur(22px);
+			box-shadow:
+				0 10px 30px -8px rgb(0 0 0 / 0.22),
+				0 0 0 0.5px rgb(0 0 0 / 0.08);
+			padding: 0.3rem;
 		}
 
 		nav a {
 			flex: 1;
 			flex-direction: column;
-			gap: 0.15rem;
-			border-radius: 0;
-			padding: 0.3rem 0;
+			gap: 0.1rem;
+			border-radius: 999px;
+			padding: 0.4rem 0 0.35rem;
 			font-size: 0.6875rem;
+			font-weight: 500;
 			color: var(--color-muted);
 		}
 
 		nav a[aria-current='page'] {
-			background: none;
+			background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 			box-shadow: none;
 			color: var(--color-accent);
 		}
 
 		nav svg {
 			display: block;
-			width: 1.6rem;
-			height: 1.6rem;
+			width: 1.5rem;
+			height: 1.5rem;
 			fill: none;
 			stroke: currentColor;
 			stroke-width: 1.7;
