@@ -18,3 +18,5 @@ Thumbs.db
 
 # local browser checks (Playwright), never committed
 browser-checks/
+.impeccable/
+.mcp.json
