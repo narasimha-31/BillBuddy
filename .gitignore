@@ -20,3 +20,4 @@ Thumbs.db
 browser-checks/
 .impeccable/
 .mcp.json
+.playwright-mcp/

@@ -1,97 +1,541 @@
 <script lang="ts">
-	import SampleReceipt from './SampleReceipt.svelte';
+	import { onMount } from 'svelte';
+	import { animate, inView } from 'motion';
+	import NumberFlow from '@number-flow/svelte';
+	import GoogleButton from './GoogleButton.svelte';
+	import Wordmark from './Wordmark.svelte';
 
 	let { data } = $props();
+
+	// a sample shopper's last banana price at each store; the numbers roll in when the card is seen
+	const stores = [
+		{ name: 'Parivar Grocers', cents: 49 },
+		{ name: 'H-E-B', cents: 50 },
+		{ name: 'Fiesta Mart', cents: 59 }
+	];
+	// the real prices show by default; they only start from zero once the page can roll them in
+	let shown = $state(stores.map((s) => s.cents));
+
+	// what the receipt printed, and what BillBuddy understood
+	const lines = [
+		{ printed: 'FS BANANA LB-3037', name: 'Bananas', detail: '2.88 lb at $0.59', cents: 170 },
+		{ printed: 'FS OKRA (BHINDI) 1LB', name: 'Okra', detail: '1.19 lb at $2.97', cents: 353 },
+		{ printed: 'MARUCHAN RMN CHKN', name: 'Chicken ramen', detail: '3 at $0.50', cents: 150 },
+		{ printed: 'HEB WHOLE MILK 64OZ', name: 'Whole milk', detail: 'half gallon', cents: 389 }
+	];
+
+	const promises = ['Your card number is never kept.', 'The photo is deleted once it’s read.', 'Nothing is sold or shared. Ever.'];
+
+	// Number Flow renders differently on the server, so the plain price is drawn until the page is live
+	let live = $state(false);
+	let storesCard: HTMLElement;
+	let promiseList: HTMLElement;
+
+	onMount(() => {
+		live = true;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		shown = stores.map(() => 0);
+		const stopPrices = inView(storesCard, () => {
+			shown = stores.map((s) => s.cents);
+		}, { amount: 0.5 });
+
+		// the promises arrive one after another, each settling on a spring
+		const items = promiseList.querySelectorAll('li');
+		items.forEach((li) => ((li as HTMLElement).style.opacity = '0'));
+		const stopPromises = inView(promiseList, () => {
+			items.forEach((li, i) =>
+				animate(li, { opacity: [0, 1], transform: ['translateY(24px)', 'none'] }, { type: 'spring', bounce: 0, duration: 0.9, delay: i * 0.18 })
+			);
+		}, { amount: 0.4 });
+		return () => {
+			stopPrices();
+			stopPromises();
+		};
+	});
+
+	const dollars = (cents: number) => cents / 100;
+	const usd = { style: 'currency', currency: 'USD' } as const;
+	const money = new Intl.NumberFormat('en-US', usd);
 </script>
 
-<div class="surface" aria-hidden="true"></div>
-<main
-	class="mx-auto grid max-w-5xl items-center gap-12 px-5 py-12 md:min-h-dvh md:grid-cols-[minmax(0,1fr)_auto] md:gap-16 md:py-8 xl:max-w-6xl xl:gap-24 2xl:max-w-7xl"
->
-	<div>
-		<h1 class="wordmark text-center text-[clamp(3rem,6vw,6rem)] md:text-left">
-			<span class="blur-rise block"><span class="text-brand">B</span>ill</span>
-			<span class="blur-rise block" style:--delay="120ms"><span class="text-brand">B</span>uddy</span>
-		</h1>
+<svelte:head>
+	<title>BillBuddy · Know what you paid last time</title>
+	<meta name="description" content="Snap any grocery receipt. BillBuddy remembers every price, at every store you shop." />
+</svelte:head>
 
-		<p
-			class="blur-rise mt-8 text-center text-2xl font-semibold text-ink md:text-left xl:text-3xl"
-			style:--delay="350ms"
-		>
-			Know what you paid last time.
-		</p>
-		<p
-			class="blur-rise mx-auto mt-3 max-w-md text-center text-lg leading-relaxed text-muted md:mx-0 md:text-left xl:max-w-lg"
-			style:--delay="480ms"
-		>
-			Snap any grocery receipt. BillBuddy remembers every item, price and store, then tells you next
-			time if it went up or where it's cheaper.
-		</p>
+<header class="bar">
+	<Wordmark />
+	<nav>
+		<a href="/demo">Try the demo</a>
+		<a href="/privacy">Privacy</a>
+	</nav>
+</header>
 
-		{#if data.signInFailed}
-			<p class="mt-6 font-mono text-sm text-up">SIGN-IN DIDN'T GO THROUGH. TRY AGAIN.</p>
-		{/if}
-
-		<div
-			class="blur-rise mt-8 flex flex-wrap items-start justify-center gap-3 md:justify-start"
-			style:--delay="640ms"
-		>
-			<form method="POST" action="?/google">
-				<button
-					class="flex items-center gap-3 rounded-md bg-ink px-5 py-3 font-medium text-bg transition-transform hover:-translate-y-0.5 active:translate-y-0"
-				>
-					<svg viewBox="0 0 48 48" class="size-5 rounded-full bg-white p-0.5" aria-hidden="true">
-						<path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
-						<path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
-						<path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
-						<path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
-					</svg>
-					Continue with Google
-				</button>
-			</form>
-			<a href="/demo" class="flex flex-col items-center">
-				<span
-					class="rounded-md border border-ink/40 px-5 py-3 font-medium text-ink transition-transform hover:-translate-y-0.5 hover:border-ink"
-				>
-					Try the demo
-				</span>
-				<span class="mt-1.5 text-xs text-muted">no login required</span>
-			</a>
+<main>
+	<section class="hero">
+		<h1>Know what you paid last time.</h1>
+		<p class="lead">Snap any grocery receipt. BillBuddy remembers every price, at every store you shop.</p>
+		{#if data.signInFailed}<p class="failed" role="alert">Sign-in didn’t go through. Try again.</p>{/if}
+		<div class="actions">
+			<GoogleButton />
+			<a class="quiet" href="/demo">Try the demo</a>
 		</div>
-	</div>
+		<figure class="photo">
+			<img
+				src="/images/hero-receipt-2048.webp"
+				srcset="/images/hero-receipt-1024.webp 1024w, /images/hero-receipt-2048.webp 2048w"
+				sizes="(min-width: 1200px) 1120px, 92vw"
+				width="2048"
+				height="1020"
+				alt="A hand holding a long grocery receipt in a bright produce aisle"
+				fetchpriority="high"
+			/>
+		</figure>
+	</section>
 
-	<div class="flex justify-center md:justify-end">
-		<SampleReceipt />
-	</div>
+	<section class="snap">
+		<div class="copy">
+			<h2>Crumpled. Faded. Abbreviated. Read anyway.</h2>
+			<p>
+				BillBuddy reads every line of a real receipt, turns store shorthand into plain names, and checks every total
+				with simple math. It never guesses a price.
+			</p>
+		</div>
+		<div class="stage">
+			<img
+				class="pile"
+				src="/images/receipts-flat-2048.webp"
+				srcset="/images/receipts-flat-1024.webp 1024w, /images/receipts-flat-2048.webp 2048w"
+				sizes="(min-width: 1000px) 640px, 92vw"
+				width="2048"
+				height="1152"
+				alt="Four long crumpled grocery receipts on a grey table"
+				loading="lazy"
+			/>
+			<div class="readout">
+				<p class="store">Fiesta Mart · Oct 2</p>
+				<ul>
+					{#each lines as line (line.printed)}
+						<li>
+							<span class="printed">{line.printed}</span>
+							<span class="name">{line.name}</span>
+							<span class="price">{money.format(dollars(line.cents))}</span>
+							<span class="detail">{line.detail}</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<section class="stores">
+		<h2>Every store. One price.</h2>
+		<p class="sub">The same bananas from three stores line up as one product, so you can see where they’re cheaper.</p>
+		<div class="card" bind:this={storesCard}>
+			<div class="card-head">
+				<span>Bananas</span>
+				<span class="unit">price per lb</span>
+			</div>
+			<ul>
+				{#each stores as store, i (store.name)}
+					<li class:best={i === 0}>
+						<span>{store.name}</span>
+						{#if i === 0}<span class="tag">Cheapest</span>{/if}
+						<span class="money">
+							{#if live}<NumberFlow value={dollars(shown[i])} format={usd} />{:else}{money.format(dollars(store.cents))}{/if}
+						</span>
+					</li>
+				{/each}
+			</ul>
+			<p class="note">Sample prices from a sample shopper.</p>
+		</div>
+	</section>
+
+	<section class="private">
+		<h2>Private by design.</h2>
+		<ul bind:this={promiseList}>
+			{#each promises as promise (promise)}<li>{promise}</li>{/each}
+		</ul>
+		<a class="fine" href="/privacy">Read the fine print</a>
+	</section>
+
+	<section class="close">
+		<h2>Start with your last receipt.</h2>
+		<div class="actions">
+			<GoogleButton />
+			<a class="quiet" href="/demo">Try the demo</a>
+		</div>
+	</section>
 </main>
 
+<footer>
+	<Wordmark />
+	<span>Prices on this page come from a sample shopper.</span>
+</footer>
+
 <style>
-	/* opsz is left to font-optical-sizing: forcing it breaks glyph advances in WebKit */
-	.wordmark {
+	.bar {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.9rem max(1.25rem, calc((100% - 73.5rem) / 2));
+		background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+		backdrop-filter: saturate(1.6) blur(18px);
+	}
+
+	nav {
+		display: flex;
+		gap: 1.5rem;
+		font-size: 0.9375rem;
+	}
+
+	nav a,
+	.quiet,
+	.fine {
+		color: var(--color-ink);
+	}
+
+	@media (hover: hover) {
+		nav a:hover,
+		.fine:hover {
+			color: var(--color-accent);
+		}
+	}
+
+	section {
+		margin: 0 auto;
+		max-width: 76rem;
+		padding: 0 1.25rem;
+	}
+
+	h1,
+	h2 {
 		font-family: var(--font-display);
-		font-weight: 700;
-		font-synthesis: none;
-		font-optical-sizing: auto;
-		font-variation-settings: 'SOFT' 100;
-		line-height: 0.95;
-		letter-spacing: -0.01em;
+		font-weight: 650;
+		letter-spacing: -0.035em;
+		text-wrap: balance;
+		color: var(--color-ink);
 	}
 
-	/* paper grain under one warm light, kept still: moving it behind the title makes the text shimmer */
-	.surface {
-		position: fixed;
-		inset: 0;
-		z-index: -1;
-		pointer-events: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .27 0 0 0 0 .2 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	h1 {
+		font-size: clamp(2.75rem, 7vw, 5.5rem);
+		line-height: 1.02;
 	}
 
-	.surface::before {
-		content: '';
-		position: absolute;
-		inset: -30%;
-		background: radial-gradient(closest-side, var(--color-glow), transparent);
-		transform: translate(-10%, -8%);
+	h2 {
+		font-size: clamp(2.1rem, 4.6vw, 3.75rem);
+		line-height: 1.05;
 	}
 
+	.hero {
+		padding-top: clamp(3rem, 9vh, 6.5rem);
+		text-align: center;
+	}
+
+	.lead {
+		margin: 1.25rem auto 0;
+		max-width: 34rem;
+		font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+		line-height: 1.45;
+		color: var(--color-muted);
+		text-wrap: pretty;
+	}
+
+	.failed {
+		margin-top: 1rem;
+		color: var(--color-up);
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem 1.75rem;
+		margin-top: 2rem;
+	}
+
+	.quiet {
+		border-radius: 999px;
+		padding: 0.75rem 1.25rem;
+		font-size: 1.0625rem;
+		font-weight: 500;
+		box-shadow: inset 0 0 0 1px var(--color-line);
+		transition: box-shadow 200ms;
+	}
+
+	@media (hover: hover) {
+		.quiet:hover {
+			box-shadow: inset 0 0 0 1px var(--color-ink);
+		}
+	}
+
+	.quiet:focus-visible,
+	nav a:focus-visible,
+	.fine:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	.photo {
+		margin-top: clamp(2.5rem, 7vh, 4.5rem);
+	}
+
+	.photo img {
+		width: 100%;
+		height: auto;
+		border-radius: 28px;
+		box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.25);
+	}
+
+	/* the photo settles from slightly smaller to full size as it scrolls into place */
+	@supports (animation-timeline: view()) {
+		@media (prefers-reduced-motion: no-preference) {
+			.photo img {
+				animation: settle linear both;
+				animation-timeline: view();
+				animation-range: entry 0% cover 45%;
+			}
+
+			.readout {
+				animation: rise linear both;
+				animation-timeline: view();
+				animation-range: entry 10% cover 50%;
+			}
+		}
+	}
+
+	@keyframes settle {
+		from {
+			transform: scale(0.9);
+			opacity: 0.6;
+		}
+	}
+
+	@keyframes rise {
+		from {
+			transform: translateY(60px);
+			opacity: 0;
+		}
+	}
+
+	.snap {
+		display: grid;
+		gap: 2.5rem;
+		margin-top: clamp(6rem, 16vh, 10rem);
+	}
+
+	.copy p,
+	.sub {
+		margin-top: 1.25rem;
+		max-width: 32rem;
+		font-size: 1.1875rem;
+		line-height: 1.55;
+		color: var(--color-muted);
+	}
+
+	.stage {
+		position: relative;
+	}
+
+	.pile {
+		width: 100%;
+		height: auto;
+		border-radius: 28px;
+	}
+
+	.readout {
+		position: relative;
+		margin: -5rem 1rem 0 auto;
+		max-width: 26rem;
+		border-radius: 22px;
+		background: #fff;
+		padding: 1.25rem 1.4rem;
+		box-shadow: 0 24px 50px -20px rgb(0 0 0 / 0.28);
+	}
+
+	.store {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-muted);
+	}
+
+	.readout li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0 1rem;
+		border-top: 1px solid var(--color-receipt-line);
+		padding: 0.65rem 0;
+	}
+
+	.readout li:first-child {
+		margin-top: 0.6rem;
+	}
+
+	.printed {
+		grid-column: 1 / -1;
+		font-size: 0.75rem;
+		letter-spacing: 0.02em;
+		color: var(--color-muted);
+	}
+
+	.name {
+		font-weight: 600;
+	}
+
+	.detail {
+		font-size: 0.875rem;
+		color: var(--color-muted);
+	}
+
+	.price {
+		grid-row: 2 / span 2;
+		grid-column: 2;
+		align-self: center;
+		font-weight: 600;
+	}
+
+	@media (min-width: 1000px) {
+		.snap {
+			grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+			align-items: center;
+			gap: 4rem;
+		}
+
+		.copy {
+			position: sticky;
+			top: 30vh;
+			align-self: start;
+		}
+	}
+
+	.stores {
+		margin-top: clamp(6rem, 16vh, 10rem);
+		max-width: none;
+		background: var(--color-raised);
+		padding: clamp(4.5rem, 12vh, 7.5rem) 1.25rem;
+		text-align: center;
+	}
+
+	.stores .sub {
+		margin-inline: auto;
+	}
+
+	.card {
+		margin: 3rem auto 0;
+		max-width: 30rem;
+		border-radius: 24px;
+		background: #fff;
+		padding: 1.5rem 1.6rem 1.25rem;
+		text-align: left;
+		box-shadow: 0 24px 50px -28px rgb(0 0 0 / 0.25);
+	}
+
+	.card-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		font-size: 1.375rem;
+		font-weight: 650;
+		letter-spacing: -0.02em;
+	}
+
+	.unit {
+		font-size: 0.875rem;
+		font-weight: 400;
+		letter-spacing: 0;
+		color: var(--color-muted);
+	}
+
+	.card li {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		border-top: 1px solid var(--color-receipt-line);
+		padding: 0.95rem 0;
+		font-size: 1.0625rem;
+	}
+
+	.card li:first-child {
+		margin-top: 0.75rem;
+	}
+
+	.money {
+		margin-left: auto;
+		font-size: 1.25rem;
+		font-weight: 600;
+	}
+
+	.best .money {
+		color: var(--color-accent);
+	}
+
+	.tag {
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		padding: 0.15rem 0.55rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-accent);
+	}
+
+	.note {
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.private {
+		padding-top: clamp(6rem, 16vh, 10rem);
+	}
+
+	.private ul {
+		display: grid;
+		gap: 1rem;
+		margin-top: 2.5rem;
+	}
+
+	.private li {
+		font-family: var(--font-display);
+		font-size: clamp(1.6rem, 3.4vw, 2.75rem);
+		font-weight: 600;
+		letter-spacing: -0.03em;
+		line-height: 1.15;
+		color: var(--color-ink);
+	}
+
+	.fine {
+		display: inline-block;
+		margin-top: 2rem;
+		font-size: 1.0625rem;
+		text-decoration: underline;
+		text-underline-offset: 4px;
+	}
+
+	.close {
+		padding: clamp(6rem, 16vh, 10rem) 1.25rem clamp(5rem, 12vh, 8rem);
+		text-align: center;
+	}
+
+	footer {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin: 0 auto;
+		max-width: 76rem;
+		border-top: 1px solid var(--color-line);
+		padding: 1.5rem 1.25rem 2.5rem;
+		font-size: 0.875rem;
+		color: var(--color-muted);
+	}
+
+	:global(::selection) {
+		background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+	}
 </style>
