@@ -1,6 +1,6 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { CATEGORIES } from '../../../item-names';
-import { reconcile } from '../../../receipt-check';
+import { readDate, reconcile } from '../../../receipt-check';
 import { firstNameOf } from '../../../session.server';
 import { readEdits } from './review-edits';
 import type { Actions, PageServerLoad } from './$types';
@@ -55,8 +55,14 @@ export const actions: Actions = {
 		if (items.error) throw items.error;
 
 		const editable = items.data.filter((i) => i.kind === 'item');
-		const result = readEdits(await request.formData(), editable.map((i) => i.id));
+		const form = await request.formData();
+		const result = readEdits(form, editable.map((i) => i.id));
 		if (!result.ok) return fail(400, { problem: result.problem });
+
+		// the date as the shopper set it; a blank field means the receipt has no date
+		const typed = String(form.get('purchased_on') ?? '').trim();
+		const purchasedOn = typed ? readDate(typed) : null;
+		if (typed && !purchasedOn) return fail(400, { problem: 'pick a real date, not in the future' });
 
 		const changed = result.edits.filter((edit) => {
 			const before = editable.find((i) => i.id === edit.id)!;
@@ -92,7 +98,8 @@ export const actions: Actions = {
 		const seen = await locals.supabase.from('receipt_items').update({ issue: null }).eq('receipt_id', params.id).in('issue', ['unsure', 'unreadable']);
 		if (seen.error) throw seen.error;
 
-		const { error } = await locals.supabase.from('receipts').update({ status: 'saved' }).eq('id', params.id);
+		const update = form.has('purchased_on') ? { status: 'saved', purchased_on: purchasedOn } : { status: 'saved' };
+		const { error } = await locals.supabase.from('receipts').update(update).eq('id', params.id);
 		if (error) throw error;
 		redirect(303, '/receipts');
 	},

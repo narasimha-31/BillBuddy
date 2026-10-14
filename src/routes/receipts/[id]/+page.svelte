@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { longDay as day, money, storeName } from '../../../format';
+	import { money, storeName } from '../../../format';
 	import AppShell from '../../AppShell.svelte';
 
 	let { data, form } = $props();
@@ -27,7 +27,13 @@
 		<div class="layout">
 			<section class="summary" aria-labelledby="store">
 				<h1 id="store">{store}</h1>
-				<p class="meta">{day(r.purchased_on)}{channels[r.channel ?? ''] ? ` · ${channels[r.channel ?? '']}` : ''}</p>
+				<p class="meta">
+					<label>
+						<span class="visually-hidden">Date bought</span>
+						<input class="date" type="date" name="purchased_on" form="confirm" value={r.purchased_on ?? ''} max={new Date().toISOString().slice(0, 10)} />
+					</label>
+					{channels[r.channel ?? ''] ? ` · ${channels[r.channel ?? '']}` : ''}
+				</p>
 				{#if r.total_cents !== null}<p class="total">{money(r.total_cents)}</p>{/if}
 
 				<div class="checks">
@@ -190,6 +196,32 @@
 	.meta {
 		margin-top: 0.25rem;
 		color: var(--color-muted);
+	}
+
+	/* the date reads as plain text until it is clicked to fix it */
+	.date {
+		border: 1px solid transparent;
+		border-radius: 0.5rem;
+		background: transparent;
+		padding: 0.15rem 0.35rem;
+		margin-left: -0.35rem;
+		font: inherit;
+		color: inherit;
+	}
+
+	.date:hover,
+	.date:focus {
+		border-color: var(--color-line);
+		outline: none;
+	}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
 	.total {
