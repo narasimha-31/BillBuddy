@@ -540,3 +540,29 @@ describe('price changes', () => {
 		expect((await anon.rpc('my_price_changes')).error).not.toBeNull();
 	});
 });
+
+describe('shared products', () => {
+	const vector = (hot: number) => `[${Array.from({ length: 1024 }, (_, i) => (i === hot ? 1 : 0)).join(',')}]`;
+
+	it('can be read by signed-in people but only added by the server, and finds the nearest by meaning', async () => {
+		const tag = crypto.randomUUID().slice(0, 8);
+		const made = await admin.from('products').insert([
+			{ name: `Test bananas ${tag}`, embedding: vector(3) },
+			{ name: `Test milk ${tag}`, embedding: vector(7) }
+		]).select('id, name');
+		expect(made.error).toBeNull();
+		try {
+			const read = await alice.from('products').select('name').like('name', `%${tag}`);
+			expect(read.data).toHaveLength(2);
+			expect((await alice.from('products').insert({ name: `Sneaky ${tag}`, embedding: vector(1) })).error).not.toBeNull();
+			expect((await createClient(url, publishable, noSession).from('products').select('name').like('name', `%${tag}`)).data ?? []).toEqual([]);
+
+			const near = await admin.rpc('nearest_products', { p_embedding: vector(3), p_count: 1 });
+			expect(near.data[0].name).toBe(`Test bananas ${tag}`);
+			expect(near.data[0].similarity).toBeCloseTo(1, 5);
+			expect((await alice.rpc('nearest_products', { p_embedding: vector(3), p_count: 1 })).error).not.toBeNull();
+		} finally {
+			await admin.from('products').delete().in('id', made.data!.map((p) => p.id));
+		}
+	});
+});
