@@ -60,11 +60,8 @@
 	}
 
 	h1 {
-		font-family: var(--font-display);
-		font-size: clamp(1.9rem, 3vw, 2.4rem);
-		font-weight: 650;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+		font-size: 1.75rem;
+		font-weight: 600;
 		color: var(--color-ink);
 	}
 
