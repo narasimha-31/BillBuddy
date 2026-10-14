@@ -2,7 +2,7 @@ import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { renderSVG } from 'uqr';
 import { createPhoneLink } from '../../phone-link.server';
 import { processReceipt } from '../../process-receipt.server';
-import { DAILY_RECEIPTS, savePhoto } from '../../save-photo.server';
+import { DAILY_RECEIPTS, savePhoto, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -10,21 +10,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const [list, today] = await Promise.all([
+	const [list, uploaded] = await Promise.all([
 		locals.supabase
 			.from('receipts')
 			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, stores(name)')
 			.order('created_at', { ascending: false })
 			.limit(100),
 		// counted from the upload log, so deleted receipts still count, exactly like the limit itself
-		locals.supabase.rpc('uploads_today')
+		locals.supabase.rpc('my_upload_window')
 	]);
 	if (list.error) throw list.error;
-	if (today.error) throw today.error;
+	if (uploaded.error) throw uploaded.error;
 
 	return {
 		firstName: firstNameOf(user),
-		today: (today.data as number | null) ?? 0,
+		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
 		receipts: list.data.map(({ stores, ...receipt }) => ({
 			...receipt,

@@ -99,7 +99,7 @@
 			<h1>Receipts</h1>
 
 			<div class="scroll">
-				<ReceiptUploader bind:this={uploader} today={data.today} dailyLimit={data.dailyLimit} onreading={busy} />
+				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
 
 				{#if review.length}
 					<section>

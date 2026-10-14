@@ -28,7 +28,7 @@
 
 		<div class="board">
 			<div class="add">
-				<ReceiptUploader today={data.today} dailyLimit={data.dailyLimit} />
+				<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} />
 			</div>
 
 			<section class="month" aria-labelledby="month-title">

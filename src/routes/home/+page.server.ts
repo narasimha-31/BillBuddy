@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { DAILY_RECEIPTS } from '../../save-photo.server';
+import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { PageServerLoad } from './$types';
 
@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!user) redirect(303, '/');
 
 	const monthStart = `${new Date().toISOString().slice(0, 7)}-01`;
-	const [recent, month, changes, today] = await Promise.all([
+	const [recent, month, changes, uploaded] = await Promise.all([
 		locals.supabase
 			.from('receipts')
 			.select('id, purchased_on, total_cents, channel, stores(name)')
@@ -23,14 +23,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.limit(5),
 		locals.supabase.from('receipts').select('total_cents, store_id').eq('status', 'saved').gte('purchased_on', monthStart),
 		locals.supabase.rpc('my_price_changes', { how_many: 5 }),
-		locals.supabase.rpc('uploads_today')
+		locals.supabase.rpc('my_upload_window')
 	]);
-	for (const answer of [recent, month, changes, today]) if (answer.error) throw answer.error;
+	for (const answer of [recent, month, changes, uploaded]) if (answer.error) throw answer.error;
 
 	const monthRows = month.data ?? [];
 	return {
 		firstName: firstNameOf(user),
-		today: (today.data as number | null) ?? 0,
+		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
 		month: {
 			start: monthStart,

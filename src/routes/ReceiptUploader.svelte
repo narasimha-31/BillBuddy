@@ -4,7 +4,20 @@
 	import { preparePhoto } from './receipts/prepare-photo';
 	import { post, readReceipt, type Printed } from './receipts/reading';
 
-	let { today, dailyLimit, onreading }: { today: number; dailyLimit: number; onreading?: (id: string, busy: boolean) => void } = $props();
+	let {
+		uploads,
+		dailyLimit,
+		onreading
+	}: { uploads: { used: number; freesAt: string | null }; dailyLimit: number; onreading?: (id: string, busy: boolean) => void } = $props();
+
+	// the time is shown in the browser's own timezone, so it is only written once the page is running there
+	let opensAt = $state('');
+	$effect(() => {
+		opensAt =
+			uploads.used >= dailyLimit && uploads.freesAt
+				? new Date(uploads.freesAt).toLocaleTimeString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+				: '';
+	});
 
 	type State = 'preparing' | 'reading' | 'saved' | 'review' | 'duplicate' | 'failed' | 'paused';
 	type Entry = { key: number; id?: string; photo: string | null; state: State; slow: boolean; note?: string; printed?: Printed };
@@ -112,7 +125,10 @@
 			e.currentTarget.value = '';
 		}}
 	/>
-	<p class="limits">{today} of {dailyLimit} receipts today. Photos up to 5 MB.</p>
+	<p class="limits">
+		{uploads.used} of {dailyLimit} receipts in the last 24 hours.
+		{opensAt ? `The next one opens ${opensAt}.` : 'Photos up to 5 MB.'}
+	</p>
 
 	{#if entries.length}
 		<ul class="entries" aria-live="polite">
