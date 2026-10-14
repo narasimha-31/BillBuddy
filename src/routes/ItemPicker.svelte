@@ -76,17 +76,14 @@
 	.search {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		border: 1px solid var(--color-line);
-		border-radius: 0.875rem;
-		background: var(--color-raised);
-		padding: 0 1.1rem;
-		transition: border-color 150ms;
+		gap: 0.5rem;
+		border-radius: 10px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0 0.75rem;
 	}
 
 	.search:focus-within {
-		border-color: var(--color-brand);
-		outline: 2px solid color-mix(in srgb, var(--color-brand) 25%, transparent);
+		outline: 2px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
 	}
 
 	.search svg {
@@ -105,7 +102,7 @@
 		min-width: 0;
 		border: 0;
 		background: transparent;
-		padding: 0.85rem 0;
+		padding: 0.6rem 0;
 		font-size: 1rem;
 		color: var(--color-ink);
 		outline: none;
@@ -116,9 +113,9 @@
 	}
 
 	h2 {
-		margin-top: 1.5rem;
-		font-size: 0.95rem;
-		font-weight: 600;
+		margin: 1.5rem 1rem 0;
+		font-size: 0.8125rem;
+		font-weight: 500;
 		color: var(--color-muted);
 	}
 
@@ -130,27 +127,26 @@
 	}
 
 	.chip {
-		border: 1px solid var(--color-line);
 		border-radius: 999px;
-		background: var(--color-raised);
-		padding: 0.45rem 0.85rem;
-		font-size: 0.875rem;
+		background: #fff;
+		padding: 0.45rem 0.9rem;
+		font-size: 0.9375rem;
 		color: var(--color-ink);
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
 		transition:
 			background-color 150ms,
-			border-color 150ms;
+			color 150ms;
 	}
 
 	.chip:focus-visible,
 	summary:focus-visible {
-		outline: 2px solid var(--color-brand);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
 
 	.chip.selected {
-		border-color: var(--color-ink);
-		background: var(--color-ink);
-		color: var(--color-on-ink);
+		background: var(--color-accent);
+		color: #fff;
 	}
 
 	.none {
@@ -159,12 +155,14 @@
 	}
 
 	.aisles {
-		margin-top: 0.5rem;
-		border-top: 1px solid var(--color-line);
+		margin-top: 0.45rem;
+		overflow: hidden;
+		border-radius: 14px;
+		background: #fff;
 	}
 
-	details {
-		border-bottom: 1px solid var(--color-line);
+	details + details {
+		box-shadow: inset 0 1px 0 rgb(60 60 67 / 0.12);
 	}
 
 	summary {
@@ -172,8 +170,8 @@
 		align-items: center;
 		gap: 0.6rem;
 		list-style: none;
-		padding: 0.75rem 0.25rem;
-		font-weight: 550;
+		padding: 0.8rem 1rem;
+		font-weight: 500;
 		color: var(--color-ink);
 	}
 
@@ -198,21 +196,29 @@
 
 	.count {
 		margin-left: auto;
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
+		font-size: 0.9375rem;
 		font-weight: 400;
 		color: var(--color-muted);
 	}
 
 	details .chips {
-		margin: 0 0 0.9rem;
+		margin: 0;
+		padding: 0 1rem 0.9rem;
+	}
+
+	details .chip {
+		background: var(--color-raised);
+		box-shadow: none;
+	}
+
+	details .chip.selected {
+		background: var(--color-accent);
 	}
 
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
 	@media (hover: hover) {
 		.chip:not(.selected):hover {
-			border-color: var(--color-muted);
-			background: var(--color-receipt);
+			color: var(--color-accent);
 		}
 	}
 </style>

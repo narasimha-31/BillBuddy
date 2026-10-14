@@ -18,7 +18,10 @@
 	async function pick(name: string) {
 		picked = name;
 		await goto(`?item=${encodeURIComponent(name)}`, { replaceState: true, noScroll: true, keepFocus: true });
-		if (matchMedia('(max-width: 959px)').matches) history?.scrollIntoView({ behavior: prefersReducedMotion.current ? 'auto' : 'smooth' });
+		// on a phone, picking from an aisle below the history brings the history back into view
+		const top = history?.getBoundingClientRect().top ?? 0;
+		if (matchMedia('(max-width: 959px)').matches && (top < 0 || top > innerHeight * 0.6))
+			history?.scrollIntoView({ behavior: prefersReducedMotion.current ? 'auto' : 'smooth' });
 	}
 </script>
 
@@ -28,7 +31,8 @@
 
 <AppShell fit firstName={data.firstName}>
 	<main>
-		<h1>What did I pay last time?</h1>
+		<h1 class="large-title">Prices</h1>
+		<p class="ask">What did I pay last time?</p>
 
 		{#if data.products.length}
 			<div class="columns">
@@ -55,14 +59,10 @@
 </AppShell>
 
 <style>
-	main {
-		margin-top: 2rem;
-	}
-
-	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
-		color: var(--color-ink);
+	.ask {
+		margin-top: 0.3rem;
+		font-size: 1.0625rem;
+		color: var(--color-muted);
 	}
 
 	.columns {
@@ -71,8 +71,31 @@
 		margin-top: 1.5rem;
 	}
 
+	/* on a phone the price comes straight after the items tapped most; the aisles follow it */
+	@media (max-width: 959px) {
+		.columns {
+			display: flex;
+			flex-direction: column;
+			gap: 0;
+		}
+
+		.picker {
+			display: contents;
+		}
+
+		.history {
+			order: 2;
+			margin-top: 1.5rem;
+		}
+
+		.picker > :global(h2:nth-of-type(2)),
+		.picker > :global(.aisles) {
+			order: 3;
+		}
+	}
+
 	.history {
-		scroll-margin-top: 1rem;
+		scroll-margin-top: 5rem;
 	}
 
 	/* the history stays in view while the list beside it is browsed */
@@ -131,7 +154,7 @@
 		.picker > :global(.aisles),
 		.picker > :global(.chips:last-child),
 		.history {
-			flex: 1 1 auto;
+			flex: 0 1 auto;
 			position: static;
 			min-height: 0;
 			overflow-y: auto;

@@ -71,12 +71,10 @@
 
 <style>
 	.card {
-		border-radius: 0.875rem;
-		background: var(--color-receipt);
-		padding: 1.5rem;
-		font-family: var(--font-mono);
-		color: var(--color-receipt-ink);
-		box-shadow: 0 0 0 1px var(--color-receipt-line);
+		border-radius: 18px;
+		background: #fff;
+		padding: 1.4rem 1.5rem;
+		color: var(--color-ink);
 	}
 
 	header {
@@ -84,18 +82,21 @@
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1rem;
-		border-bottom: 1px dashed var(--color-receipt-line);
-		padding-bottom: 1rem;
+		border-bottom: 1px solid rgb(60 60 67 / 0.12);
+		padding-bottom: 0.9rem;
 	}
 
 	h2 {
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-size: 1.375rem;
+		font-weight: 650;
+		letter-spacing: -0.02em;
 	}
 
 	header span,
 	.label,
 	.more {
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		color: var(--color-receipt-muted);
 	}
 
@@ -109,8 +110,10 @@
 
 	.big {
 		margin-top: 0.25rem;
-		font-size: 2.75rem;
+		font-family: var(--font-display);
+		font-size: 3rem;
 		font-weight: 700;
+		letter-spacing: -0.03em;
 		line-height: 1.1;
 		font-variant-numeric: tabular-nums;
 	}
@@ -144,7 +147,7 @@
 	}
 
 	.part {
-		border-top: 1px dashed var(--color-receipt-line);
+		border-top: 1px solid rgb(60 60 67 / 0.12);
 		padding: 1.1rem 0 0.25rem;
 	}
 
@@ -157,7 +160,7 @@
 		display: grid;
 		gap: 0.75rem;
 		margin-top: 0.85rem;
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 	}
 
 	/* every row shares one name column, as wide as the longest store name, so the bars line up */
