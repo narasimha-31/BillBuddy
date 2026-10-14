@@ -368,6 +368,19 @@ describe('receipt and upload limits, enforced by the database', () => {
 		expect((await anon.rpc('uploads_today')).error).not.toBeNull();
 	});
 
+	it('says how many of the last 24 hours of uploads are used and when the oldest drops out', async () => {
+		const jo = await userWithHistory('jo', 2, 5);
+		const { data } = await jo.rpc('my_upload_window');
+		expect(data[0].used).toBe(2);
+		const frees = Date.parse(data[0].frees_at);
+		expect(frees).toBeGreaterThan(Date.now() + 23 * 3600_000);
+		expect(frees).toBeLessThanOrEqual(Date.now() + 24 * 3600_000);
+		const empty = await userWithHistory('kit', 0, 0);
+		expect((await empty.rpc('my_upload_window')).data).toEqual([{ used: 0, frees_at: null }]);
+		const anon = createClient(url, publishable, noSession);
+		expect((await anon.rpc('my_upload_window')).error).not.toBeNull();
+	});
+
 	it('keeps the upload log out of reach of users and visitors', async () => {
 		const henry = await userWithHistory('henry', 1, 5);
 		const id = userIds[userIds.length - 1];
