@@ -22,11 +22,11 @@
 
 <AppShell firstName={data.firstName}>
 	<main>
-		<a href="/receipts" class="back">All receipts</a>
+		<a href="/receipts" class="back">Receipts</a>
 
 		<div class="layout">
-			<section class="summary" aria-labelledby="store">
-				<h1 id="store">{store}</h1>
+			<section class="summary surface" aria-labelledby="store">
+				<h1 class="large-title" id="store">{store}</h1>
 				<p class="meta">
 					<label>
 						<span class="visually-hidden">Date bought</span>
@@ -74,7 +74,7 @@
 				{#if form?.problem}<p class="error" role="alert">{form.problem}</p>{/if}
 
 				<div class="actions">
-					<button form="confirm" class="primary">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
+					<button form="confirm" class="pill-button">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
 					<form method="POST" action="?/delete">
 						<button class="quiet" onclick={(e) => !confirm('Delete this receipt? This cannot be undone.') && e.preventDefault()}>
 							Delete receipt
@@ -83,8 +83,8 @@
 				</div>
 			</section>
 
-			<div class="paper-shadow">
-				<form method="POST" action="?/confirm" id="confirm" class="receipt torn">
+			<div class="sheet">
+				<form method="POST" action="?/confirm" id="confirm" class="receipt surface">
 					{#if toCheck.length}
 						<h2>Check these names</h2>
 						<p class="hint">BillBuddy guessed these. Fix any that are wrong and it remembers next time.</p>
@@ -103,12 +103,12 @@
 							<li class:flagged={item.issue === 'line_math'} class:guessed={item.issue === 'unsure' || item.issue === 'unreadable'}>
 								<p class="printed">{item.raw_text}</p>
 								{#if item.kind === 'discount'}
-									<div class="row">
+									<div class="line-row">
 										<span class="savings">Savings</span>
 										<span class="price">{money(item.total_cents)}</span>
 									</div>
 								{:else}
-									<div class="row">
+									<div class="line-row">
 										<input
 											name="name_{item.id}"
 											value={item.name ?? ''}
@@ -118,7 +118,7 @@
 										/>
 										<span class="price">{money(item.total_cents)}</span>
 									</div>
-									<div class="row small">
+									<div class="line-row small">
 										<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}">
 											{#each data.categories as category (category)}
 												<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
@@ -155,20 +155,31 @@
 </AppShell>
 
 <style>
-	main {
-		margin-top: 1.5rem;
+	.back {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 1.0625rem;
+		color: var(--color-accent);
 	}
 
-	.back {
-		font-size: 0.9rem;
-		color: var(--color-muted);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+	.back::before {
+		content: '';
+		width: 0.55rem;
+		height: 0.55rem;
+		border-bottom: 2px solid currentColor;
+		border-left: 2px solid currentColor;
+		transform: rotate(45deg);
+	}
+
+	.back:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
 	}
 
 	.layout {
 		display: grid;
-		gap: 2rem;
+		gap: 1.5rem;
 		margin-top: 1rem;
 	}
 
@@ -177,34 +188,32 @@
 		.layout {
 			grid-template-columns: minmax(0, 40rem) minmax(18rem, 24rem);
 			align-items: start;
-			gap: 3rem;
+			gap: 2rem;
 		}
 
 		.summary {
 			position: sticky;
-			top: 1.5rem;
+			top: 5rem;
 			order: 2;
 		}
 	}
 
-	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
-		color: var(--color-ink);
+	.summary {
+		padding: 1.4rem 1.5rem;
 	}
 
 	.meta {
-		margin-top: 0.25rem;
+		margin-top: 0.3rem;
 		color: var(--color-muted);
 	}
 
 	/* the date reads as plain text until it is clicked to fix it */
 	.date {
+		margin-left: -0.35rem;
 		border: 1px solid transparent;
-		border-radius: 0.5rem;
+		border-radius: 8px;
 		background: transparent;
 		padding: 0.15rem 0.35rem;
-		margin-left: -0.35rem;
 		font: inherit;
 		color: inherit;
 	}
@@ -226,10 +235,10 @@
 
 	.total {
 		margin-top: 0.75rem;
-		font-family: var(--font-mono);
-		font-size: 2.25rem;
+		font-family: var(--font-display);
+		font-size: 2.5rem;
 		font-weight: 700;
-		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.03em;
 		color: var(--color-ink);
 	}
 
@@ -240,7 +249,8 @@
 	}
 
 	.checks p {
-		font-size: 0.95rem;
+		font-size: 0.9375rem;
+		line-height: 1.45;
 	}
 
 	.good {
@@ -249,8 +259,9 @@
 	}
 
 	.warn {
-		border-left: 3px solid var(--color-up);
-		padding-left: 0.75rem;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--color-up) 8%, transparent);
+		padding: 0.6rem 0.75rem;
 		color: var(--color-ink);
 	}
 
@@ -272,6 +283,16 @@
 		margin-top: 1.5rem;
 	}
 
+	.quiet {
+		font-size: 0.9375rem;
+		color: var(--color-up);
+	}
+
+	.quiet:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
 	/* one column: summary, then the receipt, then the buttons, which stay in reach on long receipts */
 	@media (max-width: 959px) {
 		.layout {
@@ -283,7 +304,7 @@
 			display: contents;
 		}
 
-		.paper-shadow {
+		.sheet {
 			order: 2;
 		}
 
@@ -292,68 +313,26 @@
 			bottom: 0;
 			z-index: 5;
 			order: 3;
-			border-top: 1px solid var(--color-line);
-			background: var(--color-bg);
-			padding: 0.85rem 0;
+			margin-inline: -1.25rem;
+			background: color-mix(in srgb, var(--color-raised) 96%, transparent);
+			box-shadow: 0 -1px 0 rgb(0 0 0 / 0.08);
+			padding: 0.85rem 1.25rem;
 		}
 	}
 
 	/* above the tab bar on phones */
 	@media (max-width: 640px) {
 		.actions {
-			bottom: calc(3.7rem + env(safe-area-inset-bottom));
+			bottom: calc(4.9rem + env(safe-area-inset-bottom));
 		}
 	}
 
-	.primary {
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.7rem 1.6rem;
-		font-weight: 600;
-		color: var(--color-on-ink);
-	}
-
-	.quiet {
-		font-size: 0.9rem;
-		color: var(--color-muted);
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-
-	.primary:focus-visible,
-	.quiet:focus-visible,
-	.back:focus-visible {
-		outline: 2px solid var(--color-brand);
-		outline-offset: 2px;
-	}
-
-	.paper-shadow {
-		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.08)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.12));
-	}
-
 	.receipt {
-		background: var(--color-receipt);
-		padding: 1.25rem 1.25rem 2rem;
-		color: var(--color-receipt-ink);
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--color-receipt-muted);
-	}
-
-	.lines {
-		margin-top: 0.75rem;
-		border-top: 1px dashed var(--color-receipt-line);
-	}
-
-	.lines li {
-		border-bottom: 1px dashed var(--color-receipt-line);
-		padding: 0.75rem 0;
+		padding: 1.1rem 1.25rem 1.25rem;
 	}
 
 	.receipt h2 {
-		font-size: 0.95rem;
+		font-size: 1.0625rem;
 		font-weight: 600;
 	}
 
@@ -361,42 +340,68 @@
 		margin-top: 1.75rem;
 	}
 
+	.hint {
+		font-size: 0.875rem;
+		color: var(--color-muted);
+	}
+
+	.lines {
+		margin-top: 0.6rem;
+	}
+
+	.lines li {
+		border-top: 1px solid rgb(60 60 67 / 0.12);
+		padding: 0.7rem 0;
+	}
+
+	/* a guessed name or a line whose sums are off gets a soft tint, not a stripe */
+	.lines li.guessed,
+	.lines li.flagged {
+		margin: 0 -0.6rem;
+		border-radius: 10px;
+		border-top-color: transparent;
+		padding: 0.7rem 0.6rem;
+	}
+
 	.lines li.guessed {
-		border-left: 3px solid var(--color-brand);
-		padding-left: 0.75rem;
+		background: color-mix(in srgb, var(--color-accent) 7%, transparent);
 	}
 
 	.lines li.flagged {
-		border-left: 3px solid var(--color-receipt-up);
-		padding-left: 0.75rem;
+		background: color-mix(in srgb, var(--color-up) 7%, transparent);
+	}
+
+	.lines li.guessed + li,
+	.lines li.flagged + li {
+		border-top-color: transparent;
 	}
 
 	.printed {
-		font-family: var(--font-mono);
 		font-size: 0.75rem;
-		color: var(--color-receipt-muted);
+		letter-spacing: 0.02em;
+		color: var(--color-muted);
 	}
 
-	.row {
+	.line-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
-		margin-top: 0.3rem;
+		margin-top: 0.2rem;
 	}
 
-	.row.small {
-		font-size: 0.85rem;
-		color: var(--color-receipt-muted);
+	.line-row.small {
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 
 	input,
 	select {
 		min-width: 0;
 		border: 1px solid transparent;
-		border-radius: 0.5rem;
+		border-radius: 8px;
 		background: transparent;
-		color: var(--color-receipt-ink);
+		color: var(--color-ink);
 	}
 
 	/* 16px text: iOS Safari zooms the page on any smaller input */
@@ -409,36 +414,34 @@
 	}
 
 	input::placeholder {
-		font-family: var(--font-mono);
 		font-weight: 400;
-		color: var(--color-receipt-muted);
+		color: var(--color-muted);
 	}
 
 	select {
 		margin-left: -0.35rem;
 		padding: 0.2rem 0.35rem;
-		font-size: 0.85rem;
-		color: var(--color-receipt-muted);
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 
 	@media (hover: hover) {
 		input:hover,
 		select:hover {
-			border-color: var(--color-receipt-line);
+			border-color: var(--color-line);
 		}
 	}
 
 	input:focus,
 	select:focus {
 		outline: none;
-		border-color: var(--color-brand);
-		background: var(--color-raised);
+		border-color: var(--color-accent);
+		background: #fff;
 	}
 
 	.price,
 	.amount,
 	.sums dd {
-		font-family: var(--font-mono);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
@@ -449,28 +452,29 @@
 
 	.savings {
 		font-weight: 600;
-		color: var(--color-receipt-down);
+		color: var(--color-accent);
 	}
 
 	.issue {
-		margin-top: 0.4rem;
-		font-size: 0.85rem;
-		color: var(--color-receipt-up);
+		margin-top: 0.35rem;
+		font-size: 0.875rem;
+		color: var(--color-up);
 	}
 
 	.worked {
-		margin-top: 0.35rem;
-		font-size: 0.8rem;
-		color: var(--color-receipt-muted);
+		margin-top: 0.3rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
 	}
 
 	.sums {
 		display: grid;
 		grid-template-columns: 1fr auto;
 		gap: 0.3rem 1rem;
-		margin-top: 0.9rem;
-		font-family: var(--font-mono);
-		font-size: 0.9rem;
+		margin-top: 0.75rem;
+		border-top: 1px solid rgb(60 60 67 / 0.12);
+		padding-top: 0.75rem;
+		font-size: 0.9375rem;
 	}
 
 	.sums .grand {
