@@ -44,9 +44,9 @@ export async function recentlyFailed(role: ModelRole) {
 
 // no answer in time, or no connection at all, counts as the provider being down; a timeout
 // is not retried, since waiting twice would leave the person sitting there far too long
-async function post(body: object, seconds: number) {
+async function post(body: object, seconds: number, path = 'chat/completions') {
 	try {
-		return await fetch(`${BASE_URL}/chat/completions`, {
+		return await fetch(`${BASE_URL}/${path}`, {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${NEBIUS_API_KEY}`, 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
@@ -59,12 +59,64 @@ async function post(body: object, seconds: number) {
 	}
 }
 
-// One structured call. reasoning_effort "none" matters: with reasoning on, Nemotron ignores
-// response_format and bills the reasoning, so strict JSON (our injection defence) breaks.
-export async function structured<T>({ role, purpose, userId, messages, schema, maxTokens = 2000 }: Request): Promise<T> {
+type Usage = { prompt_tokens?: number; completion_tokens?: number };
+
+async function checkBudget(userId: string | null) {
 	const spent = await spentToday(userId);
 	if (overDailyCap(spent.all)) throw new AiUnavailable('daily AI budget reached', true);
 	if (overUserCap(spent.mine)) throw new AiUnavailable('daily AI budget for this person reached', true);
+}
+
+async function logCall(role: ModelRole, purpose: string, userId: string | null, usage: Usage, started: number, ok: boolean, servedModel: string | null) {
+	const { error } = await admin.from('ai_calls').insert({
+		user_id: userId,
+		model: MODELS[role].id,
+		served_model: servedModel,
+		purpose,
+		input_tokens: usage.prompt_tokens ?? 0,
+		output_tokens: usage.completion_tokens ?? 0,
+		cost_micros: costMicros(role, usage),
+		duration_ms: Date.now() - started,
+		ok
+	});
+	if (error) console.error('ai call log failed', error.message);
+}
+
+// a server error or rate limit gets one more try after a short wait
+async function postWithRetry(body: object, seconds: number, path?: string) {
+	let response = await post(body, seconds, path);
+	if (response.status === 429 || response.status >= 500) {
+		await new Promise((wait) => setTimeout(wait, 1500));
+		response = await post(body, seconds, path);
+	}
+	if (response.status === 429 || response.status >= 500) throw new AiUnavailable(`provider returned ${response.status}`);
+	if (!response.ok) throw new Error(`provider rejected the request: ${response.status}`);
+	return response;
+}
+
+// one vector per text, in the same order
+export async function embed({ purpose, userId, texts }: { purpose: string; userId: string | null; texts: string[] }): Promise<number[][]> {
+	await checkBudget(userId);
+	const started = Date.now();
+	let usage: Usage = {};
+	let ok = false;
+	try {
+		const response = await postWithRetry({ model: MODELS.embed.id, input: texts, dimensions: 1024 }, MODELS.embed.seconds, 'embeddings');
+		const json = await response.json();
+		usage = json.usage ?? {};
+		const vectors = (json.data as { index: number; embedding: number[] }[]).sort((a, b) => a.index - b.index).map((d) => d.embedding);
+		if (vectors.length !== texts.length || vectors.some((v) => v.length !== 1024)) throw new Error('embedding answer has the wrong shape');
+		ok = true;
+		return vectors;
+	} finally {
+		await logCall('embed', purpose, userId, usage, started, ok, null);
+	}
+}
+
+// One structured call. reasoning_effort "none" matters: with reasoning on, Nemotron ignores
+// response_format and bills the reasoning, so strict JSON (our injection defence) breaks.
+export async function structured<T>({ role, purpose, userId, messages, schema, maxTokens = 2000 }: Request): Promise<T> {
+	await checkBudget(userId);
 
 	const body = {
 		model: MODELS[role].id,
@@ -76,18 +128,11 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 	};
 
 	const started = Date.now();
-	let usage: { prompt_tokens?: number; completion_tokens?: number } = {};
+	let usage: Usage = {};
 	let ok = false;
 	let servedModel: string | null = null;
 	try {
-		let response = await post(body, MODELS[role].seconds);
-		if (response.status === 429 || response.status >= 500) {
-			await new Promise((wait) => setTimeout(wait, 1500));
-			response = await post(body, MODELS[role].seconds);
-		}
-		if (response.status === 429 || response.status >= 500) throw new AiUnavailable(`provider returned ${response.status}`);
-		if (!response.ok) throw new Error(`provider rejected the request: ${response.status}`);
-
+		const response = await postWithRetry(body, MODELS[role].seconds);
 		const json = await response.json();
 		usage = json.usage ?? {};
 		servedModel = typeof json.model === 'string' ? json.model.slice(0, 100) : null;
@@ -95,17 +140,6 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 		ok = true;
 		return parsed;
 	} finally {
-		const { error } = await admin.from('ai_calls').insert({
-			user_id: userId,
-			model: MODELS[role].id,
-			served_model: servedModel,
-			purpose,
-			input_tokens: usage.prompt_tokens ?? 0,
-			output_tokens: usage.completion_tokens ?? 0,
-			cost_micros: costMicros(role, usage),
-			duration_ms: Date.now() - started,
-			ok
-		});
-		if (error) console.error('ai call log failed', error.message);
+		await logCall(role, purpose, userId, usage, started, ok, servedModel);
 	}
 }

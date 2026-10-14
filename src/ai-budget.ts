@@ -7,7 +7,9 @@ export const MODELS = {
 	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 45 },
 	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
 	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
-	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 45 }
+	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 45 },
+	// product names become vectors so the same product groups together however it was worded
+	embed: { id: 'Qwen/Qwen3-Embedding-8B', input: 0.01, output: 0, seconds: 20 }
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
