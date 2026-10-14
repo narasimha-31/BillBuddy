@@ -194,10 +194,10 @@
 		align-items: center;
 		gap: 0.6rem;
 		width: 100%;
-		border: 1.5px dashed var(--color-line);
-		border-radius: 1rem;
+		border: 1.5px dashed rgb(60 60 67 / 0.22);
+		border-radius: 14px;
 		background: var(--color-raised);
-		padding: 2.25rem 1.5rem;
+		padding: 2rem 1.5rem;
 		color: var(--color-ink);
 		transition:
 			background-color 150ms,
@@ -205,20 +205,19 @@
 	}
 
 	.drop.dragging {
-		border-color: var(--color-brand);
-		background: var(--color-receipt);
+		border-color: var(--color-accent);
+		background: color-mix(in srgb, var(--color-accent) 6%, var(--color-raised));
 	}
 
 	@media (hover: hover) {
 		.drop:hover {
-			border-color: var(--color-brand);
-			background: var(--color-receipt);
+			border-color: var(--color-accent);
 		}
 	}
 
 	.drop:focus-visible,
 	.printout a:focus-visible {
-		outline: 2px solid var(--color-brand);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
 
@@ -226,8 +225,8 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		fill: none;
-		stroke: var(--color-ink);
-		stroke-width: 1.5;
+		stroke: var(--color-accent);
+		stroke-width: 1.6;
 		stroke-linejoin: round;
 	}
 
@@ -238,11 +237,11 @@
 
 	.pill {
 		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.55rem 1.2rem;
-		font-size: 0.9rem;
+		background: var(--color-accent);
+		padding: 0.6rem 1.25rem;
+		font-size: 0.9375rem;
 		font-weight: 500;
-		color: var(--color-on-ink);
+		color: #fff;
 	}
 
 	.for-touch {
@@ -275,7 +274,7 @@
 		display: flex;
 		align-items: center;
 		gap: 1rem;
-		border-radius: 0.9rem;
+		border-radius: 14px;
 		background: var(--color-raised);
 		padding: 0.75rem;
 	}
@@ -308,8 +307,8 @@
 		position: absolute;
 		inset: 0 0 auto;
 		height: 2px;
-		background: #9fb0ee;
-		box-shadow: 0 0 10px 3px rgb(159 176 238 / 0.65);
+		background: #34c77b;
+		box-shadow: 0 0 10px 3px rgb(52 199 123 / 0.55);
 		animation: scan 1.8s ease-in-out infinite alternate;
 	}
 
@@ -333,18 +332,17 @@
 		color: var(--color-muted);
 	}
 
-	/* the result prints out as a till receipt */
+	/* the result arrives as a short list of what was read */
 	.shadow {
-		max-width: 26rem;
-		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.08)) drop-shadow(0 8px 14px rgb(0 0 0 / 0.12));
+		max-width: 28rem;
 	}
 
 	.printout {
-		background: var(--color-receipt);
-		padding: 1.1rem 1.25rem 1.6rem;
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
-		color: var(--color-receipt-ink);
+		border-radius: 14px;
+		background: var(--color-raised);
+		padding: 0.9rem 1.1rem 1rem;
+		font-size: 0.9375rem;
+		color: var(--color-ink);
 	}
 
 	.printout header,
@@ -356,9 +354,9 @@
 	}
 
 	.printout header {
-		border-bottom: 1px dashed var(--color-receipt-line);
+		border-bottom: 1px solid rgb(60 60 67 / 0.14);
 		padding-bottom: 0.6rem;
-		font-weight: 700;
+		font-weight: 600;
 	}
 
 	.printout ul {
@@ -385,9 +383,9 @@
 
 	.printout footer {
 		flex-wrap: wrap;
-		border-top: 1px dashed var(--color-receipt-line);
+		border-top: 1px solid rgb(60 60 67 / 0.14);
 		padding-top: 0.6rem;
-		font-weight: 700;
+		font-weight: 600;
 	}
 
 	.check {
@@ -402,15 +400,12 @@
 	}
 
 	.printout a {
-		font-family: var(--font-sans);
 		font-weight: 500;
-		color: var(--color-receipt-ink);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		color: var(--color-accent);
 	}
 
 	.message {
-		border-radius: 0.9rem;
+		border-radius: 14px;
 		background: var(--color-raised);
 		padding: 0.85rem 1rem;
 		color: var(--color-muted);
