@@ -26,7 +26,7 @@
 	<title>Prices · BillBuddy</title>
 </svelte:head>
 
-<AppShell firstName={data.firstName}>
+<AppShell fit firstName={data.firstName}>
 	<main>
 		<h1>What did I pay last time?</h1>
 
@@ -98,5 +98,47 @@
 		color: var(--color-ink);
 		text-decoration: underline;
 		text-underline-offset: 3px;
+	}
+
+	/* on a laptop the page is one screen tall; the item list and the history each scroll on their own */
+	@media (min-width: 1024px) and (min-height: 600px) {
+		main {
+			display: flex;
+			flex: 1;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.columns {
+			flex: 1;
+			min-height: 0;
+			grid-template-rows: minmax(0, 1fr);
+			align-items: stretch;
+		}
+
+		/* search and the most bought stay put; only the aisles (or the search results) scroll */
+		.picker {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+			padding: 3px 0 0 3px;
+		}
+
+		.picker > :global(*) {
+			flex: none;
+		}
+
+		.picker > :global(.aisles),
+		.picker > :global(.chips:last-child),
+		.history {
+			flex: 1 1 auto;
+			position: static;
+			min-height: 0;
+			overflow-y: auto;
+			padding-right: 0.5rem;
+			scrollbar-gutter: stable;
+			scrollbar-width: thin;
+			scrollbar-color: var(--color-line) transparent;
+		}
 	}
 </style>
