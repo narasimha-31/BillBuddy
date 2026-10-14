@@ -50,30 +50,8 @@
 }
 
 
-/* soft warm charcoal, never black, with text kept below full contrast. Receipts stay real paper,
-   only dimmer, so the app reads the same at night */
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-bg: #2e2c28;
-		--color-ink: #dbd5c9;
-		--color-muted: #a7a093;
-		--color-line: #4a463f;
-		--color-accent: #9db5a3;
-		--color-brand: #9aa2c4;
-		--color-up: #d89c86;
-		--color-raised: #36342f;
-		--color-on-ink: #2e2c28;
-		--color-glow: rgb(255 240 210 / 0.03);
-
-		--color-receipt: #ddd6c8;
-		--color-receipt-ink: #2e302c;
-		--color-receipt-muted: #585b55;
-		--color-receipt-line: #c2baa9;
-	}
-}
-
 :root {
-	color-scheme: light dark;
+	color-scheme: light;
 }
 
 /* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */

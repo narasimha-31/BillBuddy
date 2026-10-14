@@ -277,9 +277,7 @@
 		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.08)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.12));
 	}
 
-	/* paper stays light at night, so its fields keep light form controls */
 	.receipt {
-		color-scheme: light;
 		background: var(--color-receipt);
 		padding: 1.25rem 1.25rem 2rem;
 		color: var(--color-receipt-ink);
