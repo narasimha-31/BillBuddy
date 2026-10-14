@@ -257,8 +257,10 @@
 		}
 
 		.add {
-			max-height: 50dvh;
-			overflow-y: auto;
+			display: flex;
+			flex-direction: column;
+			max-height: 55dvh;
+			min-height: 0;
 		}
 
 		.changes,

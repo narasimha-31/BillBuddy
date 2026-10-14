@@ -98,8 +98,11 @@
 		<main>
 			<h1>Receipts</h1>
 
-			<div class="scroll">
+			<div class="upload">
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
+			</div>
+
+			<div class="scroll">
 
 				{#if review.length}
 					<section>
@@ -455,7 +458,7 @@
 		color: var(--color-accent);
 	}
 
-	.scroll {
+	.upload {
 		margin-top: 1.25rem;
 	}
 
@@ -466,7 +469,7 @@
 		}
 	}
 
-	/* the heading stays put and the drop zone and receipt lists scroll under it; the side cards are sized to fit */
+	/* the heading and drop zone stay put and only the receipt lists scroll; the side cards are sized to fit */
 	@media (min-width: 1024px) and (min-height: 600px) {
 		.columns {
 			flex: 1;
@@ -480,9 +483,18 @@
 			min-height: 0;
 		}
 
+		.upload {
+			display: flex;
+			flex: none;
+			flex-direction: column;
+			max-height: 55%;
+			min-height: 0;
+		}
+
 		.scroll {
 			flex: 1;
 			min-height: 0;
+			margin-top: 0.5rem;
 			padding-right: 0.5rem;
 			overflow-y: auto;
 			scrollbar-gutter: stable;

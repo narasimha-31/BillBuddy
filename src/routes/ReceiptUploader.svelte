@@ -426,4 +426,26 @@
 			transform: translateY(2.25rem);
 		}
 	}
+
+	/* on a laptop the page is one screen tall: the drop zone stays put and the results scroll under it */
+	@media (min-width: 1024px) and (min-height: 600px) {
+		.uploader {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.drop,
+		.limits {
+			flex: none;
+		}
+
+		.entries {
+			min-height: 0;
+			overflow-y: auto;
+			padding: 0 0.5rem 1rem 0;
+			scrollbar-width: thin;
+			scrollbar-color: var(--color-line) transparent;
+		}
+	}
 </style>
