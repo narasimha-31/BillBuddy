@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PHOTO_BYTES, jpegSize, photoProblem, sizeProblem } from './photo-rules';
+import { MAX_PHOTO_BYTES, jpegSize, pdfProblem, photoProblem, sizeProblem, stackScale } from './photo-rules';
 
 const jpeg = (size = 10) => {
 	const bytes = new Uint8Array(size);
@@ -55,5 +55,27 @@ describe('jpegSize and sizeProblem', () => {
 
 	it('refuses a file with no frame header', () => {
 		expect(sizeProblem(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))).toBe('unreadable photo');
+	});
+});
+
+describe('pdf rules', () => {
+	const pdf = new TextEncoder().encode('%PDF-1.7 rest of file');
+
+	it('takes a real PDF of up to 3 pages', () => {
+		expect(pdfProblem(pdf)).toBeNull();
+		expect(pdfProblem(pdf, 3)).toBeNull();
+	});
+
+	it('refuses a renamed file, an empty one, a huge one and a long one', () => {
+		expect(pdfProblem(new TextEncoder().encode('<html>'))).toBe('This file is not a PDF.');
+		expect(pdfProblem(new Uint8Array())).toBe('empty file');
+		expect(pdfProblem(new Uint8Array(MAX_PHOTO_BYTES + 1))).toBe('This PDF is over 5 MB.');
+		expect(pdfProblem(pdf, 4)).toMatch(/4 pages/);
+	});
+
+	it('scales stacked pages to fit the longest side, but never past 3x', () => {
+		const letter = { width: 612, height: 792 };
+		expect(stackScale([letter, letter, letter]) * 792 * 3).toBeCloseTo(4000);
+		expect(stackScale([{ width: 200, height: 300 }])).toBe(3);
 	});
 });

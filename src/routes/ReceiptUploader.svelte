@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { money, shortDay, storeName } from '../format';
-	import { preparePhoto } from './receipts/prepare-photo';
+	import { canAdd, cannotOpen, isPdf, prepareUpload } from './receipts/prepare-photo';
 	import { post, readReceipt, type Printed } from './receipts/reading';
 
 	let {
@@ -32,7 +32,7 @@
 
 	function begin(photo: string | null): Entry {
 		const key = nextKey++;
-		entries.unshift({ key, photo, state: photo ? 'preparing' : 'reading', slow: false });
+		entries.unshift({ key, photo, state: photo === null ? 'reading' : 'preparing', slow: false });
 		return entries.find((e) => e.key === key)!;
 	}
 
@@ -58,11 +58,13 @@
 	}
 
 	async function add(files: Iterable<File>) {
-		const batch = [...files].filter((f) => f.type.startsWith('image/'));
+		const batch = [...files].filter(canAdd);
 		for (const file of batch) {
-			const entry = begin(URL.createObjectURL(file));
+			// a PDF has no picture to show until its pages are drawn
+			const entry = begin(isPdf(file) ? '' : URL.createObjectURL(file));
 			try {
-				const { jpeg, hash } = await preparePhoto(file);
+				const { jpeg, hash } = await prepareUpload(file);
+				if (!entry.photo) entry.photo = URL.createObjectURL(jpeg);
 				const body = new FormData();
 				body.set('photo', jpeg, 'receipt.jpg');
 				body.set('hash', hash);
@@ -72,9 +74,9 @@
 					entry.state = result.type === 'failure' && result.status === 409 ? 'duplicate' : 'failed';
 					entry.note = result.type === 'failure' && result.status !== 409 ? String(result.data?.problem ?? '') : undefined;
 				}
-			} catch {
+			} catch (problem) {
 				entry.state = 'failed';
-				entry.note = 'This photo format could not be opened.';
+				entry.note = cannotOpen(problem, file);
 			} finally {
 				if (entry.photo && entry.state !== 'reading') URL.revokeObjectURL(entry.photo);
 			}
@@ -115,7 +117,7 @@
 	<input
 		bind:this={picker}
 		type="file"
-		accept="image/*"
+		accept="image/*,application/pdf"
 		multiple
 		hidden
 		onchange={(e) => {
@@ -125,7 +127,7 @@
 	/>
 	<p class="limits">
 		{uploads.used} of {dailyLimit} receipts in the last 24 hours.
-		{opensAt ? `The next one opens ${opensAt}.` : 'Photos up to 5 MB.'}
+		{opensAt ? `The next one opens ${opensAt}.` : 'Photos and PDFs up to 5 MB.'}
 	</p>
 
 	{#if entries.length}

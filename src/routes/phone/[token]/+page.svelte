@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
-	import { preparePhoto } from '../../receipts/prepare-photo';
+	import { canAdd, cannotOpen, isPdf, prepareUpload } from '../../receipts/prepare-photo';
 	import Wordmark from '../../Wordmark.svelte';
 
 	let { data } = $props();
@@ -24,11 +24,12 @@
 	};
 
 	async function send(files: FileList | null) {
-		for (const file of [...(files ?? [])].filter((f) => f.type.startsWith('image/'))) {
-			sent.unshift({ id: nextId++, photo: URL.createObjectURL(file), state: 'sending' });
+		for (const file of [...(files ?? [])].filter(canAdd)) {
+			sent.unshift({ id: nextId++, photo: isPdf(file) ? '' : URL.createObjectURL(file), state: 'sending' });
 			const entry = sent[0];
 			try {
-				const { jpeg, hash } = await preparePhoto(file);
+				const { jpeg, hash } = await prepareUpload(file);
+				if (!entry.photo) entry.photo = URL.createObjectURL(jpeg);
 				const body = new FormData();
 				body.set('photo', jpeg, 'receipt.jpg');
 				body.set('hash', hash);
@@ -41,9 +42,9 @@
 					entry.note = result.type === 'failure' ? String(result.data?.problem ?? '') : 'try again';
 					if (result.type === 'failure' && result.status === 403) closed = true;
 				}
-			} catch {
+			} catch (problem) {
 				entry.state = 'failed';
-				entry.note = 'this photo format could not be opened';
+				entry.note = cannotOpen(problem, file);
 			}
 		}
 		if (picker) picker.value = '';
@@ -63,7 +64,7 @@
 			<h1 class="large-title">Add receipts from this phone</h1>
 			<p class="lead">Take a photo of each receipt. They show up on your computer, ready to read.</p>
 
-			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
+			<input bind:this={picker} type="file" accept="image/*,application/pdf" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
 			<button class="pill-button take" onclick={() => picker?.click()}>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
 					<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />

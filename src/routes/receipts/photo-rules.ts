@@ -33,3 +33,22 @@ export function photoProblem(bytes: Uint8Array, hash: string): string | null {
 	if (!/^[0-9a-f]{64}$/.test(hash)) return 'bad fingerprint';
 	return null;
 }
+
+export const MAX_PDF_PAGES = 3;
+
+// a PDF is checked by its first bytes, not its name or the type the browser claims
+export function pdfProblem(bytes: Uint8Array, pages?: number): string | null {
+	if (bytes.length === 0) return 'empty file';
+	if (bytes.length > MAX_PHOTO_BYTES) return 'This PDF is over 5 MB.';
+	if (String.fromCharCode(...bytes.subarray(0, 5)) !== '%PDF-') return 'This file is not a PDF.';
+	if (pages !== undefined && pages > MAX_PDF_PAGES) return `This PDF has ${pages} pages. Receipts of up to ${MAX_PDF_PAGES} pages can be added.`;
+	return null;
+}
+
+// One scale for every page, so pages stacked top to bottom stay within the reader's longest side,
+// and never past 3x (about 216 dpi), where text is already sharp and the file only grows.
+export function stackScale(pages: { width: number; height: number }[], longest = 4000) {
+	const width = Math.max(...pages.map((p) => p.width));
+	const height = pages.reduce((sum, p) => sum + p.height, 0);
+	return Math.min(3, longest / Math.max(width, height));
+}
