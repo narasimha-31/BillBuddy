@@ -10,6 +10,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
+	import DisplayPanel from './DisplayPanel.svelte';
 	import Wordmark from './Wordmark.svelte';
 
 	let { firstName, fit = false, children }: { firstName: string | null; fit?: boolean; children: Snippet } = $props();
@@ -49,7 +50,10 @@
 					</a>
 				{/each}
 			</nav>
-			<AccountMenu {firstName} />
+			<div class="end">
+				<DisplayPanel />
+				<AccountMenu {firstName} />
+			</div>
 		</div>
 	</header>
 
@@ -59,6 +63,13 @@
 </div>
 
 <style>
+	.end {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	/* signed-in pages sit on Apple's grouped grey, so white lists and cards read as surfaces */
 	.app {
 		min-height: 100dvh;
@@ -202,7 +213,7 @@
 			padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 		}
 
-		.site-top :global(.account) {
+		.end {
 			margin-left: auto;
 		}
 
