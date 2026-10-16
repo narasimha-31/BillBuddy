@@ -21,3 +21,6 @@ browser-checks/
 .impeccable/
 .mcp.json
 .playwright-mcp/
+
+# merge eval pairs drawn from live receipts, kept local
+evals/merge/

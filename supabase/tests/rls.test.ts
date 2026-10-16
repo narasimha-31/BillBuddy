@@ -457,7 +457,7 @@ describe('phone links', () => {
 	});
 
 	it('stop working once expired or after 10 photos', async () => {
-		const expired = await link({ expires_at: new Date(Date.now() - 1000).toISOString() });
+		const expired = await link({ expires_at: new Date(Date.now() - 60_000).toISOString() });
 		expect((await admin.rpc('use_phone_link', { p_token_hash: expired.token_hash, p_claim_hash: expired.claim_hash })).data).toBeNull();
 
 		const full = await link({ uploads: 9 });
@@ -547,14 +547,17 @@ describe('shared products', () => {
 	it('can be read by signed-in people but only added by the server, and finds the nearest by meaning', async () => {
 		const tag = crypto.randomUUID().slice(0, 8);
 		const made = await admin.from('products').insert([
-			{ name: `Test bananas ${tag}`, embedding: vector(3) },
-			{ name: `Test milk ${tag}`, embedding: vector(7) }
+			{ name: `Test bananas ${tag}`, match_key: `banana test ${tag}`, embedding: vector(3) },
+			{ name: `Test milk ${tag}`, match_key: `milk test ${tag}`, embedding: vector(7) }
 		]).select('id, name');
 		expect(made.error).toBeNull();
 		try {
+			const twin = await admin.from('products').insert({ name: `Test banana ${tag}`, match_key: `banana test ${tag}`, embedding: vector(3) });
+			expect(twin.error?.code).toBe('23505');
+
 			const read = await alice.from('products').select('name').like('name', `%${tag}`);
 			expect(read.data).toHaveLength(2);
-			expect((await alice.from('products').insert({ name: `Sneaky ${tag}`, embedding: vector(1) })).error).not.toBeNull();
+			expect((await alice.from('products').insert({ name: `Sneaky ${tag}`, match_key: `sneaky ${tag}`, embedding: vector(1) })).error).not.toBeNull();
 			expect((await createClient(url, publishable, noSession).from('products').select('name').like('name', `%${tag}`)).data ?? []).toEqual([]);
 
 			const near = await admin.rpc('nearest_products', { p_embedding: vector(3), p_count: 1 });
@@ -567,24 +570,35 @@ describe('shared products', () => {
 	});
 });
 
+// a shopper of their own: by now alice has added as many receipts this minute as the burst limit allows
 describe('store places', () => {
+	let carol: SupabaseClient;
+	let carolStoreId: string;
+
+	beforeAll(async () => {
+		carol = await signedInUser('carol');
+		const store = await carol.from('stores').insert({ name: 'Fiesta' }).select().single();
+		if (store.error) throw store.error;
+		carolStoreId = store.data.id;
+	});
+
 	it("gives each shopper only their own stores, with visits and the latest branch's point", async () => {
-		const saved = await alice
+		const saved = await carol
 			.from('receipts')
-			.insert({ store_id: aliceStoreId, status: 'saved', purchased_on: '2026-10-02', total_cents: 500, store_address: '8130 Kirby Dr, Houston, TX 77054', store_lat: 29.689, store_lng: -95.4126 })
+			.insert({ store_id: carolStoreId, status: 'saved', purchased_on: '2026-10-02', total_cents: 500, store_address: '8130 Kirby Dr, Houston, TX 77054', store_lat: 29.689, store_lng: -95.4126 })
 			.select()
 			.single();
 		expect(saved.error).toBeNull();
 
-		const mine = await alice.rpc('my_store_places');
+		const mine = await carol.rpc('my_store_places');
 		expect(mine.data).toEqual([{ name: 'Fiesta', visits: 1, lat: 29.689, lng: -95.4126 }]);
 		expect((await bob.rpc('my_store_places')).data).toEqual([]);
 		expect((await createClient(url, publishable, noSession).rpc('my_store_places')).error).not.toBeNull();
 	});
 
 	it('refuses a map point without the address it came from, or half a point', async () => {
-		const noAddress = await alice.from('receipts').insert({ total_cents: 5, store_lat: 29.7, store_lng: -95.4 });
-		const half = await alice.from('receipts').insert({ total_cents: 5, store_address: '1 Main St, Houston, TX', store_lat: 29.7 });
+		const noAddress = await carol.from('receipts').insert({ total_cents: 5, store_lat: 29.7, store_lng: -95.4 });
+		const half = await carol.from('receipts').insert({ total_cents: 5, store_address: '1 Main St, Houston, TX', store_lat: 29.7 });
 		expect(noAddress.error?.code).toBe('23514');
 		expect(half.error?.code).toBe('23514');
 	});
