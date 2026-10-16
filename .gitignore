@@ -24,3 +24,6 @@ browser-checks/
 
 # merge eval pairs drawn from live receipts, kept local
 evals/merge/
+
+# real receipt photos and their answer keys, kept local
+evals/real/
