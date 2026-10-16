@@ -491,13 +491,44 @@ describe('product grouping', () => {
 
 		const { data } = await zoe.rpc('my_products');
 		expect(data).toEqual([
-			{ name: 'Whole milk', times: 2, last_bought: '2026-10-02', stores: 2, category: 'Dairy & eggs' },
-			{ name: 'Limes', times: 1, last_bought: '2026-10-02', stores: 1, category: 'Dairy & eggs' }
+			{ name: 'Whole milk', times: 2, last_bought: '2026-10-02', stores: 2, category: 'Dairy & eggs', maybe_same: null },
+			{ name: 'Limes', times: 1, last_bought: '2026-10-02', stores: 1, category: 'Dairy & eggs', maybe_same: null }
 		]);
 		const others = await bob.rpc('my_products');
 		expect((others.data ?? []).some((p: { name: string }) => p.name === 'Limes')).toBe(false);
 		const anon = createClient(url, publishable, noSession);
 		expect((await anon.rpc('my_products')).error).not.toBeNull();
+	});
+
+	it('counts differently named lines of one shared product as that product, and says what a line might be', async () => {
+		const ann = await signedInUser('ann');
+		const annId = userIds[userIds.length - 1];
+		const tag = crypto.randomUUID().slice(0, 8);
+		const vector = `[${Array.from({ length: 1024 }, (_, i) => (i === 0 ? 1 : 0)).join(',')}]`;
+		const made = await admin.from('products').insert([
+			{ name: `Roma tomatoes ${tag}`, match_key: `roma tomato ${tag}`, embedding: vector },
+			{ name: `Plum tomatoes ${tag}`, match_key: `plum tomato ${tag}`, embedding: vector }
+		]).select('id, name');
+		if (made.error) throw made.error;
+		const [roma, plum] = made.data!;
+		try {
+			const store = (await admin.from('stores').insert({ user_id: annId, name: 'Parivar' }).select('id').single()).data!.id;
+			const receipt = (await admin.from('receipts').insert({ user_id: annId, store_id: store, purchased_on: '2026-09-19', created_at: '2026-09-01T00:00:00Z' }).select('id').single()).data!.id;
+			const line = (position: number, name: string, productId: string | null, maybeId: string | null = null) => ({
+				user_id: annId, receipt_id: receipt, position, kind: 'item', raw_text: name.toUpperCase(), name, category: 'Produce',
+				quantity: 1, unit: 'ea', total_cents: 100, computed: false, product_id: productId, maybe_product_id: maybeId
+			});
+			const { error } = await admin.from('receipt_items').insert([line(0, 'Tomatoes', roma.id), line(1, 'Roma tomatoes', roma.id), line(2, 'Plum tomato', plum.id, roma.id)]);
+			if (error) throw error;
+
+			const { data } = await ann.rpc('my_products');
+			expect(data.map((p: { name: string; times: number; maybe_same: string | null }) => [p.name, p.times, p.maybe_same])).toEqual([
+				[roma.name, 2, null],
+				[plum.name, 1, roma.name]
+			]);
+		} finally {
+			await admin.from('products').delete().in('id', [roma.id, plum.id]);
+		}
 	});
 });
 

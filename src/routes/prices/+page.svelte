@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import { storeTags } from '../../store-facts';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { fade } from 'svelte/transition';
@@ -67,6 +69,22 @@
 		if (remembered && anyPoint && 'geolocation' in navigator) locate();
 	});
 
+	// a yes moves this item's lines into the other product, so the page goes to that product
+	let answering = $state(false);
+	let sameProblem = $state('');
+	const answerSame: SubmitFunction = () => {
+		answering = true;
+		sameProblem = '';
+		return async ({ result, update }) => {
+			answering = false;
+			if (result.type === 'success' && typeof result.data?.now === 'string') {
+				picked = result.data.now;
+				await goto(`?item=${encodeURIComponent(result.data.now)}`, { replaceState: true, noScroll: true, invalidateAll: true });
+			} else if (result.type === 'failure') sameProblem = String(result.data?.problem ?? 'That did not save. Try again.');
+			else await update({ reset: false });
+		};
+	};
+
 	// on a phone the history sits below the list, so it is brought into view once it arrives
 	async function pick(name: string) {
 		picked = name;
@@ -113,6 +131,18 @@
 					<ItemPicker items={data.products} bind:selected={() => selected, pick} />
 				</div>
 				<div class="history scroll-area" bind:this={history}>
+					{#if data.maybeSame}
+						<form class="same" method="POST" action="?/same" use:enhance={answerSame}>
+							<input type="hidden" name="item" value={data.selected} />
+							<p class="question">Same as {data.maybeSame}?</p>
+							<p class="why">If it is, their prices show as one, from every store.</p>
+							<div class="answers">
+								<button class="yes" name="answer" value="yes" disabled={answering}>Same product</button>
+								<button class="no" name="answer" value="no" disabled={answering}>Not the same</button>
+							</div>
+							{#if sameProblem}<p class="problem" role="alert">{sameProblem}</p>{/if}
+						</form>
+					{/if}
 					{#key data.selected}
 						{#if data.history}
 							<div in:fade={{ duration: 250 }}>
@@ -243,6 +273,60 @@
 			position: sticky;
 			top: 1.5rem;
 		}
+	}
+
+	.same {
+		margin-bottom: 1rem;
+		border-radius: 18px;
+		background: #fff;
+		padding: 1rem 1.1rem 1.1rem;
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+	}
+
+	.question {
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--color-ink);
+	}
+
+	.why {
+		margin-top: 0.2rem;
+		font-size: 0.9375rem;
+		color: var(--color-muted);
+	}
+
+	.answers {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.85rem;
+	}
+
+	.answers button {
+		border-radius: 999px;
+		padding: 0.55rem 1.05rem;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		transition: background-color 150ms;
+	}
+
+	.yes {
+		background: var(--color-accent);
+		color: #fff;
+	}
+
+	.no {
+		background: rgb(118 118 128 / 0.12);
+		color: var(--color-ink);
+	}
+
+	.answers button:disabled {
+		opacity: 0.55;
+	}
+
+	.answers button:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
 	}
 
 	.lead {
