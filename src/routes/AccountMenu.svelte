@@ -19,11 +19,9 @@
 			<span class="initial">{initial}</span>
 		</summary>
 		<div class="menu">
+			<a href="/settings">Settings</a>
 			<form method="POST" action="/?/signout">
 				<button>Sign out</button>
-			</form>
-			<form method="POST" action="/?/signout_everywhere">
-				<button>Sign out of all devices</button>
 			</form>
 		</div>
 	</details>
@@ -93,7 +91,9 @@
 			0 12px 28px -10px rgb(0 0 0 / 0.35);
 	}
 
+	.menu a,
 	.menu button {
+		display: block;
 		width: 100%;
 		border-radius: 0.5rem;
 		padding: 0.6rem 0.75rem;
@@ -103,11 +103,13 @@
 	}
 
 	@media (hover: hover) {
+		.menu a:hover,
 		.menu button:hover {
 			background: color-mix(in srgb, var(--color-ink) 6%, transparent);
 		}
 	}
 
+	.menu a:focus-visible,
 	.menu button:focus-visible {
 		outline: 2px solid var(--color-accent);
 	}
