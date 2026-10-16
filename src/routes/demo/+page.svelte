@@ -55,7 +55,7 @@
 				<ItemPicker items={all} bind:selected={() => selected, pick} />
 			</div>
 
-			<div class="result" bind:this={result}>
+			<div class="result scroll-area" bind:this={result}>
 				{#key selected}
 					<div in:fade={{ duration: 250 }}>
 						<PriceHistory {history} />
@@ -255,11 +255,6 @@
 			position: sticky;
 			top: 5rem;
 			max-height: calc(100dvh - 6.5rem);
-			overflow-y: auto;
-			overscroll-behavior: contain;
-			border-radius: 18px;
-			scrollbar-width: thin;
-			scrollbar-color: var(--color-line) transparent;
 		}
 	}
 

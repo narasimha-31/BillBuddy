@@ -146,17 +146,16 @@ body {
 	top: 0;
 	right: 0;
 	left: 1rem;
-	height: 1px;
-	background: rgb(60 60 67 / 0.14);
+	border-top: 1px solid rgb(60 60 67 / 0.14);
 }
 
 .row {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	gap: 0.1rem 1rem;
+	gap: 2px 1rem;
 	min-height: 2.875rem;
-	padding: 0.7rem 1rem;
+	padding: 12px 1rem;
 	color: var(--color-ink);
 }
 
@@ -195,7 +194,9 @@ a.row::after {
 	transform: rotate(45deg);
 }
 
+/* whole-pixel line heights keep every row an exact height, so the hairlines stay crisp */
 .row-title {
+	line-height: 22px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -204,6 +205,7 @@ a.row::after {
 
 .row-sub {
 	grid-column: 1;
+	line-height: 18px;
 	font-size: 0.8125rem;
 	color: var(--color-muted);
 }
@@ -213,6 +215,41 @@ a.row::after {
 	grid-row: 1 / span 2;
 	font-variant-numeric: tabular-nums;
 	color: var(--color-ink);
+}
+
+/* a list that scrolls on its own keeps its bar on the grey beside the cards, never inside a
+   rounded corner. The bar and its gap hang past the column, so the cards still line up */
+.scroll-area {
+	min-height: 0;
+	margin-right: calc(-0.5rem - 8px);
+	padding-right: 0.5rem;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+
+.scroll-area::-webkit-scrollbar {
+	width: 8px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+	border-radius: 4px;
+	background: rgb(0 0 0 / 0.2);
+}
+
+.scroll-area::-webkit-scrollbar-thumb:hover {
+	background: rgb(0 0 0 / 0.32);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+	.scroll-area {
+		scrollbar-width: thin;
+		scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+	}
 }
 
 .surface {

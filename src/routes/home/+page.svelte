@@ -54,20 +54,22 @@
 			<section class="changes" aria-labelledby="changes-title">
 				<h2 class="list-label" id="changes-title">Prices since last time</h2>
 				{#if data.changes.length}
-					<ul class="group">
-						{#each data.changes as change (change.name)}
-							{@const diff = change.now_cents - change.before_cents}
-							<li>
-								<a class="row" href="/prices?item={encodeURIComponent(change.name)}">
-									<span class="row-title">{change.name}</span>
-									<span class="row-value">{money(change.now_cents)}{change.per === 'lb' ? '/lb' : ''}</span>
-									<span class="row-sub move" class:up={diff > 0}>
-										{diff > 0 ? 'Up' : 'Down'} {step(Math.abs(diff))} from {storeName(change.before_store) ?? 'last time'}
-									</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
+					<div class="scroll-area">
+						<ul class="group">
+							{#each data.changes as change (change.name)}
+								{@const diff = change.now_cents - change.before_cents}
+								<li>
+									<a class="row" href="/prices?item={encodeURIComponent(change.name)}">
+										<span class="row-title">{change.name}</span>
+										<span class="row-value">{money(change.now_cents)}{change.per === 'lb' ? '/lb' : ''}</span>
+										<span class="row-sub move" class:up={diff > 0}>
+											{diff > 0 ? 'Up' : 'Down'} {step(Math.abs(diff))} from {storeName(change.before_store) ?? 'last time'}
+										</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
 				{:else}
 					<p class="empty surface">Buy something twice and you’ll see here whether it got cheaper.</p>
 				{/if}
@@ -79,17 +81,19 @@
 					{#if data.recent.length}<a href="/receipts">See all</a>{/if}
 				</div>
 				{#if data.recent.length}
-					<ul class="group">
-						{#each data.recent as receipt (receipt.id)}
-							<li>
-								<a class="row" href="/receipts/{receipt.id}">
-									<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
-									<span class="row-value">{money(receipt.total_cents)}</span>
-									<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
+					<div class="scroll-area">
+						<ul class="group">
+							{#each data.recent as receipt (receipt.id)}
+								<li>
+									<a class="row" href="/receipts/{receipt.id}">
+										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
+										<span class="row-value">{money(receipt.total_cents)}</span>
+										<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
 				{:else}
 					<p class="empty surface">Your receipts show up here once they’re read.</p>
 				{/if}
@@ -105,11 +109,12 @@
 		margin-top: 1.25rem;
 	}
 
-	@media (min-width: 900px) {
+	/* the same two columns as Receipts, so the drop zone has one size and place on both pages */
+	@media (min-width: 1024px) {
 		.board {
-			grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+			grid-template-columns: minmax(0, 1fr) 22rem;
 			grid-template-areas: 'add month' 'changes recent';
-			gap: 1.75rem 1.75rem;
+			gap: 1.75rem 2.5rem;
 		}
 
 		.add {
@@ -204,11 +209,9 @@
 			min-height: 0;
 		}
 
-		.changes .group,
-		.recent .group {
-			min-height: 0;
-			overflow-y: auto;
-			scrollbar-width: thin;
+		.changes .scroll-area,
+		.recent .scroll-area {
+			flex: 0 1 auto;
 		}
 	}
 </style>

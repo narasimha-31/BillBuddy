@@ -131,7 +131,7 @@
 	</p>
 
 	{#if entries.length}
-		<ul class="entries" aria-live="polite">
+		<ul class="entries scroll-area" aria-live="polite">
 			{#each entries as entry (entry.key)}
 				<li>
 					{#if entry.state === 'preparing' || entry.state === 'reading'}
@@ -436,11 +436,7 @@
 		}
 
 		.entries {
-			min-height: 0;
-			overflow-y: auto;
-			padding: 0 0.5rem 1rem 0;
-			scrollbar-width: thin;
-			scrollbar-color: var(--color-line) transparent;
+			padding-bottom: 1rem;
 		}
 	}
 </style>

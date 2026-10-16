@@ -101,7 +101,7 @@
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
 			</div>
 
-			<div class="scroll">
+			<div class="scroll scroll-area">
 				{#if review.length}
 					<section>
 						<h2 class="list-label">Needs a quick look</h2>
@@ -220,7 +220,7 @@
 					<li>Photos are deleted once read.</li>
 					<li>Location is removed on your device.</li>
 				</ul>
-				<a href="/privacy" class="link">The fine print</a>
+				<a href="/privacy" class="link">How we handle your receipts</a>
 			</div>
 		</aside>
 	</div>
@@ -397,10 +397,6 @@
 			flex: 1;
 			min-height: 0;
 			margin-top: 0.5rem;
-			padding-right: 0.5rem;
-			overflow-y: auto;
-			scrollbar-width: thin;
-			scrollbar-color: var(--color-line) transparent;
 		}
 	}
 </style>

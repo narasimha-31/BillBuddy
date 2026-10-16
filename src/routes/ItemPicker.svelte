@@ -37,7 +37,7 @@
 </label>
 
 {#if searching}
-	<div class="chips">
+	<div class="chips found scroll-area">
 		{#each found as item (item.name)}
 			{@render chip(item)}
 		{:else}
@@ -54,20 +54,22 @@
 
 	{#if items.length > MOST_BOUGHT}
 		<h2>By aisle</h2>
-		<div class="aisles">
-			{#each aisles as [aisle, list] (aisle)}
-				<details open={aisle === selectedAisle && items.findIndex((i) => i.name === selected) >= MOST_BOUGHT}>
-					<summary>
-						<span>{aisle}</span>
-						<span class="count">{list.length}</span>
-					</summary>
-					<div class="chips">
-						{#each list as item (item.name)}
-							{@render chip(item)}
-						{/each}
-					</div>
-				</details>
-			{/each}
+		<div class="aisles scroll-area">
+			<div class="aisle-list">
+				{#each aisles as [aisle, list] (aisle)}
+					<details open={aisle === selectedAisle && items.findIndex((i) => i.name === selected) >= MOST_BOUGHT}>
+						<summary>
+							<span>{aisle}</span>
+							<span class="count">{list.length}</span>
+						</summary>
+						<div class="chips">
+							{#each list as item (item.name)}
+								{@render chip(item)}
+							{/each}
+						</div>
+					</details>
+				{/each}
+			</div>
 		</div>
 	{/if}
 {/if}
@@ -156,6 +158,9 @@
 
 	.aisles {
 		margin-top: 0.45rem;
+	}
+
+	.aisle-list {
 		overflow: hidden;
 		border-radius: 14px;
 		background: #fff;

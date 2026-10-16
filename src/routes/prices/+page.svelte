@@ -39,7 +39,7 @@
 				<div class="picker">
 					<ItemPicker items={data.products} bind:selected={() => selected, pick} />
 				</div>
-				<div class="history" bind:this={history}>
+				<div class="history scroll-area" bind:this={history}>
 					{#key data.selected}
 						{#if data.history}
 							<div in:fade={{ duration: 250 }}>
@@ -152,16 +152,10 @@
 		}
 
 		.picker > :global(.aisles),
-		.picker > :global(.chips:last-child),
+		.picker > :global(.found),
 		.history {
 			flex: 0 1 auto;
 			position: static;
-			min-height: 0;
-			overflow-y: auto;
-			padding-right: 0.5rem;
-			scrollbar-gutter: stable;
-			scrollbar-width: thin;
-			scrollbar-color: var(--color-line) transparent;
 		}
 	}
 </style>
