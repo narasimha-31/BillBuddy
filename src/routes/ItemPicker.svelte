@@ -1,7 +1,7 @@
 <script lang="ts">
 	import AisleIcon from './AisleIcon.svelte';
 
-	type Item = { name: string; category?: string | null };
+	type Item = { name: string; category?: string | null; times?: number };
 
 	// items come most bought first
 	let { items, selected = $bindable() }: { items: Item[]; selected: string } = $props();
@@ -58,9 +58,14 @@
 	</div>
 {:else}
 	<h2>You buy these most</h2>
-	<div class="chips">
+	<!-- the few items bought most get even tiles that fill the column, with how often they were bought -->
+	<div class="tiles">
 		{#each items.slice(0, MOST_BOUGHT) as item (item.name)}
-			{@render chip(item)}
+			<button class="tile" class:selected={item.name === selected} aria-pressed={item.name === selected} onclick={() => (selected = item.name)}>
+				<AisleIcon aisle={item.category ?? null} />
+				<span class="tile-name">{item.name}</span>
+				{#if item.times}<span class="tile-times">{item.times === 1 ? 'Once' : `${item.times} times`}</span>{/if}
+			</button>
 		{/each}
 	</div>
 
@@ -168,6 +173,102 @@
 		flex-wrap: wrap;
 		gap: 0.45rem;
 		margin-top: 0.75rem;
+	}
+
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+	}
+
+	.tile {
+		display: grid;
+		grid-template-rows: auto 1fr auto;
+		justify-items: start;
+		gap: 0.35rem;
+		min-height: 6.25rem;
+		border-radius: 14px;
+		background: #fff;
+		padding: 0.75rem 0.85rem;
+		text-align: left;
+		color: var(--color-ink);
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+		-webkit-tap-highlight-color: transparent;
+		transition:
+			background-color var(--standard) var(--ease),
+			color var(--standard) var(--ease),
+			box-shadow var(--standard) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	.tile :global(.aisle-icon) {
+		color: var(--color-accent);
+		transition: color var(--standard) var(--ease);
+	}
+
+	.tile-name {
+		font-size: 0.9375rem;
+		font-weight: 600;
+		line-height: 1.25;
+	}
+
+	.tile-times {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+		transition: color var(--standard) var(--ease);
+	}
+
+	.tile.selected {
+		background: var(--color-accent);
+		color: #fff;
+		box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--color-accent) 60%, transparent);
+	}
+
+	.tile.selected :global(.aisle-icon),
+	.tile.selected .tile-times {
+		color: rgb(255 255 255 / 0.85);
+	}
+
+	.tile:active {
+		transform: scale(0.97);
+		transition-duration: var(--quick);
+	}
+
+	/* on a phone the tiles are one row to swipe, so the price they open is still on the first screen */
+	@media (max-width: 640px) {
+		.tiles {
+			grid-template-columns: none;
+			grid-auto-flow: column;
+			grid-auto-columns: 8.75rem;
+			overflow-x: auto;
+			margin-inline: -1.25rem;
+			padding: 0.25rem 1.25rem 1.25rem;
+			margin-bottom: -0.75rem;
+			scroll-padding-inline: 1.25rem;
+			scroll-snap-type: x mandatory;
+			scrollbar-width: none;
+		}
+
+		.tiles::-webkit-scrollbar {
+			display: none;
+		}
+
+		.tile {
+			min-height: 5.75rem;
+			scroll-snap-align: start;
+		}
+	}
+
+	.tile:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	@media (hover: hover) {
+		.tile:not(.selected):hover {
+			box-shadow: 0 4px 12px -4px rgb(0 0 0 / 0.14);
+		}
 	}
 
 	.chip {
