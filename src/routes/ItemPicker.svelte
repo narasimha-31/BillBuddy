@@ -34,6 +34,11 @@
 		<path d="m20 20-3.5-3.5" />
 	</svg>
 	<input bind:value={query} type="search" placeholder="Search eggs, milk, chicken" aria-label="Search an item" />
+	{#if query}
+		<button class="clear" aria-label="Clear the search" onclick={() => (query = '')}>
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8 8 8M16 8l-8 8" /></svg>
+		</button>
+	{/if}
 </label>
 
 {#if searching}
@@ -112,6 +117,35 @@
 
 	.search input::placeholder {
 		color: var(--color-muted);
+	}
+
+	/* the browser's own blue cross is replaced by an iOS-style grey one */
+	.search input::-webkit-search-cancel-button {
+		-webkit-appearance: none;
+	}
+
+	.clear {
+		display: grid;
+		flex: none;
+		place-items: center;
+		width: 1.25rem;
+		height: 1.25rem;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.45);
+	}
+
+	.clear svg {
+		width: 0.9rem;
+		height: 0.9rem;
+		fill: none;
+		stroke: #fff;
+		stroke-width: 2.6;
+		stroke-linecap: round;
+	}
+
+	.clear:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
 	}
 
 	h2 {

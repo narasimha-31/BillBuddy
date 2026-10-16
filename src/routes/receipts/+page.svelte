@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { money, shortDay, storeName } from '../../format';
+	import { storeMatches } from '../../store-search';
 	import AppShell from '../AppShell.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { post, problems, readReceipt } from './reading';
@@ -61,10 +62,17 @@
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
 
+	// searching filters by store name only, never by what is on the receipts
+	let storeQuery = $state('');
+	const searching = $derived(storeQuery.trim().length > 0);
+	const shown = $derived(saved.filter((r) => storeMatches(storeName(r.store), storeQuery)));
+	const shownStores = $derived([...new Set(shown.map((r) => storeName(r.store)))]);
+	const shownCents = $derived(shown.reduce((sum, r) => sum + (r.total_cents ?? 0), 0));
+
 	// read receipts by the month they were bought, newest first, each month with its total
 	const months = $derived.by(() => {
-		const groups = new Map<string, typeof saved>();
-		const newest = [...saved].sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? ''));
+		const groups = new Map<string, typeof shown>();
+		const newest = [...shown].sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? ''));
 		for (const r of newest) {
 			const key = r.purchased_on?.slice(0, 7) ?? '';
 			groups.set(key, [...(groups.get(key) ?? []), r]);
@@ -100,6 +108,29 @@
 			<div class="upload surface">
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
 			</div>
+
+			{#if saved.length > 1}
+				<div class="find">
+					<label class="search">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+						<input bind:value={storeQuery} type="search" placeholder="Search stores" aria-label="Search your receipts by store" />
+						{#if storeQuery}
+							<button class="clear" aria-label="Clear the search" onclick={() => (storeQuery = '')}>
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8 8 8M16 8l-8 8" /></svg>
+							</button>
+						{/if}
+					</label>
+					{#if searching}
+						<p class="found" aria-live="polite">
+							{#if shown.length}
+								{shown.length} receipt{shown.length === 1 ? '' : 's'}{shownStores.length === 1 ? ` at ${shownStores[0]}` : ''} · {money(shownCents)}
+							{:else}
+								No receipts from a store called “{storeQuery.trim()}”.
+							{/if}
+						</p>
+					{/if}
+				</div>
+			{/if}
 
 			<div class="scroll scroll-area">
 				{#if review.length}
@@ -243,6 +274,85 @@
 
 	.scroll {
 		margin-top: 0.25rem;
+	}
+
+	.find {
+		flex: none;
+		margin-top: 1.25rem;
+	}
+
+	.search {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-radius: 10px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0 0.75rem;
+	}
+
+	.search:focus-within {
+		outline: 2px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+	}
+
+	.search svg {
+		width: 1.25rem;
+		height: 1.25rem;
+		flex: none;
+		fill: none;
+		stroke: var(--color-muted);
+		stroke-width: 2;
+		stroke-linecap: round;
+	}
+
+	/* 16px text: iOS Safari zooms the page on any smaller input */
+	.search input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		padding: 0.6rem 0;
+		font-size: 1rem;
+		color: var(--color-ink);
+		outline: none;
+	}
+
+	.search input::placeholder {
+		color: var(--color-muted);
+	}
+
+	/* the browser's own blue cross is replaced by an iOS-style grey one */
+	.search input::-webkit-search-cancel-button {
+		-webkit-appearance: none;
+	}
+
+	.clear {
+		display: grid;
+		flex: none;
+		place-items: center;
+		width: 1.25rem;
+		height: 1.25rem;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.45);
+	}
+
+	.clear svg {
+		width: 0.9rem;
+		height: 0.9rem;
+		fill: none;
+		stroke: #fff;
+		stroke-width: 2.6;
+		stroke-linecap: round;
+	}
+
+	.clear:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.found {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 
 	.attention {
