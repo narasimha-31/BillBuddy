@@ -1,11 +1,13 @@
 // Exact Token Factory ids, catalog prices (USD per 1M tokens) and a hard limit on each answer.
-// Measured Oct 13-16 on real receipts: Qwen's slowest good read took 7 seconds (36 reads),
-// DeepSeek's median is 2.5, Super's slowest naming 3.7. Ten seconds without an answer means down.
+// Measured Oct 13-16: Qwen's slowest good read of a real receipt took 7 seconds (36 reads),
+// Nemotron VL's slowest eval read 3.1, Super's slowest naming 3.7. Ten seconds without an answer means down.
 export const MODELS = {
 	// Qwen over DeepSeek and GLM: on real crumpled receipts it got every name and amount right
 	// where DeepSeek shifted every amount by a line and invented items. GLM was down for hours.
 	vision: { id: 'Qwen/Qwen3.8-27B', input: 0.45, output: 3, seconds: 10 },
-	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 10 },
+	// Nemotron 3.5 Super VL over DeepSeek as the backup: on Oct 16 it passed all 12 eval images
+	// at half Qwen's cost per read (median 1.5 s). Not main reader until it passes real photos.
+	visionBackup: { id: 'nvidia/Nemotron-3.5-Super-VL', input: 0.3, output: 0.9, seconds: 10 },
 	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
 	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
 	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 10 },
