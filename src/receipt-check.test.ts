@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, readDate, realignDetails, reconcile, storeAddress, type Reading } from './receipt-check';
+import { checkReading, dropNonItems, readDate, realignDetails, reconcile, storeAddress, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -313,5 +313,38 @@ describe('storeAddress', () => {
 
 	it('caps a runaway reading', () => {
 		expect(storeAddress(`1 ${'Main St '.repeat(40)}`)).toHaveLength(160);
+	});
+});
+
+// what Nemotron 3.5 Super VL returned on Oct 16 for the Walmart and Target test receipts
+describe('dropNonItems', () => {
+	it('folds a rate printed on its own line into the item it explains', () => {
+		const lines = [
+			line('BANANAS', 1.18),
+			line('2.10 lb @ 0.56 /lb', 1.26),
+			line('GRN CHILI HOT', 1.26),
+			line('0.42 lb @ 2.99 /lb', 1.26, { quantity: 0.42, unit: 'lb', unit_price: 2.99 }),
+			line('CHKN BRST BNLS', 5.85),
+			line('1.62 lb @ 3.61 /lb', 5.85, { quantity: 1.62, unit: 'lb', unit_price: 3.61 })
+		];
+		const kept = dropNonItems(lines);
+		expect(kept.map((l) => l.raw)).toEqual(['BANANAS', 'GRN CHILI HOT', 'CHKN BRST BNLS']);
+		expect(kept.map((l) => [l.quantity, l.unit, l.unit_price])).toEqual([
+			[2.1, 'lb', 0.56],
+			[0.42, 'lb', 2.99],
+			[1.62, 'lb', 3.61]
+		]);
+	});
+
+	it('takes the totals block out of the items', () => {
+		const lines = [line('GG WHOLE MILK 1G', 3.69), line('SUBTOTAL', 18.16), line('TAX', 0), line('TOTAL', 18.16), line('TAX 1 8.25 %', 0), line('BALANCE DUE', 18.16)];
+		expect(dropNonItems(lines).map((l) => l.raw)).toEqual(['GG WHOLE MILK 1G']);
+		const r = checkReading(reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BANANAS', 1.18), line('SUBTOTAL', 4.39), line('TOTAL', 4.39)] }), today);
+		expect(r).toMatchObject({ ok: true, lines_match_subtotal: true, needs_review: false });
+	});
+
+	it('keeps groceries whose names only start like a total or a rate', () => {
+		const lines = [line('TOTAL CEREAL 12OZ', 4.29), line('TAXI CAB TOY', 2.99), line('2 LB CARROTS', 1.49), line('8 @ 4/0.99', 1.98)];
+		expect(dropNonItems(lines).map((l) => l.raw)).toEqual(['TOTAL CEREAL 12OZ', 'TAXI CAB TOY', '2 LB CARROTS']);
 	});
 });

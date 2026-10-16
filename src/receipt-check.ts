@@ -164,6 +164,42 @@ export function realignDetails(lines: ReadLine[]): ReadLine[] {
 	return result;
 }
 
+// Lines a model sometimes lists as items although no receipt sells them: the totals block, and a
+// weight or multi-buy rate printed on its own line. Whole-line matches only, so "TOTAL CEREAL"
+// and "TAXI CAB TOY" stay items.
+const TOTALS_LINE = /^(sub\s*-?\s*total|total|total\s+tax|sales\s+tax|tax(\s+\d+)?(\s+[\d.]+\s*%)?|balance(\s+due)?|amount\s+due)\s*:?\s*$/i;
+const RATE_LINE = /^(\d+(?:\.\d+)?)\s*(lb|lbs|kg|oz|g|ea)?\s*@\s*(?:(\d+)\s*\/\s*)?\$?(\d+(?:\.\d+)?)\s*(\/\s*(lb|kg|oz|g|ea))?\s*$/i;
+
+// A rate line's numbers go to the neighbour (above or below) whose amount they explain and that
+// has no rate of its own; then the rate line itself is dropped.
+export function dropNonItems(lines: ReadLine[]): ReadLine[] {
+	const result = lines.map((l) => ({ ...l }));
+	const drop = new Set<number>();
+	result.forEach((line, i) => {
+		const raw = line.raw.trim();
+		if (TOTALS_LINE.test(raw)) {
+			drop.add(i);
+			return;
+		}
+		const rate = RATE_LINE.exec(raw);
+		if (!rate) return;
+		drop.add(i);
+		const unit = rate[2]?.toLowerCase().replace(/^lbs$/, 'lb') ?? rate[6]?.toLowerCase() ?? null;
+		const found = { quantity: Number(rate[1]), unit, unit_price: Number(rate[4]), unit_price_for: rate[3] ? Number(rate[3]) : null };
+		const amount = rateCents(found);
+		for (const n of [i - 1, i + 1]) {
+			const other = result[n];
+			if (!other || drop.has(n) || other.discount || rateCents(other) !== null || amount === null) continue;
+			const total = cents(other.total);
+			if (total !== null && Math.abs(total - amount) <= 2) {
+				Object.assign(other, found);
+				break;
+			}
+		}
+	});
+	return result.filter((_, i) => !drop.has(i));
+}
+
 function wholeCount(totalCents: number, priceCents: number) {
 	const count = Math.round(totalCents / priceCents);
 	return count >= 1 && count < 100 && Math.abs(count * priceCents - totalCents) <= 1 ? count : null;
@@ -175,7 +211,7 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 
 	// All arithmetic happens here, in whole cents. The model only copies printed numbers.
 	const lines: CheckedLine[] = [];
-	for (const line of realignDetails(reading.lines.slice(0, MAX_LINES))) {
+	for (const line of realignDetails(dropNonItems(reading.lines.slice(0, MAX_LINES)))) {
 		// one printed line stays one line: a hidden newline could pose as extra numbered lines downstream
 		const raw = line.raw.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').replace(LONG_NUMBER, '').trim().slice(0, 120);
 		if (!/[a-z]{2}/i.test(raw) || PAYMENT.test(raw)) continue;
