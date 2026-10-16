@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchKey, numbersConflict } from './product-match';
+import { matchKey, numbersConflict, pickProducts } from './product-match';
 
 describe('match key', () => {
 	it('is the same for plurals, word order, capitals and punctuation', () => {
@@ -13,6 +13,12 @@ describe('match key', () => {
 		expect(matchKey('Ground beef 80/20')).toBe(matchKey('80/20 ground beef'));
 	});
 
+	it('leaves out pack sizes, which are kept apart on each line', () => {
+		expect(matchKey('Large eggs, 12 ct')).toBe(matchKey('Large eggs, 18 ct'));
+		expect(matchKey('Whole milk 64OZ')).toBe(matchKey('Whole milk'));
+		expect(matchKey('Mustard seed 200GM')).toBe(matchKey('Mustard seed'));
+	});
+
 	it('keeps words that end in ss or us, and words of three letters', () => {
 		expect(matchKey('Swiss cheese')).toBe('cheese swiss');
 		expect(matchKey('Hummus')).toBe('hummus');
@@ -24,7 +30,6 @@ describe('match key', () => {
 		expect(matchKey('Whole milk')).not.toBe(matchKey('2% milk'));
 		expect(matchKey('Organic bananas')).not.toBe(matchKey('Bananas'));
 		expect(matchKey('Sweet potatoes')).not.toBe(matchKey('Potatoes'));
-		expect(matchKey('Large eggs, 12 ct')).not.toBe(matchKey('Large eggs, 18 ct'));
 	});
 });
 
@@ -32,13 +37,42 @@ describe('numbers conflict', () => {
 	it('when the numbers differ or only one name has them', () => {
 		expect(numbersConflict('2% milk', '1% milk')).toBe(true);
 		expect(numbersConflict('Ground beef 80/20', 'Ground beef 93/7')).toBe(true);
-		expect(numbersConflict('Large eggs, 12 ct', 'Large eggs, 18 ct')).toBe(true);
 		expect(numbersConflict('2% milk', 'Milk')).toBe(true);
+	});
+
+	it('not when only the pack size differs', () => {
+		expect(numbersConflict('Large eggs, 12 ct', 'Large eggs, 18 ct')).toBe(false);
+		expect(numbersConflict('Whole milk 64OZ', 'Whole milk')).toBe(false);
+		expect(numbersConflict('2% milk 1 gal', '2% milk')).toBe(false);
 	});
 
 	it('not when the numbers match, in any order', () => {
 		expect(numbersConflict('Whole milk', 'Milk, whole')).toBe(false);
 		expect(numbersConflict('80/20 ground beef', 'Ground beef 80/20')).toBe(false);
-		expect(numbersConflict('1.5 lb chicken', 'Chicken 1.5 lb')).toBe(false);
+	});
+});
+
+describe('picking products', () => {
+	const c = (slot: number, id: string, similarity: number) => ({ slot, id, name: id, similarity });
+
+	it('takes the closest product the judge called the same', () => {
+		const picks = pickProducts(1, [c(0, 'a', 0.9), c(0, 'b', 0.95)], ['same', 'same']);
+		expect(picks).toEqual([{ same: 'b', maybe: null }]);
+	});
+
+	it('never merges on unsure, but offers it to the shopper', () => {
+		expect(pickProducts(1, [c(0, 'a', 0.9)], ['unsure'])).toEqual([{ same: null, maybe: 'a' }]);
+	});
+
+	it('drops the offer once a product is the same', () => {
+		expect(pickProducts(1, [c(0, 'a', 0.97), c(0, 'b', 0.9)], ['unsure', 'same'])).toEqual([{ same: 'b', maybe: null }]);
+	});
+
+	it('leaves a name new when every candidate is different, a verdict is missing, or nothing was close', () => {
+		expect(pickProducts(3, [c(0, 'a', 0.9), c(1, 'b', 0.9)], ['different'])).toEqual([
+			{ same: null, maybe: null },
+			{ same: null, maybe: null },
+			{ same: null, maybe: null }
+		]);
 	});
 });
