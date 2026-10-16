@@ -2,7 +2,8 @@
 	import type { History } from '../price-history';
 	import { money, shortDay, storeName } from '../format';
 
-	let { history }: { history: History } = $props();
+	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"
+	let { history, tags = {} }: { history: History; tags?: Record<string, string[]> } = $props();
 
 	const SHOWN = 6;
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
@@ -40,11 +41,13 @@
 		<div class="part">
 			<p class="label">Last price at each store</p>
 			<ul class="stores">
-				{#each history.stores as row, i (row.store)}
+				{#each history.stores as row (row.store)}
 					{@const cheapest = row.lastCents === history.stores[0].lastCents}
 					<li class:cheapest>
-						<span class="store">{storeName(row.store)}{#if cheapest}<em>cheapest</em>{/if}</span>
-						<span class="track"><span class="bar" style:--size={row.lastCents / priciest} style:--delay="{i * 60}ms"></span></span>
+						<span class="store">
+							{storeName(row.store)}{#if cheapest}<em>cheapest</em>{/if}{#each tags[row.store] ?? [] as fact (fact)}<em class="fact">{fact}</em>{/each}
+						</span>
+						<span class="track"><span class="bar" style:--size={row.lastCents / priciest}></span></span>
 						<span class="price">{money(row.lastCents)}</span>
 					</li>
 				{/each}
@@ -199,9 +202,14 @@
 		font-style: normal;
 	}
 
-	.store em:not(.tag) {
+	.store em:not(.tag, .fact) {
 		background: color-mix(in srgb, var(--color-receipt-down) 14%, transparent);
 		color: var(--color-receipt-down);
+	}
+
+	.fact {
+		background: rgb(118 118 128 / 0.12);
+		color: var(--color-muted);
 	}
 
 	.tag {
@@ -216,7 +224,7 @@
 		background: color-mix(in srgb, var(--color-receipt-line) 60%, transparent);
 	}
 
-	/* bars grow from the left; transform only, so rows never shift */
+	/* each bar is scaled from the left, so its length never changes the row */
 	.bar {
 		position: absolute;
 		inset: 0;
@@ -224,7 +232,6 @@
 		background: color-mix(in srgb, var(--color-receipt-ink) 70%, transparent);
 		transform-origin: left;
 		transform: scaleX(var(--size));
-		animation: grow 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
 	}
 
 	.cheapest .bar {
@@ -276,15 +283,4 @@
 		}
 	}
 
-	@keyframes grow {
-		from {
-			transform: scaleX(0);
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.bar {
-			animation: none;
-		}
-	}
 </style>

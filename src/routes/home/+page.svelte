@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import NumberFlow from '@number-flow/svelte';
 	import { money, shortDay, storeName } from '../../format';
 	import AppShell from '../AppShell.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
@@ -9,19 +7,8 @@
 
 	const monthName = $derived(new Date(`${data.month.start}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }));
 
-	// the month's total rolls up once the page is live; the server draws the plain figure first
-	let live = $state(false);
-	let spentShown = $state(0);
-	onMount(() => {
-		live = true;
-		const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (still) spentShown = data.month.spentCents;
-		else requestAnimationFrame(() => (spentShown = data.month.spentCents));
-	});
-
 	const step = (cents: number) => (cents < 100 ? `${cents}¢` : money(cents));
 	const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-	const usd = { style: 'currency', currency: 'USD' } as const;
 </script>
 
 <svelte:head>
@@ -39,9 +26,7 @@
 
 			<section class="month surface" aria-labelledby="month-title">
 				<h2 id="month-title">Spent in {monthName}</h2>
-				<p class="spent">
-					{#if live}<NumberFlow value={spentShown / 100} format={usd} />{:else}{money(data.month.spentCents)}{/if}
-				</p>
+				<p class="spent">{money(data.month.spentCents)}</p>
 				<p class="note">
 					{#if data.month.receipts}
 						{plural(data.month.receipts, 'receipt')} at {plural(data.month.stores, 'store')}
