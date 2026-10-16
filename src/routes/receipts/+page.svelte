@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { money, shortDay, storeName } from '../../format';
-	import { storeMatches } from '../../store-search';
+	import { keyMatches, storeKey } from '../../store-search';
 	import AppShell from '../AppShell.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { post, problems, readReceipt } from './reading';
@@ -62,10 +62,14 @@
 	const unreadable = $derived(data.receipts.filter((r) => r.status === 'failed' && r.problem !== 'error'));
 	const saved = $derived(data.receipts.filter((r) => r.status === 'saved'));
 
-	// searching filters by store name only, never by what is on the receipts
+	// searching filters by store name only, never by what is on the receipts; keys are made once per load
 	let storeQuery = $state('');
 	const searching = $derived(storeQuery.trim().length > 0);
-	const shown = $derived(saved.filter((r) => storeMatches(storeName(r.store), storeQuery)));
+	const keyed = $derived(saved.map((receipt) => ({ receipt, key: storeKey(storeName(receipt.store)) })));
+	const shown = $derived.by(() => {
+		const wanted = storeKey(storeQuery);
+		return keyed.filter(({ key }) => keyMatches(key, wanted)).map(({ receipt }) => receipt);
+	});
 	const shownStores = $derived([...new Set(shown.map((r) => storeName(r.store)))]);
 	const shownCents = $derived(shown.reduce((sum, r) => sum + (r.total_cents ?? 0), 0));
 

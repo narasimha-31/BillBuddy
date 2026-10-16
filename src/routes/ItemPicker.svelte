@@ -8,7 +8,12 @@
 
 	let query = $state('');
 	const searching = $derived(query.trim().length > 0);
-	const found = $derived(items.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase())));
+	// names are lowercased once per list, the query once per keystroke, then one substring scan
+	const lowered = $derived(items.map((item) => ({ item, name: item.name.toLowerCase() })));
+	const found = $derived.by(() => {
+		const wanted = query.trim().toLowerCase();
+		return lowered.filter(({ name }) => name.includes(wanted)).map(({ item }) => item);
+	});
 
 	// the rest of the list sorted into aisles, the fullest aisle first
 	const aisles = $derived.by(() => {
