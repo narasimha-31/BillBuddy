@@ -4,6 +4,7 @@ import { AiUnavailable } from './nebius.server';
 import { checkReading } from './receipt-check';
 import { readReceipt } from './receipt-reader.server';
 import { itemRows } from './receipt-rows';
+import { assignProducts } from './product-merge.server';
 import { placeStore } from './store-place.server';
 import { sizeProblem } from './routes/receipts/photo-rules';
 
@@ -97,11 +98,17 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 			items.map((l) => ['lb', 'kg', 'oz', 'g'].includes(l.unit))
 		);
 		const { rows, skipped } = itemRows(checked.lines, names);
+		// only names the namer was sure of join the shared product list; a guess waits for the shopper
+		const sure = rows.filter((r) => r.kind === 'item' && r.name !== null && r.issue !== 'unsure');
+		const products = await assignProducts(userId, sure.map((r) => r.name!));
+		const productOf = new Map(sure.map((r, i) => [r, products[i]]));
 
 		// a crashed earlier attempt may have left lines behind
 		const cleared = await supabase.from('receipt_items').delete().eq('receipt_id', receiptId);
 		if (cleared.error) throw cleared.error;
-		const inserted = await supabase.from('receipt_items').insert(rows.map((row) => ({ ...row, receipt_id: receiptId })));
+		const inserted = await supabase.from('receipt_items').insert(
+			rows.map((row) => ({ ...row, receipt_id: receiptId, product_id: productOf.get(row)?.productId ?? null, maybe_product_id: productOf.get(row)?.maybeProductId ?? null }))
+		);
 		if (inserted.error) throw inserted.error;
 
 		const keepPhoto = settings?.keep_photos === true;

@@ -11,14 +11,20 @@ export const MODELS = {
 	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
 	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
 	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 10 },
+	// Qwen judges whether two product names are one product. Oct 16, 83 shopper-checked pairs,
+	// 30 of them held out from tuning, three runs: no wrong merge, 2 of 31 true pairs missed. Super
+	// made two wrong merges on the same pairs, and every model went wrong when a high embedding
+	// score alone was allowed to merge.
+	judge: { id: 'Qwen/Qwen3.8-27B', input: 0.45, output: 3, seconds: 10 },
 	// product names become vectors so the same product groups together however it was worded
 	embed: { id: 'Qwen/Qwen3-Embedding-8B', input: 0.01, output: 0, seconds: 10 }
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
 
-// 50 cents a day across everyone: about 60 full-size receipts, and a hard ceiling on the credits
-export const DAILY_CAP_MICROS = 500_000;
+// 75 cents a day across everyone: about 68 receipts at the Oct 16 cost of 1.1 cents each (read,
+// names, product match), and a hard ceiling on the credits: under $10 if hit every day to Oct 29
+export const DAILY_CAP_MICROS = 750_000;
 
 // a price per 1M tokens times tokens is exactly millionths of a dollar; round up so we never undercount
 export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; completion_tokens?: number }) {
@@ -26,10 +32,10 @@ export function costMicros(role: ModelRole, usage: { prompt_tokens?: number; com
 	return Math.ceil((usage.prompt_tokens ?? 0) * input + (usage.completion_tokens ?? 0) * output);
 }
 
-// 10 cents a day per person, enough for the 10 full-size receipts a day the database allows.
+// 15 cents a day per person, enough for the 10 receipts a day the database allows at 1.1 cents each.
 // Counted from the call log, which people cannot touch, so deleting receipts and adding them
 // again never buys more reads.
-export const USER_DAILY_CAP_MICROS = 100_000;
+export const USER_DAILY_CAP_MICROS = 150_000;
 
 export function overDailyCap(spentTodayMicros: number) {
 	return spentTodayMicros >= DAILY_CAP_MICROS;
