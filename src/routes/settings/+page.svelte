@@ -46,7 +46,10 @@
 							checked={data.keepStoreAddress}
 							onchange={(e) => e.currentTarget.form?.requestSubmit()}
 						/>
-						<span class="row-sub">Which branch you shopped at, as printed on the receipt. Turning this off deletes them.</span>
+						<span class="row-sub">
+							Which branch you shopped at, as printed on the receipt, so Prices can show the nearest store. Only the store’s
+							address goes to the US Census map lookup. Turning this off deletes them.
+						</span>
 					</label>
 				</li>
 				<li>

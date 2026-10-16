@@ -4,6 +4,7 @@ import { AiUnavailable } from './nebius.server';
 import { checkReading } from './receipt-check';
 import { readReceipt } from './receipt-reader.server';
 import { itemRows } from './receipt-rows';
+import { placeStore } from './store-place.server';
 import { sizeProblem } from './routes/receipts/photo-rules';
 
 // what was saved, for the screen to print back as a receipt
@@ -107,11 +108,15 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		if (!keepPhoto) await dropPhoto();
 
 		const needsReview = checked.needs_review || rows.some((r) => r.issue === 'line_math');
+		// the branch only means something next to a kept store name, and only with consent
+		const storeAddress = storeId && settings?.keep_store_location === true ? checked.storeAddress : null;
+		const point = storeAddress ? await placeStore(storeAddress) : null;
 		await finish({
 			status: needsReview ? 'review' : 'saved',
 			store_id: storeId,
-			// the branch only means something next to a kept store name, and only with consent
-			store_address: storeId && settings?.keep_store_location === true ? checked.storeAddress : null,
+			store_address: storeAddress,
+			store_lat: point?.lat ?? null,
+			store_lng: point?.lng ?? null,
 			purchased_on: checked.purchasedOn,
 			channel: checked.channel,
 			subtotal_cents: checked.subtotalCents,

@@ -37,7 +37,10 @@ export const actions: Actions = {
 		if (saved.error) throw saved.error;
 
 		if (!keepAddress) {
-			const cleared = await locals.supabase.from('receipts').update({ store_address: null }).not('store_address', 'is', null);
+			const cleared = await locals.supabase
+				.from('receipts')
+				.update({ store_address: null, store_lat: null, store_lng: null })
+				.not('store_address', 'is', null);
 			if (cleared.error) throw cleared.error;
 		}
 

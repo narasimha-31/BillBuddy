@@ -566,3 +566,26 @@ describe('shared products', () => {
 		}
 	});
 });
+
+describe('store places', () => {
+	it("gives each shopper only their own stores, with visits and the latest branch's point", async () => {
+		const saved = await alice
+			.from('receipts')
+			.insert({ store_id: aliceStoreId, status: 'saved', purchased_on: '2026-10-02', total_cents: 500, store_address: '8130 Kirby Dr, Houston, TX 77054', store_lat: 29.689, store_lng: -95.4126 })
+			.select()
+			.single();
+		expect(saved.error).toBeNull();
+
+		const mine = await alice.rpc('my_store_places');
+		expect(mine.data).toEqual([{ name: 'Fiesta', visits: 1, lat: 29.689, lng: -95.4126 }]);
+		expect((await bob.rpc('my_store_places')).data).toEqual([]);
+		expect((await createClient(url, publishable, noSession).rpc('my_store_places')).error).not.toBeNull();
+	});
+
+	it('refuses a map point without the address it came from, or half a point', async () => {
+		const noAddress = await alice.from('receipts').insert({ total_cents: 5, store_lat: 29.7, store_lng: -95.4 });
+		const half = await alice.from('receipts').insert({ total_cents: 5, store_address: '1 Main St, Houston, TX', store_lat: 29.7 });
+		expect(noAddress.error?.code).toBe('23514');
+		expect(half.error?.code).toBe('23514');
+	});
+});
