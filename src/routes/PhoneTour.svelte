@@ -24,9 +24,13 @@
 
 	let active = $state(0);
 	let blocks = $state<HTMLElement[]>([]);
+	let fit = $state<HTMLElement>();
+	let scale = $state(1);
 
-	// the step whose text crosses the middle of the screen drives the phone
+	const PHONE = { width: 300, height: 640 };
+
 	onMount(() => {
+		// the step crossing the middle of the screen drives the phone
 		const watch = new IntersectionObserver(
 			(seen) => {
 				for (const entry of seen) if (entry.isIntersecting) active = blocks.indexOf(entry.target as HTMLElement);
@@ -34,7 +38,18 @@
 			{ rootMargin: '-45% 0px -45% 0px' }
 		);
 		for (const block of blocks) watch.observe(block);
-		return () => watch.disconnect();
+
+		// the whole phone shrinks evenly to fit the room it has, so its screen never gets squashed
+		const measure = new ResizeObserver(() => {
+			if (!fit?.clientHeight) return;
+			scale = Math.min(1, (fit.clientHeight - 16) / PHONE.height, (fit.clientWidth - 16) / PHONE.width);
+		});
+		if (fit) measure.observe(fit);
+
+		return () => {
+			watch.disconnect();
+			measure.disconnect();
+		};
 	});
 
 	const money = (dollars: number) => `$${dollars.toFixed(2)}`;
@@ -98,6 +113,24 @@
 {/snippet}
 
 <section class="tour" aria-label="How BillBuddy works">
+	<div class="pin" aria-hidden="true">
+		<div class="captions">
+			{#each steps as step, i (step.title)}
+				<div class="caption" class:on={active === i}>
+					<h3>{step.title}</h3>
+					<p class="say">{step.text}</p>
+				</div>
+			{/each}
+		</div>
+		<div class="fit" bind:this={fit}>
+			<div class="phone" style:--scale={scale}>
+				{#each steps as _, i (i)}
+					<div class="screen layer" class:on={active === i}>{@render screen(i)}</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+
 	<div class="steps">
 		{#each steps as step, i (step.title)}
 			<div class="step" class:on={active === i} bind:this={blocks[i]}>
@@ -106,14 +139,6 @@
 				<div class="phone still" aria-hidden="true"><div class="screen">{@render screen(i)}</div></div>
 			</div>
 		{/each}
-	</div>
-
-	<div class="pin" aria-hidden="true">
-		<div class="phone">
-			{#each steps as _, i (i)}
-				<div class="screen layer" class:on={active === i}>{@render screen(i)}</div>
-			{/each}
-		</div>
 	</div>
 </section>
 
@@ -147,7 +172,7 @@
 		margin-top: 5rem;
 	}
 
-	/* phones and reduced motion: each step carries its own still screen */
+	/* reduced motion: each step carries its own still screen */
 	.pin {
 		display: none;
 	}
@@ -156,7 +181,101 @@
 		margin: 2rem auto 0;
 	}
 
-	/* wide screens: the phone stays pinned while the steps scroll past, Apple product-page style */
+	@media (prefers-reduced-motion: no-preference) {
+		.still {
+			display: none;
+		}
+
+		/* pinned just below the page's frosted bar while the steps scroll past */
+		.pin {
+			--bar: 4rem;
+			display: flex;
+			flex-direction: column;
+			position: sticky;
+			top: var(--bar);
+			height: calc(100svh - var(--bar));
+		}
+
+		/* the phone is placed out of flow, so only the free space sets its size, never the phone itself */
+		.fit {
+			position: relative;
+			flex: 1;
+			min-height: 0;
+		}
+
+		.pin .phone {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%) scale(var(--scale, 1));
+		}
+
+		.step + .step {
+			margin-top: 0;
+		}
+
+		/* room after the last step, so the phone stays pinned while that step is read */
+		.steps {
+			padding-bottom: 20svh;
+		}
+	}
+
+	/* phones: the caption sits above the pinned phone and changes with it; the steps are only scroll marks */
+	@media (max-width: 999px) and (prefers-reduced-motion: no-preference) {
+		.tour {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.pin,
+		.steps {
+			grid-area: 1 / 1;
+		}
+
+		.pin {
+			--bar: 3.75rem;
+			z-index: 1;
+		}
+
+		.captions {
+			display: grid;
+			flex: none;
+			padding-top: 0.75rem;
+			text-align: center;
+		}
+
+		.caption {
+			grid-area: 1 / 1;
+			opacity: 0;
+			transform: translateY(8px);
+			transition:
+				opacity 400ms cubic-bezier(0.16, 1, 0.3, 1),
+				transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		.caption.on {
+			opacity: 1;
+			transform: none;
+		}
+
+		.caption h3 {
+			font-size: clamp(1.6rem, 7vw, 2.1rem);
+		}
+
+		.caption .say {
+			margin: 0.5rem auto 0;
+			max-width: 22rem;
+			font-size: 1rem;
+			line-height: 1.45;
+		}
+
+		.step {
+			min-height: 85svh;
+			opacity: 0;
+			pointer-events: none;
+		}
+	}
+
+	/* wide screens: text beside the pinned phone, Apple product-page style */
 	@media (min-width: 1000px) and (prefers-reduced-motion: no-preference) {
 		/* text and phone sit together in the middle, not at opposite ends of the page */
 		.tour {
@@ -165,9 +284,19 @@
 			gap: clamp(4rem, 8vw, 8rem);
 		}
 
-		/* room after the last step, so the phone stays pinned while that step is read */
 		.steps {
-			padding-bottom: 20vh;
+			grid-column: 1;
+			grid-row: 1;
+		}
+
+		.pin {
+			grid-column: 2;
+			grid-row: 1;
+			width: 340px;
+		}
+
+		.captions {
+			display: none;
 		}
 
 		.step {
@@ -181,31 +310,6 @@
 
 		.step.on {
 			opacity: 1;
-		}
-
-		.step + .step {
-			margin-top: 0;
-		}
-
-		.still {
-			display: none;
-		}
-
-		/* pinned below the page's frosted bar, and shrunk on short screens so it always fits whole */
-		.pin {
-			--bar: 4rem;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			position: sticky;
-			top: var(--bar);
-			height: calc(100vh - var(--bar));
-		}
-
-		.pin .phone {
-			height: min(640px, calc(100vh - var(--bar) - 3rem));
-			width: auto;
-			aspect-ratio: 300 / 640;
 		}
 	}
 
