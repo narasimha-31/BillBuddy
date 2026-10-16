@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import AisleIcon from './AisleIcon.svelte';
 
 	type Item = { name: string; category?: string | null; times?: number };
@@ -26,7 +27,13 @@
 		}
 		return [...groups].sort((a, b) => b[1].length - a[1].length);
 	});
-	const selectedAisle = $derived(items.find((item) => item.name === selected)?.category ?? 'Other');
+	// Only the first render opens the aisle of an item picked from the aisles, once, and never as an
+	// attribute: Svelte re-applies an attribute whenever the list refreshes, which snapped shut an
+	// aisle the shopper had just opened while a price was loading.
+	const openAtStart = untrack(() => {
+		const at = items.findIndex((item) => item.name === selected);
+		return at >= MOST_BOUGHT ? (items[at].category ?? 'Other') : null;
+	});
 </script>
 
 {#snippet chip(item: Item)}
@@ -74,7 +81,11 @@
 		<div class="aisles scroll-area">
 			<div class="aisle-list">
 				{#each aisles as [aisle, list] (aisle)}
-					<details open={aisle === selectedAisle && items.findIndex((i) => i.name === selected) >= MOST_BOUGHT}>
+					<details
+						{@attach (el) => {
+							if (untrack(() => aisle) === openAtStart) el.open = true;
+						}}
+					>
 						<summary>
 							<AisleIcon {aisle} />
 							<span>{aisle}</span>
