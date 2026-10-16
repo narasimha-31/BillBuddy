@@ -124,6 +124,18 @@ export type Comparison = {
 	usAverage: number | null;
 };
 
+export const CART: Product[] = ['milk', 'eggs', 'chicken', 'beef', 'peanutButter', 'pasta', 'bananas'];
+
+// one of each product (a pound of anything weighed) at every store that prices all of them, cheapest first
+export function cartTotals(cart: Product[] = CART) {
+	return stores
+		.filter((s) => cart.every((p) => s.prices[p] !== undefined))
+		.map((s) => ({ store: s.name, cents: cart.reduce((sum, p) => sum + Math.round(s.prices[p]! * 100), 0) }))
+		.sort((a, b) => a.cents - b.cents);
+}
+
+export const priceOf = (store: string, product: Product) => stores.find((s) => s.name === store)?.prices[product] ?? null;
+
 // every product with each store's price, cheapest first
 export function comparisons(): Comparison[] {
 	return (Object.keys(products) as Product[]).map((key) => ({

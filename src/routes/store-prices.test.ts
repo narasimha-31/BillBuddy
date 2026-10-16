@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LINES_PER_RECEIPT, comparisons, receiptFor, rotation } from './store-prices';
+import { LINES_PER_RECEIPT, cartTotals, comparisons, priceOf, receiptFor, rotation } from './store-prices';
 
 const store = (name: string) => rotation.find((s) => s.name === name)!;
 const everyLine = (name: string) => [0, 1, 2, 3, 4].flatMap((visit) => receiptFor(store(name), visit));
@@ -53,5 +53,27 @@ describe('comparisons', () => {
 
 	it('marks weighed products as priced by the pound', () => {
 		expect(comparisons().find((c) => c.key === 'chicken')!.unit).toBe('LB');
+	});
+});
+
+describe('cartTotals', () => {
+	it('adds the same seven staples in whole cents at every store that prices all of them', () => {
+		expect(cartTotals()).toEqual([
+			{ store: 'Aldi', cents: 1639 },
+			{ store: 'Walmart', cents: 1858 },
+			{ store: 'Kroger', cents: 1943 },
+			{ store: 'Target', cents: 2066 }
+		]);
+	});
+
+	it('leaves out a store that is missing any item in the cart', () => {
+		expect(cartTotals(['milk', 'chicken']).map((t) => t.store)).not.toContain('Publix');
+	});
+});
+
+describe('priceOf', () => {
+	it('gives the sourced price, or nothing when the store has none', () => {
+		expect(priceOf('Wegmans', 'chicken')).toBe(2.29);
+		expect(priceOf('Publix', 'chicken')).toBeNull();
 	});
 });
