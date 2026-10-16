@@ -28,8 +28,10 @@
 	--font-display: system-ui, -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
 
+/* the scrollbar's room is always kept, so short and long pages centre on the same line */
 :root {
 	color-scheme: light;
+	scrollbar-gutter: stable;
 }
 
 /* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */
@@ -94,6 +96,17 @@ body {
 	.line-in {
 		animation: none;
 	}
+}
+
+/* one header shape on every page, so the logo sits on the same pixel when moving between pages */
+.site-top {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	height: 3.75rem;
+	margin: 0 auto;
+	max-width: 76rem;
+	padding: 0 1.25rem;
 }
 
 /* Apple-app building blocks shared by the signed-in pages */

@@ -16,7 +16,7 @@
 
 <div class="app" class:fit>
 	<header class="top">
-		<div class="top-inner">
+		<div class="site-top">
 			<Wordmark href="/home" />
 			<nav aria-label="Main">
 				{#each links as link (link.href)}
@@ -49,15 +49,6 @@
 		background: color-mix(in srgb, var(--color-raised) 82%, transparent);
 		backdrop-filter: saturate(1.8) blur(20px);
 		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
-	}
-
-	.top-inner {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin: 0 auto;
-		max-width: 76rem;
-		padding: 0.7rem 1.25rem;
 	}
 
 	.page {
@@ -134,7 +125,7 @@
 			padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 		}
 
-		.top-inner :global(.account) {
+		.site-top :global(.account) {
 			margin-left: auto;
 		}
 

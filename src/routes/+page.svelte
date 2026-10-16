@@ -85,11 +85,13 @@
 </svelte:head>
 
 <header class="bar">
-	<Wordmark />
-	<nav>
-		<a href="/demo">Try the demo</a>
-		<a href="/privacy">Privacy</a>
-	</nav>
+	<div class="site-top">
+		<Wordmark />
+		<nav>
+			<a href="/demo">Try the demo</a>
+			<a href="/privacy">Privacy</a>
+		</nav>
+	</div>
 </header>
 
 <main>
@@ -265,16 +267,13 @@
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.9rem max(1.25rem, calc((100% - 73.5rem) / 2));
 		background: color-mix(in srgb, var(--color-bg) 85%, transparent);
 		backdrop-filter: saturate(1.6) blur(18px);
 	}
 
 	nav {
 		display: flex;
+		margin-left: auto;
 		gap: 1.5rem;
 		font-size: 0.9375rem;
 	}

@@ -30,7 +30,7 @@
 
 <div class="screen">
 	<header class="top">
-		<div class="top-inner">
+		<div class="site-top">
 			<Wordmark />
 			<a href="/demo" class="demo">Try the demo</a>
 		</div>
@@ -75,16 +75,8 @@
 		backdrop-filter: saturate(1.8) blur(20px);
 	}
 
-	.top-inner {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin: 0 auto;
-		max-width: 72rem;
-		padding: 0.8rem 1.25rem;
-	}
-
 	.demo {
+		margin-left: auto;
 		font-size: 0.9375rem;
 		color: var(--color-accent);
 	}

@@ -36,7 +36,7 @@
 
 <div class="app">
 	<header class="top">
-		<div class="top-inner">
+		<div class="site-top">
 			<Wordmark />
 			<span class="sample">Sample shopper</span>
 			<a href="/" class="pill-button start">Use your receipts</a>
@@ -144,15 +144,6 @@
 		background: color-mix(in srgb, var(--color-raised) 82%, transparent);
 		backdrop-filter: saturate(1.8) blur(20px);
 		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
-	}
-
-	.top-inner {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin: 0 auto;
-		max-width: 76rem;
-		padding: 0.7rem 1.25rem;
 	}
 
 	.sample {
