@@ -82,11 +82,11 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 
 		const { data: settings } = await supabase
 			.from('user_settings')
-			.select('keep_store_name, keep_store_location, keep_photos')
+			.select('keep_store_location, keep_photos')
 			.eq('user_id', userId)
 			.maybeSingle();
-		// the store name is kept unless the person turned it off
-		const storeId = settings?.keep_store_name !== false && checked.store ? await storeFor(supabase, checked.store) : null;
+		// the store name is always kept: comparing stores is what the app is for (decided Oct 16)
+		const storeId = checked.store ? await storeFor(supabase, checked.store) : null;
 
 		const items = checked.lines.filter((l) => l.kind === 'item');
 		const names = await nameLines(

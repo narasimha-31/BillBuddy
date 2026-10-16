@@ -23,20 +23,6 @@
 			<ul class="group">
 				<li>
 					<label class="row">
-						<span class="row-title">Store names</span>
-						<input
-							class="switch"
-							type="checkbox"
-							role="switch"
-							name="keep_store_name"
-							checked={data.keepStoreName}
-							onchange={(e) => e.currentTarget.form?.requestSubmit()}
-						/>
-						<span class="row-sub">So you can see where a price was cheaper.</span>
-					</label>
-				</li>
-				<li>
-					<label class="row">
 						<span class="row-title">Store addresses</span>
 						<input
 							class="switch"

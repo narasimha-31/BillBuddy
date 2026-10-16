@@ -7,13 +7,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const settings = await locals.supabase.from('user_settings').select('keep_store_name, keep_store_location, keep_photos').maybeSingle();
+	const settings = await locals.supabase.from('user_settings').select('keep_store_location, keep_photos').maybeSingle();
 	if (settings.error) throw settings.error;
 
 	return {
 		firstName: firstNameOf(user),
 		email: user.email ?? null,
-		keepStoreName: settings.data?.keep_store_name ?? true,
 		keepStoreAddress: settings.data?.keep_store_location ?? false,
 		keepPhotos: settings.data?.keep_photos ?? false
 	};
@@ -29,7 +28,6 @@ export const actions: Actions = {
 		const keepAddress = form.get('keep_store_location') === 'on';
 		const saved = await locals.supabase.from('user_settings').upsert({
 			user_id: user.id,
-			keep_store_name: form.get('keep_store_name') === 'on',
 			keep_store_location: keepAddress,
 			keep_photos: keepPhotos,
 			updated_at: new Date().toISOString()
