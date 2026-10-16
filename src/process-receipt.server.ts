@@ -81,7 +81,7 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 
 		const { data: settings } = await supabase
 			.from('user_settings')
-			.select('keep_store_name, keep_photos')
+			.select('keep_store_name, keep_store_location, keep_photos')
 			.eq('user_id', userId)
 			.maybeSingle();
 		// the store name is kept unless the person turned it off
@@ -110,6 +110,8 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		await finish({
 			status: needsReview ? 'review' : 'saved',
 			store_id: storeId,
+			// the branch only means something next to a kept store name, and only with consent
+			store_address: storeId && settings?.keep_store_location === true ? checked.storeAddress : null,
 			purchased_on: checked.purchasedOn,
 			channel: checked.channel,
 			subtotal_cents: checked.subtotalCents,

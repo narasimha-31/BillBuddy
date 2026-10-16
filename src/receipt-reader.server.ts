@@ -9,6 +9,7 @@ const schema = {
 		kind: { type: 'string', enum: ['store_receipt', 'online_order', 'not_a_receipt'] },
 		handwritten: { type: 'boolean', description: 'true only if the items and prices are handwritten' },
 		store: nullable('string'),
+		store_address: { ...nullable('string'), description: "the store's street address as printed, or null" },
 		date_printed: { ...nullable('string'), description: 'the purchase date copied exactly as printed, or null' },
 		channel: { type: 'string', enum: ['in_store', 'delivery', 'pickup', 'unknown'] },
 		lines: {
@@ -33,7 +34,7 @@ const schema = {
 		tax: nullable('number'),
 		total: nullable('number')
 	},
-	required: ['kind', 'handwritten', 'store', 'date_printed', 'channel', 'lines', 'subtotal', 'tax', 'total'],
+	required: ['kind', 'handwritten', 'store', 'store_address', 'date_printed', 'channel', 'lines', 'subtotal', 'tax', 'total'],
 	additionalProperties: false
 };
 
@@ -51,6 +52,7 @@ Rules:
 - quantity, unit and unit_price only when printed (for example "2.10 lb @ 0.56/lb"). A multi-buy price like "8 @ 4/0.99" means 8 items at 4 for 0.99: quantity 8, unit_price 0.99, unit_price_for 4. For a price per one item or per pound, unit_price_for is null.
 - Never output payment or identity details: card numbers or digits, card type, approval or auth codes, cashier names, loyalty or member numbers, cash tendered, change.
 - total is the amount the shopper owed: the line labelled TOTAL, BALANCE, BALANCE DUE or AMOUNT DUE. Never use cash given, an amount charged to a card, or change as the total. subtotal only from a line labelled SUBTOTAL; if none is printed, subtotal is null. tax as printed, or null.
+- store_address: the store's own street address as printed near the store name (street, city, state, zip), copied exactly. Never a phone number, website or the shopper's address. If no address is printed, null; never guess one.
 - subtotal, tax and total in dollars. date_printed: the purchase date copied character for character as printed ("10/02/26", "Sep 20, 2026"); never reorder or convert it. channel: delivery, pickup or in_store when it is clear, otherwise unknown.
 
 Return only the JSON object described by the schema:

@@ -37,6 +37,20 @@
 				</li>
 				<li>
 					<label class="row">
+						<span class="row-title">Store addresses</span>
+						<input
+							class="switch"
+							type="checkbox"
+							role="switch"
+							name="keep_store_location"
+							checked={data.keepStoreAddress}
+							onchange={(e) => e.currentTarget.form?.requestSubmit()}
+						/>
+						<span class="row-sub">Which branch you shopped at, as printed on the receipt. Turning this off deletes them.</span>
+					</label>
+				</li>
+				<li>
+					<label class="row">
 						<span class="row-title">Receipt photos</span>
 						<input
 							class="switch"

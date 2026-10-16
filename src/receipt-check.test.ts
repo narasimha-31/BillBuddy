@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, readDate, realignDetails, reconcile, type Reading } from './receipt-check';
+import { checkReading, readDate, realignDetails, reconcile, storeAddress, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -16,6 +16,7 @@ const reading = (overrides: Partial<Reading> = {}): Reading => ({
 	kind: 'store_receipt',
 	handwritten: false,
 	store: 'Walmart',
+	store_address: '8215 Westheimer Rd, Houston, TX 77063',
 	date_printed: '10/09/2026',
 	channel: 'in_store',
 	lines: [line('GV WHL MLK GAL', 3.21), line('BANANAS', 1.18, { quantity: 2.1, unit: 'lb', unit_price: 0.56 })],
@@ -297,5 +298,20 @@ describe('checkReading', () => {
 		const many = Array.from({ length: 200 }, (_, i) => line(`ITEM ${i}`, 1));
 		const result = checkReading(reading({ lines: many }), today);
 		expect(result.ok && result.lines).toHaveLength(80);
+	});
+});
+
+describe('storeAddress', () => {
+	it('keeps a printed street address on one line', () => {
+		expect(storeAddress('8215 Westheimer Rd\nHouston, TX  77063')).toBe('8215 Westheimer Rd Houston, TX 77063');
+		expect(checkReading(reading(), today)).toMatchObject({ storeAddress: '8215 Westheimer Rd, Houston, TX 77063' });
+	});
+
+	it('drops anything that is not an address', () => {
+		for (const printed of [null, '', '   ', 'THANK YOU', '(713) 555-0199', '77063']) expect(storeAddress(printed)).toBeNull();
+	});
+
+	it('caps a runaway reading', () => {
+		expect(storeAddress(`1 ${'Main St '.repeat(40)}`)).toHaveLength(160);
 	});
 });

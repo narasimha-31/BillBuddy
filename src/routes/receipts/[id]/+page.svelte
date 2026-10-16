@@ -27,6 +27,7 @@
 		<div class="layout">
 			<section class="summary surface" aria-labelledby="store">
 				<h1 class="large-title" id="store">{store}</h1>
+				{#if r.store_address}<p class="address">{r.store_address}</p>{/if}
 				<p class="meta">
 					<label>
 						<span class="visually-hidden">Date bought</span>
@@ -200,6 +201,12 @@
 
 	.summary {
 		padding: 1.4rem 1.5rem;
+	}
+
+	.address {
+		margin-top: 0.3rem;
+		font-size: 0.9375rem;
+		color: var(--color-muted);
 	}
 
 	.meta {

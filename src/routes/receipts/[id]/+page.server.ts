@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const [receipt, items] = await Promise.all([
 		locals.supabase
 			.from('receipts')
-			.select('id, status, problem, purchased_on, channel, subtotal_cents, tax_cents, total_cents, skipped_lines, store_id, stores(name)')
+			.select('id, status, problem, purchased_on, channel, subtotal_cents, tax_cents, total_cents, skipped_lines, store_id, store_address, stores(name)')
 			.eq('id', params.id)
 			.maybeSingle(),
 		locals.supabase

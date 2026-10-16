@@ -7,13 +7,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const settings = await locals.supabase.from('user_settings').select('keep_store_name, keep_photos').maybeSingle();
+	const settings = await locals.supabase.from('user_settings').select('keep_store_name, keep_store_location, keep_photos').maybeSingle();
 	if (settings.error) throw settings.error;
 
 	return {
 		firstName: firstNameOf(user),
 		email: user.email ?? null,
 		keepStoreName: settings.data?.keep_store_name ?? true,
+		keepStoreAddress: settings.data?.keep_store_location ?? false,
 		keepPhotos: settings.data?.keep_photos ?? false
 	};
 };
@@ -25,13 +26,20 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const keepPhotos = form.get('keep_photos') === 'on';
+		const keepAddress = form.get('keep_store_location') === 'on';
 		const saved = await locals.supabase.from('user_settings').upsert({
 			user_id: user.id,
 			keep_store_name: form.get('keep_store_name') === 'on',
+			keep_store_location: keepAddress,
 			keep_photos: keepPhotos,
 			updated_at: new Date().toISOString()
 		});
 		if (saved.error) throw saved.error;
+
+		if (!keepAddress) {
+			const cleared = await locals.supabase.from('receipts').update({ store_address: null }).not('store_address', 'is', null);
+			if (cleared.error) throw cleared.error;
+		}
 
 		// switching it off deletes what was kept; photos still waiting to be read stay until they are
 		if (!keepPhotos) {
