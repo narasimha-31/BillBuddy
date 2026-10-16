@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { money, storeName } from '../../../format';
+	import AisleIcon from '../../AisleIcon.svelte';
 	import AppShell from '../../AppShell.svelte';
 
 	let { data, form } = $props();
+
+	// the aisle each line is set to on this page, so its icon follows the menu
+	let picked = $state<Record<number, string>>({});
 
 	const channels: Record<string, string> = { in_store: 'In store', delivery: 'Delivery', pickup: 'Pickup', unknown: '' };
 
@@ -120,11 +124,14 @@
 										<span class="price">{money(item.total_cents)}</span>
 									</div>
 									<div class="line-row small">
-										<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}">
-											{#each data.categories as category (category)}
-												<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
-											{/each}
-										</select>
+										<span class="aisle">
+											<AisleIcon aisle={picked[item.id] ?? item.category} />
+											<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}" onchange={(e) => (picked[item.id] = e.currentTarget.value)}>
+												{#each data.categories as category (category)}
+													<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
+												{/each}
+											</select>
+										</span>
 										<span class="amount">
 											{#if item.unit === 'lb' && item.unit_price_cents !== null}
 												{item.quantity} lb × {money(item.unit_price_cents)}/lb
@@ -395,6 +402,18 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		margin-top: 0.2rem;
+	}
+
+	.aisle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.aisle :global(.aisle-icon) {
+		width: 1.05rem;
+		height: 1.05rem;
+		color: var(--color-accent);
 	}
 
 	.line-row.small {

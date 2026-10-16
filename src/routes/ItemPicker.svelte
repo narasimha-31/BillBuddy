@@ -1,4 +1,6 @@
 <script lang="ts">
+	import AisleIcon from './AisleIcon.svelte';
+
 	type Item = { name: string; category?: string | null };
 
 	// items come most bought first
@@ -69,6 +71,7 @@
 				{#each aisles as [aisle, list] (aisle)}
 					<details open={aisle === selectedAisle && items.findIndex((i) => i.name === selected) >= MOST_BOUGHT}>
 						<summary>
+							<AisleIcon {aisle} />
 							<span>{aisle}</span>
 							<span class="count">{list.length}</span>
 						</summary>
@@ -217,6 +220,10 @@
 		padding: 0.8rem 1rem;
 		font-weight: 500;
 		color: var(--color-ink);
+	}
+
+	summary :global(.aisle-icon) {
+		color: var(--color-accent);
 	}
 
 	summary::-webkit-details-marker {
