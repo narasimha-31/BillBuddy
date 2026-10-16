@@ -185,7 +185,7 @@
 		</main>
 
 		<aside>
-			<div class="card surface for-mouse phone">
+			<div class="card surface for-wide phone">
 				<h2>Use your phone</h2>
 				{#if phone}
 					<div class="code">
@@ -357,9 +357,9 @@
 		color: var(--color-accent);
 	}
 
-	/* a phone can't scan a code shown on itself */
-	@media (pointer: coarse) {
-		.for-mouse {
+	/* a phone can't scan a code shown on itself; touch laptops still get it, so this goes by screen width */
+	@media (max-width: 640px) {
+		.for-wide {
 			display: none;
 		}
 	}

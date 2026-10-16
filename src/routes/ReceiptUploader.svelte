@@ -109,10 +109,8 @@
 		ondrop={dropped}
 	>
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-		<strong class="for-mouse">Drop receipt photos here</strong>
-		<strong class="for-touch">Add a receipt</strong>
-		<span class="pill for-mouse">Choose photos</span>
-		<span class="pill for-touch">Take or choose a photo</span>
+		<strong>{dragging ? 'Drop to add' : 'Add a receipt'}</strong>
+		<span class="pill">Choose photos</span>
 	</button>
 	<input
 		bind:this={picker}
@@ -242,19 +240,6 @@
 		font-size: 0.9375rem;
 		font-weight: 500;
 		color: #fff;
-	}
-
-	.for-touch {
-		display: none;
-	}
-
-	@media (pointer: coarse) {
-		.for-touch {
-			display: inline;
-		}
-		.for-mouse {
-			display: none;
-		}
 	}
 
 	.limits {
