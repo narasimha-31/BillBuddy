@@ -1,15 +1,16 @@
-// Exact Token Factory ids, catalog prices (USD per 1M tokens) and how long to wait for an answer.
-// Qwen reads a receipt in about 5 seconds, so 30 seconds means it is down and the backup gets its turn.
+// Exact Token Factory ids, catalog prices (USD per 1M tokens) and a hard limit on each answer.
+// Measured Oct 13-16 on real receipts: Qwen's slowest good read took 7 seconds (36 reads),
+// DeepSeek's median is 2.5, Super's slowest naming 3.7. Ten seconds without an answer means down.
 export const MODELS = {
 	// Qwen over DeepSeek and GLM: on real crumpled receipts it got every name and amount right
 	// where DeepSeek shifted every amount by a line and invented items. GLM was down for hours.
-	vision: { id: 'Qwen/Qwen3.8-27B', input: 0.45, output: 3, seconds: 30 },
-	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 45 },
+	vision: { id: 'Qwen/Qwen3.8-27B', input: 0.45, output: 3, seconds: 10 },
+	visionBackup: { id: 'deepseek-ai/DeepSeek-V4.1-Flash', input: 0.3, output: 1.2, seconds: 10 },
 	// Super over Lightning: in a side-by-side on real receipt lines Lightning merged shampoo and chicken
 	// thighs into "Chicken breast"; Super kept them apart. A wrong merge corrupts price comparisons.
-	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 45 },
+	names: { id: 'nvidia/nemotron-3-super-120b-a12b', input: 0.3, output: 0.9, seconds: 10 },
 	// product names become vectors so the same product groups together however it was worded
-	embed: { id: 'Qwen/Qwen3-Embedding-8B', input: 0.01, output: 0, seconds: 20 }
+	embed: { id: 'Qwen/Qwen3-Embedding-8B', input: 0.01, output: 0, seconds: 10 }
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

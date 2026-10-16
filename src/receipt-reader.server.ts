@@ -67,12 +67,17 @@ function base64(bytes: Uint8Array) {
 
 export type VisionRole = 'vision' | 'visionBackup';
 
-// Qwen reads receipts for under half a cent; when it is down or slow the backup gets one try,
-// and while it keeps failing the backup goes first. A spent daily budget is not an outage, so it
-// never falls through to the next model.
+// Qwen reads receipts for under half a cent; when it is down or slow the backup gets one try.
+// A model that just failed is skipped, and when every model just failed (Token Factory itself is
+// down) the read stops at once without calling anyone: the receipt waits and nothing loops.
+// A spent daily budget is not an outage, so it never falls through to the next model.
 export async function readReceipt(jpeg: Uint8Array, userId: string | null, roles: VisionRole[] = ['vision', 'visionBackup']): Promise<Reading> {
 	const image = `data:image/jpeg;base64,${base64(jpeg)}`;
-	if (roles.length > 1 && (await recentlyFailed(roles[0]))) roles = roles.slice(1);
+	if (roles.length > 1) {
+		const failed = await Promise.all(roles.map((role) => recentlyFailed(role)));
+		roles = roles.filter((_, i) => !failed[i]);
+		if (!roles.length) throw new AiUnavailable('every reading model failed in the last few minutes');
+	}
 	for (const [i, role] of roles.entries()) {
 		try {
 			return await structured<Reading>({

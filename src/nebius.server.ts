@@ -27,15 +27,17 @@ async function spentToday(userId: string | null) {
 	return { all: Number(row?.all_micros ?? 0), mine: Number(row?.user_micros ?? 0) };
 }
 
-// Whether this model's last call in the past ten minutes failed. A model that is down then
-// gets skipped instead of making every person wait for its timeout, and after ten quiet
-// minutes it gets tried again, so we switch back on our own once it recovers.
+// Whether this model's last call in the past three minutes failed. A model that is down then
+// gets skipped instead of making every person wait for its limit, and after three quiet
+// minutes one read tries it again, so we switch back on our own once it recovers.
+const COOL_DOWN_MS = 3 * 60_000;
+
 export async function recentlyFailed(role: ModelRole) {
 	const { data, error } = await admin
 		.from('ai_calls')
 		.select('ok')
 		.eq('model', MODELS[role].id)
-		.gt('created_at', new Date(Date.now() - 10 * 60_000).toISOString())
+		.gt('created_at', new Date(Date.now() - COOL_DOWN_MS).toISOString())
 		.order('created_at', { ascending: false })
 		.limit(1);
 	if (error) throw error;
@@ -44,13 +46,13 @@ export async function recentlyFailed(role: ModelRole) {
 
 // no answer in time, or no connection at all, counts as the provider being down; a timeout
 // is not retried, since waiting twice would leave the person sitting there far too long
-async function post(body: object, seconds: number, path = 'chat/completions') {
+async function post(body: object, deadline: number, path = 'chat/completions') {
 	try {
 		return await fetch(`${BASE_URL}/${path}`, {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${NEBIUS_API_KEY}`, 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(seconds * 1000)
+			signal: AbortSignal.timeout(Math.max(0, deadline - Date.now()))
 		});
 	} catch (error) {
 		if (error instanceof DOMException && error.name === 'TimeoutError') throw new AiUnavailable('provider timed out');
@@ -82,12 +84,17 @@ async function logCall(role: ModelRole, purpose: string, userId: string | null, 
 	if (error) console.error('ai call log failed', error.message);
 }
 
-// a server error or rate limit gets one more try after a short wait
+// A server error or rate limit gets one more try after a short wait, but both tries share one
+// hard limit: the retry only happens if a fair chance at an answer is left inside it.
+const RETRY_WAIT_MS = 1500;
+const RETRY_NEEDS_MS = 4000;
+
 async function postWithRetry(body: object, seconds: number, path?: string) {
-	let response = await post(body, seconds, path);
-	if (response.status === 429 || response.status >= 500) {
-		await new Promise((wait) => setTimeout(wait, 1500));
-		response = await post(body, seconds, path);
+	const deadline = Date.now() + seconds * 1000;
+	let response = await post(body, deadline, path);
+	if ((response.status === 429 || response.status >= 500) && deadline - Date.now() > RETRY_WAIT_MS + RETRY_NEEDS_MS) {
+		await new Promise((wait) => setTimeout(wait, RETRY_WAIT_MS));
+		response = await post(body, deadline, path);
 	}
 	if (response.status === 429 || response.status >= 500) throw new AiUnavailable(`provider returned ${response.status}`);
 	if (!response.ok) throw new Error(`provider rejected the request: ${response.status}`);

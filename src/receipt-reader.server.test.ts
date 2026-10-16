@@ -50,10 +50,23 @@ describe('readReceipt', () => {
 	});
 
 	it('goes straight to the backup while the main model keeps failing', async () => {
-		down.mockResolvedValue(true);
+		down.mockImplementation(async (role) => role === 'vision');
 		call.mockResolvedValueOnce({ kind: 'store_receipt' });
 		await readReceipt(jpeg, null);
 		expect(roles()).toEqual(['visionBackup']);
+	});
+
+	it('stops at once, calling no one, while every model keeps failing', async () => {
+		down.mockResolvedValue(true);
+		await expect(readReceipt(jpeg, null)).rejects.toBeInstanceOf(AiUnavailable);
+		expect(call).not.toHaveBeenCalled();
+	});
+
+	it('uses the main model again once its cool-down is over', async () => {
+		down.mockImplementation(async (role) => role === 'visionBackup');
+		call.mockResolvedValueOnce({ kind: 'store_receipt' });
+		await readReceipt(jpeg, null);
+		expect(roles()).toEqual(['vision']);
 	});
 
 	it('still uses the one model it was pointed at, even if that model failed lately', async () => {

@@ -38,6 +38,18 @@ describe('structured', () => {
 		expect(fetch).toHaveBeenCalledTimes(2);
 	});
 
+	it('skips the retry when the error came too late to fit another try inside the limit', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		const fetch = vi.fn().mockImplementation(async () => {
+			vi.setSystemTime(Date.now() + 8000);
+			return answer(503);
+		});
+		vi.stubGlobal('fetch', fetch);
+		await expect(call()).rejects.toBeInstanceOf(AiUnavailable);
+		expect(fetch).toHaveBeenCalledTimes(1);
+		vi.useRealTimers();
+	});
+
 	it('reports a rejected request as a real error, not an outage', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(answer(422)));
 		const error = await call().catch((e: unknown) => e);
