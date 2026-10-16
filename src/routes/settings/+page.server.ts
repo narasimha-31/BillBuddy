@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { confirmsDelete, deleteAccount, removePhotos } from '../../delete-account.server';
+import { DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow } from '../../display';
 import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -7,14 +8,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const settings = await locals.supabase.from('user_settings').select('keep_store_location, keep_photos').maybeSingle();
+	const settings = await locals.supabase.from('user_settings').select('keep_store_location, keep_photos, text_size, more_contrast, palette').maybeSingle();
 	if (settings.error) throw settings.error;
 
 	return {
 		firstName: firstNameOf(user),
 		email: user.email ?? null,
 		keepStoreAddress: settings.data?.keep_store_location ?? false,
-		keepPhotos: settings.data?.keep_photos ?? false
+		keepPhotos: settings.data?.keep_photos ?? false,
+		display: fromRow(settings.data)
 	};
 };
 
@@ -52,7 +54,25 @@ export const actions: Actions = {
 		}
 	},
 
-	delete_account: async ({ request, locals }) => {
+	// how the app is drawn; also from the laptop's Aa panel, so it answers wherever it was sent from
+	display: async ({ request, locals, cookies }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+
+		const chosen = displayFromForm(await request.formData());
+		const saved = await locals.supabase.from('user_settings').upsert({
+			user_id: user.id,
+			text_size: chosen.text,
+			more_contrast: chosen.contrast,
+			palette: chosen.palette,
+			updated_at: new Date().toISOString()
+		});
+		if (saved.error) throw saved.error;
+		cookies.set(DISPLAY_COOKIE, displayCookie(chosen), DISPLAY_COOKIE_OPTIONS);
+		return { display: chosen };
+	},
+
+	delete_account: async ({ request, locals, cookies }) => {
 		const user = await locals.getUser();
 		if (!user) return fail(401, { problem: 'signed out' });
 
@@ -61,6 +81,7 @@ export const actions: Actions = {
 
 		await deleteAccount(user.id);
 		await locals.supabase.auth.signOut({ scope: 'local' });
+		cookies.delete(DISPLAY_COOKIE, { path: '/' });
 		redirect(303, '/');
 	}
 };

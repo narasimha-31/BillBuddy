@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import AppShell from '../AppShell.svelte';
+	import DisplayChoices from '../DisplayChoices.svelte';
 
 	let { data, form } = $props();
 
@@ -17,6 +18,8 @@
 	<main>
 		<h1 class="large-title">Settings</h1>
 
+		<div class="columns">
+		<div class="column">
 		<!-- a switch applies the moment it flips, as in iOS; without JavaScript the Save button does it -->
 		<form method="POST" action="?/save" use:enhance={() => async ({ update }) => update({ reset: false })}>
 			<h2 class="list-label">What BillBuddy keeps</h2>
@@ -61,7 +64,12 @@
 			<noscript><button class="pill-button save">Save</button></noscript>
 		</form>
 
-		<h2 class="list-label">Account</h2>
+		<h2 class="list-label">Display</h2>
+		<DisplayChoices display={data.display} />
+		</div>
+
+		<div class="column">
+		<h2 class="list-label first">Account</h2>
 		<ul class="group">
 			{#if data.email}
 				<li class="row">
@@ -88,12 +96,32 @@
 			</div>
 			{#if form?.problem}<p class="problem" role="alert">{form.problem}</p>{/if}
 		</form>
+		</div>
+		</div>
 	</main>
 </AppShell>
 
 <style>
 	main {
 		max-width: 40rem;
+	}
+
+	/* a laptop has room for two columns: what is kept and how it looks, then the account */
+	@media (min-width: 1024px) {
+		main {
+			max-width: none;
+		}
+
+		.columns {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: start;
+			gap: 2.5rem;
+		}
+
+		.list-label.first {
+			margin-top: 0;
+		}
 	}
 
 	h1 {
@@ -117,58 +145,10 @@
 		white-space: normal;
 	}
 
-	/* the iOS switch, drawn from a real checkbox so keyboard and screen readers work as usual */
-	.switch {
+	/* the switch sits at the end of its row, beside the title and the note */
+	.row :global(.switch) {
 		grid-column: 2;
 		grid-row: 1 / span 2;
-		position: relative;
-		width: 51px;
-		height: 31px;
-		border-radius: 999px;
-		background: rgb(120 120 128 / 0.16);
-		appearance: none;
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
-		transition: background-color var(--standard) var(--ease);
-	}
-
-	.switch::after {
-		content: '';
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 27px;
-		height: 27px;
-		border-radius: 999px;
-		background: #fff;
-		box-shadow:
-			0 3px 8px rgb(0 0 0 / 0.15),
-			0 3px 1px rgb(0 0 0 / 0.06);
-		transform-origin: left center;
-		transition: transform var(--standard) var(--ease);
-	}
-
-	/* held down, the knob stretches toward where it will go, as the iOS switch does */
-	.switch:active::after {
-		transform: scaleX(1.18);
-	}
-
-	.switch:checked:active::after {
-		transform: translateX(20px) scaleX(1.18);
-		transform-origin: right center;
-	}
-
-	.switch:checked {
-		background: var(--color-accent);
-	}
-
-	.switch:checked::after {
-		transform: translateX(20px);
-	}
-
-	.switch:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
 	}
 
 	.save {
@@ -222,25 +202,25 @@
 	}
 
 	.confirm input:focus-visible {
-		outline: 2px solid var(--color-up);
+		outline: 2px solid var(--color-danger);
 		outline-offset: 1px;
 	}
 
 	.delete {
 		border-radius: 999px;
-		background: var(--color-up);
+		background: var(--color-danger);
 		padding: 0.6rem 1.2rem;
 		font-weight: 500;
 		color: #fff;
 	}
 
 	.delete:disabled {
-		background: color-mix(in srgb, var(--color-up) 35%, transparent);
+		background: color-mix(in srgb, var(--color-danger) 35%, transparent);
 		cursor: not-allowed;
 	}
 
 	.danger .problem {
 		margin-top: 0.6rem;
-		color: var(--color-up);
+		color: var(--color-danger);
 	}
 </style>

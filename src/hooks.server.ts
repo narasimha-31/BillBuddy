@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+import { DISPLAY_COOKIE, htmlAttributes, readDisplay } from './display';
 import { errorCode, logError } from './error-log.server';
 import { currentUser } from './session.server';
 
@@ -25,7 +26,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.getUser = () => currentUser(event.locals.supabase);
 
+	// the shopper's text size and colours are on the very first frame, so nothing jumps after load
+	const display = htmlAttributes(readDisplay(event.cookies.get(DISPLAY_COOKIE)));
 	return resolve(event, {
+		transformPageChunk: ({ html }) => (display ? html.replace('<html lang="en">', `<html lang="en" ${display}>`) : html),
 		filterSerializedResponseHeaders: (name) =>
 			name === 'content-range' || name === 'x-supabase-api-version'
 	});
