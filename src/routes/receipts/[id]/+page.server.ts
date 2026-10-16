@@ -1,5 +1,7 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { CATEGORIES } from '../../../item-names';
+import { AiUnavailable } from '../../../nebius.server';
+import { assignProducts } from '../../../product-merge.server';
 import { readDate, reconcile } from '../../../receipt-check';
 import { firstNameOf } from '../../../session.server';
 import { readEdits } from './review-edits';
@@ -51,7 +53,7 @@ export const actions: Actions = {
 		if (!receipt.data) httpError(404, 'Not found');
 		const storeId: string | null = receipt.data.store_id;
 
-		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, brand, category, size_amount, size_unit').eq('receipt_id', params.id);
+		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, brand, category, size_amount, size_unit, issue').eq('receipt_id', params.id);
 		if (items.error) throw items.error;
 
 		const editable = items.data.filter((i) => i.kind === 'item');
@@ -92,6 +94,29 @@ export const actions: Actions = {
 			});
 			const { error } = await locals.supabase.from('name_memory').upsert(memory, { onConflict: 'user_id,store_id,raw_text' });
 			if (error) throw error;
+		}
+
+		// A renamed line, or a guessed one the shopper has now seen and kept, joins the shared product
+		// of its name. If the models are down the save still stands: the line keeps its own name on
+		// Prices until the next save.
+		const confirmed = [
+			...changed.map((edit) => ({ id: edit.id, name: edit.name })),
+			...editable.filter((i) => i.name && ['unsure', 'unreadable'].includes(i.issue) && !changed.some((e) => e.id === i.id)).map((i) => ({ id: i.id, name: i.name as string }))
+		];
+		if (confirmed.length) {
+			try {
+				const products = await assignProducts(user.id, confirmed.map((c) => c.name));
+				for (const [i, line] of confirmed.entries()) {
+					const { error } = await locals.supabase
+						.from('receipt_items')
+						.update({ product_id: products[i].productId, maybe_product_id: products[i].maybeProductId })
+						.eq('id', line.id);
+					if (error) throw error;
+				}
+			} catch (problem) {
+				if (!(problem instanceof AiUnavailable)) throw problem;
+				console.warn('renamed lines kept without a product:', problem.message);
+			}
 		}
 
 		// the shopper has seen the guessed names, so they stop being marked
