@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { historyOf } from '../../price-history';
 import { toPurchases, type ItemRow } from '../../purchases';
 import { firstNameOf } from '../../session.server';
+import { usualStore, type Place } from '../../store-facts';
 import type { PageServerLoad } from './$types';
 
 type Product = { name: string; times: number; last_bought: string | null; stores: number; category: string | null };
@@ -13,13 +14,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const listed = await locals.supabase.rpc('my_products');
+	const [listed, placed] = await Promise.all([locals.supabase.rpc('my_products'), locals.supabase.rpc('my_store_places')]);
 	if (listed.error) throw listed.error;
+	if (placed.error) throw placed.error;
 	const products = (listed.data as Product[]).map((p) => ({ name: p.name, times: Number(p.times), category: p.category }));
+	const places = (placed.data as Place[]).map((p) => ({ ...p, visits: Number(p.visits) }));
+	const usual = usualStore(places);
 
 	const asked = url.searchParams.get('item');
 	const selected = products.find((p) => p.name === asked)?.name ?? products[0]?.name ?? null;
-	if (!selected) return { firstName: firstNameOf(user), products, selected, history: null };
+	if (!selected) return { firstName: firstNameOf(user), products, places, usual, selected, history: null };
 
 	const { data, error } = await locals.supabase
 		.from('receipt_items')
@@ -33,6 +37,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		firstName: firstNameOf(user),
 		products,
+		places,
+		usual,
 		selected,
 		history: historyOf(toPurchases(data as unknown as ItemRow[]), selected)
 	};
