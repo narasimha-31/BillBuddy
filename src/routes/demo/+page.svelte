@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SiteFooter from '../SiteFooter.svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { fade } from 'svelte/transition';
 	import { comparisons } from '../store-prices';
@@ -128,9 +129,17 @@
 			</section>
 		</div>
 	</main>
+	<footer class="bottom"><SiteFooter /></footer>
 </div>
 
 <style>
+	.bottom {
+		margin: 0 auto;
+		max-width: 76rem;
+		border-top: 1px solid rgb(60 60 67 / 0.1);
+		padding: 1rem 1.25rem 2rem;
+	}
+
 	/* the demo is the app itself, so it sits on the same grouped grey as the signed-in pages */
 	.app {
 		min-height: 100dvh;

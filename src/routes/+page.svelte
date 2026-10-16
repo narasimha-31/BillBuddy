@@ -4,6 +4,7 @@
 	import NumberFlow from '@number-flow/svelte';
 	import GoogleButton from './GoogleButton.svelte';
 	import PhoneTour from './PhoneTour.svelte';
+	import SiteFooter from './SiteFooter.svelte';
 	import Wordmark from './Wordmark.svelte';
 	import { cartTotals, comparisons, priceOf } from './store-prices';
 
@@ -260,6 +261,7 @@
 		Prices are typical 2026 shelf prices from published store price lists and local price trackers. Distances and the
 		usual store belong to a sample shopper. Your own receipts replace all of it.
 	</span>
+	<SiteFooter />
 </footer>
 
 <style>
@@ -778,6 +780,10 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--color-accent);
+	}
+
+	footer :global(.site-footer) {
+		flex-basis: 100%;
 	}
 
 	.sources {

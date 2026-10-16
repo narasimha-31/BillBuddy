@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SiteFooter from '../SiteFooter.svelte';
 	import Wordmark from '../Wordmark.svelte';
 
 	let { data } = $props();
@@ -59,9 +60,17 @@
 			<p class="end">That's it. Told you it was short.</p>
 		</div>
 	</main>
+	<footer class="bottom"><SiteFooter /></footer>
 </div>
 
 <style>
+	.bottom {
+		margin: 0 auto;
+		max-width: 76rem;
+		border-top: 1px solid rgb(60 60 67 / 0.1);
+		padding: 1rem 1.25rem 2rem;
+	}
+
 	.screen {
 		min-height: 100dvh;
 		background: var(--color-raised);
