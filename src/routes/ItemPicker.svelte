@@ -177,9 +177,16 @@
 		font-size: 0.9375rem;
 		color: var(--color-ink);
 		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+		-webkit-tap-highlight-color: transparent;
 		transition:
-			background-color 150ms,
-			color 150ms;
+			background-color var(--standard) var(--ease),
+			color var(--standard) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	.chip:active {
+		transform: scale(0.95);
+		transition-duration: var(--quick);
 	}
 
 	.chip:focus-visible,
@@ -238,7 +245,37 @@
 		border-right: 1.5px solid var(--color-muted);
 		border-bottom: 1.5px solid var(--color-muted);
 		transform: rotate(-45deg);
-		transition: transform 150ms;
+		transition: transform var(--standard) var(--ease);
+	}
+
+	/* an aisle opens to its natural height instead of snapping; browsers without this simply snap */
+	details::details-content {
+		block-size: 0;
+		overflow: clip;
+		transition:
+			block-size var(--slow) var(--ease),
+			content-visibility var(--slow) allow-discrete;
+	}
+
+	details[open]::details-content {
+		block-size: auto;
+	}
+
+	/* on its own: a browser that does not know ::details-content drops the whole rule it is in */
+	@media (prefers-reduced-motion: reduce) {
+		details::details-content {
+			transition: none;
+		}
+	}
+
+	summary {
+		-webkit-tap-highlight-color: transparent;
+		transition: background-color var(--standard) var(--ease);
+	}
+
+	summary:active {
+		background: rgb(0 0 0 / 0.04);
+		transition-duration: 0s;
 	}
 
 	details[open] summary::after {

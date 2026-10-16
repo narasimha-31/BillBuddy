@@ -32,6 +32,15 @@
 :root {
 	color-scheme: light;
 	scrollbar-gutter: stable;
+	/* lets a closed section grow to its natural height, so aisles can open smoothly */
+	interpolate-size: allow-keywords;
+
+	/* BillBuddy's motion: one curve for nearly everything (iOS: quick to leave, soft to land),
+	   three durations, and one way of arriving: coming into focus */
+	--ease: cubic-bezier(0.32, 0.72, 0, 1);
+	--quick: 120ms;
+	--standard: 240ms;
+	--slow: 380ms;
 }
 
 /* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */
@@ -59,6 +68,18 @@ body {
 
 .print-feed {
 	animation: print-feed 1400ms cubic-bezier(0.3, 0.6, 0.2, 1) var(--delay, 0ms) both;
+}
+
+.focus-in {
+	animation: focus-in var(--standard) var(--ease) var(--delay, 0ms) backwards;
+}
+
+@keyframes focus-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+		filter: blur(3px);
+	}
 }
 
 .line-in {
@@ -90,8 +111,22 @@ body {
 	}
 }
 
+/* Reduced motion everywhere: everything lands in its final state at once. Components still
+   switch off their own motion; this catches anything they miss. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.blur-rise,
+	.focus-in,
 	.print-feed,
 	.line-in {
 		animation: none;
@@ -182,8 +217,10 @@ a.row {
 	}
 }
 
+/* the press shade lands at once under the finger and fades on release, as in iOS lists */
 a.row:active {
 	background: rgb(0 0 0 / 0.05);
+	transition-duration: 0s;
 }
 
 a.row:focus-visible {
@@ -284,11 +321,12 @@ a.row::after {
 	font-size: 1rem;
 	font-weight: 500;
 	color: #fff;
-	transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	transition: transform var(--standard) var(--ease);
 }
 
 .pill-button:active {
 	transform: scale(0.97);
+	transition-duration: var(--quick);
 }
 
 .pill-button:focus-visible {

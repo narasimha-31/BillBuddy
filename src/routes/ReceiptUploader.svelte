@@ -150,7 +150,7 @@
 	{#if entries.length}
 		<ul class="entries scroll-area" aria-live="polite">
 			{#each entries as entry (entry.key)}
-				<li>
+				<li class="focus-in">
 					{#if entry.state === 'preparing' || entry.state === 'reading'}
 						<div class="scanning">
 							<div class="thumb" aria-hidden="true">

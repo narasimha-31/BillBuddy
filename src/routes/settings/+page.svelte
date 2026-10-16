@@ -128,7 +128,8 @@
 		background: rgb(120 120 128 / 0.16);
 		appearance: none;
 		cursor: pointer;
-		transition: background-color 250ms;
+		-webkit-tap-highlight-color: transparent;
+		transition: background-color var(--standard) var(--ease);
 	}
 
 	.switch::after {
@@ -143,7 +144,18 @@
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.15),
 			0 3px 1px rgb(0 0 0 / 0.06);
-		transition: transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+		transform-origin: left center;
+		transition: transform var(--standard) var(--ease);
+	}
+
+	/* held down, the knob stretches toward where it will go, as the iOS switch does */
+	.switch:active::after {
+		transform: scaleX(1.18);
+	}
+
+	.switch:checked:active::after {
+		transform: translateX(20px) scaleX(1.18);
+		transform-origin: right center;
 	}
 
 	.switch:checked {

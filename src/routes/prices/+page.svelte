@@ -5,7 +5,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { storeTags } from '../../store-facts';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { fade } from 'svelte/transition';
+	import { slide } from 'svelte/transition';
 	import AppShell from '../AppShell.svelte';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
@@ -68,6 +68,9 @@
 		}
 		if (remembered && anyPoint && 'geolocation' in navigator) locate();
 	});
+
+	// the app's signature curve, cubic-bezier(0.32, 0.72, 0, 1), close enough for a fold
+	const settle = (t: number) => 1 - Math.pow(1 - t, 3.2);
 
 	// a yes moves this item's lines into the other product, so the page goes to that product
 	let answering = $state(false);
@@ -132,7 +135,13 @@
 				</div>
 				<div class="history scroll-area" bind:this={history}>
 					{#if data.maybeSame}
-						<form class="same" method="POST" action="?/same" use:enhance={answerSame}>
+						<form
+							class="same"
+							method="POST"
+							action="?/same"
+							use:enhance={answerSame}
+							out:slide={{ duration: prefersReducedMotion.current ? 0 : 240, easing: settle }}
+						>
 							<input type="hidden" name="item" value={data.selected} />
 							<p class="question">Same as {data.maybeSame}?</p>
 							<p class="why">If it is, their prices show as one, from every store.</p>
@@ -145,7 +154,7 @@
 					{/if}
 					{#key data.selected}
 						{#if data.history}
-							<div in:fade={{ duration: 250 }}>
+							<div class="focus-in">
 								<PriceHistory history={data.history} {tags} />
 							</div>
 						{/if}
