@@ -25,6 +25,7 @@
 	let entries = $state<Entry[]>([]);
 	let dragging = $state(false);
 	let picker: HTMLInputElement;
+	let camera: HTMLInputElement;
 	let nextKey = 0;
 
 	const SHOWN_LINES = 8;
@@ -98,6 +99,22 @@
 </script>
 
 <div class="uploader">
+	<!-- phones open the back camera straight away; the picker stays for saved photos and PDFs -->
+	<button type="button" class="camera" onclick={() => camera.click()}>
+		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+		Take a photo
+	</button>
+	<input
+		bind:this={camera}
+		type="file"
+		accept="image/*"
+		capture="environment"
+		hidden
+		onchange={(e) => {
+			add(e.currentTarget.files ?? []);
+			e.currentTarget.value = '';
+		}}
+	/>
 	<button
 		type="button"
 		class="drop"
@@ -233,6 +250,86 @@
 	.drop strong {
 		font-size: 1.1rem;
 		font-weight: 600;
+	}
+
+	.camera {
+		display: none;
+	}
+
+	/* a phone's main way in is its camera: a full-width button first, the picker after it in grey */
+	@media (pointer: coarse) {
+		.camera {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.5rem;
+			width: 100%;
+			margin-bottom: 0.6rem;
+			border-radius: 999px;
+			background: var(--color-accent);
+			padding: 0.85rem 1.25rem;
+			font-size: 1.0625rem;
+			font-weight: 600;
+			color: #fff;
+			-webkit-tap-highlight-color: transparent;
+			transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+		}
+
+		.camera:active {
+			transform: scale(0.97);
+			transition-duration: 80ms;
+		}
+
+		.camera svg {
+			width: 1.35rem;
+			height: 1.35rem;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.8;
+			stroke-linejoin: round;
+		}
+
+		/* nothing is dragged on a phone, so the drop box becomes a plain second button */
+		.drop {
+			border: 0;
+			background: none;
+			padding: 0;
+		}
+
+		.drop svg,
+		.drop strong {
+			display: none;
+		}
+
+		.drop .pill {
+			width: 100%;
+			background: rgb(118 118 128 / 0.12);
+			padding: 0.85rem 1.25rem;
+			font-size: 1.0625rem;
+			text-align: center;
+			color: var(--color-accent);
+			transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+		}
+
+		.drop:active .pill {
+			transform: scale(0.97);
+			transition-duration: 80ms;
+		}
+	}
+
+	.camera:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.camera {
+			transition: none;
+		}
+
+		.camera:active {
+			transform: none;
+		}
 	}
 
 	.pill {

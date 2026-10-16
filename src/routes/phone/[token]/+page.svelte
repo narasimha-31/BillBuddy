@@ -10,6 +10,7 @@
 	let sent = $state<Sent[]>([]);
 	let closed = $state(false);
 	let picker = $state<HTMLInputElement>();
+	let camera = $state<HTMLInputElement>();
 	let nextId = 0;
 
 	const until = $derived(
@@ -48,6 +49,7 @@
 			}
 		}
 		if (picker) picker.value = '';
+		if (camera) camera.value = '';
 	}
 </script>
 
@@ -65,13 +67,15 @@
 			<p class="lead">Take a photo of each receipt. They show up on your computer, ready to read.</p>
 
 			<input bind:this={picker} type="file" accept="image/*,application/pdf" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
-			<button class="pill-button take" onclick={() => picker?.click()}>
+			<input bind:this={camera} type="file" accept="image/*" capture="environment" hidden onchange={(e) => send(e.currentTarget.files)} />
+			<button class="pill-button take" onclick={() => camera?.click()}>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
 					<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
 					<circle cx="12" cy="13" r="3.5" />
 				</svg>
-				Take or choose a photo
+				Take a photo
 			</button>
+			<button class="choose" onclick={() => picker?.click()}>Choose photos or a PDF</button>
 			<p class="small">This code works until {until}, for up to 10 photos.</p>
 
 			{#if sent.length}
@@ -129,6 +133,37 @@
 		padding: 1rem 1.5rem;
 		font-size: 1.0625rem;
 		font-weight: 600;
+	}
+
+	.choose {
+		width: 100%;
+		margin-top: 0.6rem;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0.9rem 1.5rem;
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--color-accent);
+		-webkit-tap-highlight-color: transparent;
+		transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	.choose:active {
+		transform: scale(0.97);
+		transition-duration: 80ms;
+	}
+
+	.choose:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.choose,
+		.choose:active {
+			transition: none;
+			transform: none;
+		}
 	}
 
 	.take svg {
