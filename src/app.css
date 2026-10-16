@@ -217,38 +217,41 @@ a.row::after {
 	color: var(--color-ink);
 }
 
-/* a list that scrolls on its own keeps its bar on the grey beside the cards, never inside a
-   rounded corner. The bar and its gap hang past the column, so the cards still line up */
-.scroll-area {
-	min-height: 0;
-	margin-right: calc(-0.5rem - 8px);
-	padding-right: 0.5rem;
-	overflow-y: auto;
-	overscroll-behavior: contain;
-	scrollbar-gutter: stable;
-}
-
-.scroll-area::-webkit-scrollbar {
-	width: 8px;
-}
-
-.scroll-area::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.scroll-area::-webkit-scrollbar-thumb {
-	border-radius: 4px;
-	background: rgb(0 0 0 / 0.2);
-}
-
-.scroll-area::-webkit-scrollbar-thumb:hover {
-	background: rgb(0 0 0 / 0.32);
-}
-
-@supports not selector(::-webkit-scrollbar) {
+/* Only wide screens scroll inside boxes; on phones the whole page scrolls, so a finger on a list
+   always moves the page. The bar sits on the grey beside the cards, never inside a rounded
+   corner, and hangs past the column so the cards still line up. */
+@media (min-width: 960px) {
 	.scroll-area {
-		scrollbar-width: thin;
-		scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+		min-height: 0;
+		margin-right: calc(-0.5rem - 8px);
+		padding-right: 0.5rem;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
+	}
+
+	.scroll-area::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.scroll-area::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.scroll-area::-webkit-scrollbar-thumb {
+		border-radius: 4px;
+		background: rgb(0 0 0 / 0.2);
+	}
+
+	.scroll-area::-webkit-scrollbar-thumb:hover {
+		background: rgb(0 0 0 / 0.32);
+	}
+
+	@supports not selector(::-webkit-scrollbar) {
+		.scroll-area {
+			scrollbar-width: thin;
+			scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+		}
 	}
 }
 
