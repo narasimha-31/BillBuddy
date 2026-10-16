@@ -98,7 +98,8 @@
 		align-items: center;
 		gap: 0.5rem;
 		border-radius: 10px;
-		background: rgb(118 118 128 / 0.12);
+		/* solid, the same grey as before on the page, so a list scrolling under it never shows through */
+		background: color-mix(in srgb, rgb(118 118 128) 12%, var(--color-raised));
 		padding: 0 0.75rem;
 	}
 

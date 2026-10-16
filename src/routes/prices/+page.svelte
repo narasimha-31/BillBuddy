@@ -130,7 +130,7 @@
 
 		{#if data.products.length}
 			<div class="columns">
-				<div class="picker">
+				<div class="picker scroll-area">
 					<ItemPicker items={data.products} bind:selected={() => selected, pick} />
 				</div>
 				<div class="history scroll-area" bind:this={history}>
@@ -365,20 +365,37 @@
 			align-items: stretch;
 		}
 
-		/* search and the most bought stay put; only the aisles (or the search results) scroll */
+		/* The whole item column scrolls as one, under a search box that stays put, so the most bought
+		   and the aisles always keep their full height, whatever the screen's height. */
 		.picker {
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
-			padding: 3px 0 0 3px;
+			padding-left: 3px;
+			padding-bottom: 1rem;
 		}
 
 		.picker > :global(*) {
 			flex: none;
 		}
 
+		.picker > :global(.search) {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			margin-top: 3px;
+			box-shadow: 0 -3px 0 var(--color-raised), 0 6px 10px -4px var(--color-raised);
+		}
+
+		/* inside the scrolling column the lists are plain, not scroll boxes of their own */
 		.picker > :global(.aisles),
-		.picker > :global(.found),
+		.picker > :global(.found) {
+			overflow: visible;
+			margin-right: 0;
+			padding-right: 0;
+			scrollbar-gutter: auto;
+		}
+
 		.history {
 			flex: 0 1 auto;
 			position: static;
