@@ -1,12 +1,6 @@
-<script lang="ts">
-	const REPO = 'https://github.com/narasimha-31/BillBuddy';
-</script>
-
 <div class="site-footer">
-	<span>© 2026 Pola Narasimha Royal</span>
-	<a href="{REPO}/blob/main/LICENSE" rel="noopener">MIT License</a>
+	<span>© 2026 Pola Narasimha Royal · MIT License</span>
 	<a href="/privacy">Privacy</a>
-	<a href={REPO} rel="noopener">Source on GitHub</a>
 </div>
 
 <style>
