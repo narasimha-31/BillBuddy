@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { preparePhoto } from '../../receipts/prepare-photo';
+	import Wordmark from '../../Wordmark.svelte';
 
 	let { data } = $props();
 
@@ -54,116 +55,116 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
-	<p class="wordmark"><span>B</span>ill<span>B</span>uddy</p>
+<div class="screen">
+	<main>
+		<Wordmark />
 
-	{#if data.expiresAt && !closed}
-		<h1>Add receipts from this phone</h1>
-		<p class="lead">Take a photo of each receipt. They show up on your computer, ready to read.</p>
+		{#if data.expiresAt && !closed}
+			<h1 class="large-title">Add receipts from this phone</h1>
+			<p class="lead">Take a photo of each receipt. They show up on your computer, ready to read.</p>
 
-		<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
-		<button class="take" onclick={() => picker?.click()}>Take or choose a photo</button>
-		<p class="small">This code works until {until}, for up to 10 photos.</p>
+			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={(e) => send(e.currentTarget.files)} />
+			<button class="pill-button take" onclick={() => picker?.click()}>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+					<circle cx="12" cy="13" r="3.5" />
+				</svg>
+				Take or choose a photo
+			</button>
+			<p class="small">This code works until {until}, for up to 10 photos.</p>
 
-		{#if sent.length}
-			<ul aria-live="polite">
-				{#each sent as item (item.id)}
-					<li class={item.state}>
-						<img src={item.photo} alt="" />
-						<span>
-							<strong>{statusText[item.state]}</strong>
-							{#if item.state === 'sent'}<small>It's read there in a few seconds.</small>{/if}
-							{#if item.note}<small>{item.note}</small>{/if}
-						</span>
-						{#if item.state === 'sent'}
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
-						{/if}
-					</li>
-				{/each}
-			</ul>
+			{#if sent.length}
+				<ul class="group" aria-live="polite">
+					{#each sent as item (item.id)}
+						<li class={item.state}>
+							<img src={item.photo} alt="" />
+							<span>
+								<strong>{statusText[item.state]}</strong>
+								{#if item.state === 'sent'}<small>It's read there in a few seconds.</small>{/if}
+								{#if item.note}<small>{item.note}</small>{/if}
+							</span>
+							{#if item.state === 'sent'}
+								<svg class="done" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		{:else}
+			<h1 class="large-title">This code has stopped working</h1>
+			<p class="lead">
+				Codes last 10 minutes and work on one phone only. Make a new one on your computer and scan it again.
+			</p>
 		{/if}
-	{:else}
-		<h1>This code has stopped working</h1>
-		<p class="lead">
-			Codes last 10 minutes and work on one phone only. Make a new one on your computer and scan it again.
-		</p>
-	{/if}
-</main>
+	</main>
+</div>
 
 <style>
+	.screen {
+		min-height: 100dvh;
+		background: var(--color-raised);
+	}
+
 	main {
 		margin: 0 auto;
 		max-width: 28rem;
-		padding: 2rem 1.25rem 4rem;
-		text-align: center;
-	}
-
-	.wordmark {
-		font-family: var(--font-display);
-		font-size: 1.75rem;
-		font-weight: 700;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
-		color: var(--color-ink);
-	}
-
-	.wordmark span {
-		color: var(--color-brand);
+		padding: 1rem 1.25rem calc(3rem + env(safe-area-inset-bottom));
 	}
 
 	h1 {
-		margin-top: 2rem;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: var(--color-ink);
+		margin-top: 2.25rem;
 	}
 
 	.lead {
 		margin-top: 0.5rem;
+		font-size: 1.0625rem;
+		line-height: 1.45;
 		color: var(--color-muted);
 	}
 
 	.take {
 		width: 100%;
 		margin-top: 2rem;
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 1.1rem 1.5rem;
-		font-size: 1.1rem;
+		padding: 1rem 1.5rem;
+		font-size: 1.0625rem;
 		font-weight: 600;
-		color: var(--color-on-ink);
+	}
+
+	.take svg {
+		width: 1.4rem;
+		height: 1.4rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linejoin: round;
 	}
 
 	.small {
 		margin-top: 0.75rem;
-		font-size: 0.85rem;
+		text-align: center;
+		font-size: 0.8125rem;
 		color: var(--color-muted);
 	}
 
 	ul {
-		display: grid;
-		gap: 0.5rem;
-		margin-top: 1.5rem;
-		text-align: left;
+		margin-top: 1.75rem;
 	}
 
 	li {
 		display: flex;
 		align-items: center;
 		gap: 0.9rem;
-		border-radius: 0.9rem;
-		background: var(--color-raised);
-		padding: 0.6rem;
+		padding: 0.6rem 1rem;
 		color: var(--color-ink);
 	}
 
 	img {
 		flex: none;
-		width: 3rem;
-		height: 4rem;
-		border-radius: 0.35rem;
+		width: 2.75rem;
+		height: 3.6rem;
+		border-radius: 6px;
 		object-fit: cover;
-		box-shadow: 0 0 0 1px var(--color-line);
+		box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.12);
 	}
 
 	/* the photo fades while it travels, then settles once it has arrived */
@@ -183,15 +184,18 @@
 		gap: 0.1rem;
 	}
 
+	strong {
+		font-weight: 500;
+	}
+
 	small {
-		font-size: 0.85rem;
+		font-size: 0.8125rem;
 		color: var(--color-muted);
 	}
 
-	svg {
-		width: 1.5rem;
-		height: 1.5rem;
-		margin-right: 0.4rem;
+	.done {
+		width: 1.4rem;
+		height: 1.4rem;
 		fill: none;
 		stroke: var(--color-accent);
 		stroke-width: 2.2;

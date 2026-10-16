@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Wordmark from '../Wordmark.svelte';
+
 	const promises = [
 		['We never sell or share your data.', 'No ads, no trackers, no "partners". Your receipts are not a product.'],
 		['Card details are never saved.', 'We keep the items, prices, store and date. The card digits, cash given and change stay on the paper.'],
@@ -14,38 +16,90 @@
 </script>
 
 <svelte:head>
-	<title>The fine print · BillBuddy</title>
+	<title>Privacy · BillBuddy</title>
 </svelte:head>
 
-<main class="mx-auto max-w-xl px-5 py-12">
-	<a href="/" class="wordmark text-2xl"><span class="text-brand">B</span>ill<span class="text-brand">B</span>uddy</a>
+<div class="screen">
+	<header class="top">
+		<Wordmark />
+		<a href="/demo" class="demo">Try the demo</a>
+	</header>
 
-	<article class="mt-6 rounded-[3px] bg-receipt px-6 py-8 font-mono text-receipt-ink shadow-lg sm:px-10">
-		<h1 class="text-center text-lg font-bold tracking-[0.2em]">THE FINE PRINT</h1>
-		<p class="mt-1 text-center text-xs text-receipt-muted">what happens to your receipts</p>
+	<main>
+		<h1 class="large-title">Private by design.</h1>
+		<p class="lead">What happens to your receipts, in seven lines.</p>
 
-		<div class="my-6 border-t border-dashed border-receipt-line"></div>
-
-		<ol class="space-y-6">
+		<ul class="group">
 			{#each promises as [promise, detail] (promise)}
 				<li>
-					<p class="text-sm font-bold">{promise}</p>
-					<p class="mt-1 font-sans text-sm leading-relaxed text-receipt-muted">{detail}</p>
+					<h2>{promise}</h2>
+					<p>{detail}</p>
 				</li>
 			{/each}
-		</ol>
+		</ul>
 
-		<div class="my-6 border-t border-dashed border-receipt-line"></div>
-
-		<p class="text-center text-xs tracking-[0.2em]">THAT'S IT. TOLD YOU IT WAS SHORT.</p>
-	</article>
-</main>
+		<p class="end">That's it. Told you it was short.</p>
+	</main>
+</div>
 
 <style>
-	.wordmark {
-		font-family: var(--font-display);
-		font-weight: 700;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
+	.screen {
+		min-height: 100dvh;
+		background: var(--color-raised);
+	}
+
+	.top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin: 0 auto;
+		max-width: 44rem;
+		padding: 0.9rem 1.25rem;
+	}
+
+	.demo {
+		font-size: 0.9375rem;
+		color: var(--color-accent);
+	}
+
+	main {
+		margin: 0 auto;
+		max-width: 44rem;
+		padding: 2rem 1.25rem calc(4rem + env(safe-area-inset-bottom));
+	}
+
+	.lead {
+		margin-top: 0.4rem;
+		font-size: 1.0625rem;
+		color: var(--color-muted);
+	}
+
+	ul {
+		margin-top: 1.75rem;
+	}
+
+	li {
+		padding: 1rem 1.1rem 1.05rem;
+	}
+
+	h2 {
+		font-size: 1.0625rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--color-ink);
+	}
+
+	li p {
+		margin-top: 0.3rem;
+		max-width: 60ch;
+		font-size: 0.9375rem;
+		line-height: 1.5;
+		color: var(--color-muted);
+	}
+
+	.end {
+		margin: 1rem 1.1rem 0;
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 </style>

@@ -157,7 +157,7 @@
 		<ul bind:this={promiseList}>
 			{#each promises as promise (promise)}<li>{promise}</li>{/each}
 		</ul>
-		<a class="fine" href="/privacy">Read the fine print</a>
+		<a class="fine" href="/privacy">How we handle your receipts</a>
 	</section>
 
 	<section class="close">

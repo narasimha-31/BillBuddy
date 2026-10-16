@@ -12,7 +12,7 @@
 	{#if page.error?.ref}
 		<p class="ref">If it keeps happening, mention this reference: <code>{page.error.ref}</code></p>
 	{/if}
-	<a href="/" class="home">Go to BillBuddy</a>
+	<a href="/" class="pill-button home">Go to BillBuddy</a>
 </main>
 
 <style>
@@ -28,14 +28,17 @@
 	}
 
 	.code {
-		font-family: var(--font-mono);
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
+		font-weight: 500;
 		color: var(--color-muted);
 	}
 
 	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: 2.125rem;
+		font-weight: 700;
+		letter-spacing: -0.025em;
+		line-height: 1.1;
 		color: var(--color-ink);
 	}
 
@@ -44,19 +47,14 @@
 	}
 
 	code {
-		border-radius: 0.375rem;
+		border-radius: 6px;
 		background: var(--color-raised);
 		padding: 0.1rem 0.4rem;
-		font-family: var(--font-mono);
+		font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 		color: var(--color-ink);
 	}
 
 	.home {
 		margin-top: 0.75rem;
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.6rem 1.25rem;
-		font-weight: 500;
-		color: var(--color-on-ink);
 	}
 </style>
