@@ -1,240 +1,303 @@
 <script lang="ts">
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { fade } from 'svelte/transition';
 	import { comparisons } from '../store-prices';
 	import { historyOf, itemsBought } from '../../price-history';
 	import { money as cents, shortDay } from '../../format';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
+	import Wordmark from '../Wordmark.svelte';
 	import { productFor, samplePurchases, sampleReceipts } from './sample-receipts';
 
 	const all = itemsBought(samplePurchases);
 	const chains = comparisons();
 
 	let selected = $state('Large eggs, 12 ct');
+	let result = $state<HTMLElement>();
 
 	const history = $derived(historyOf(samplePurchases, selected)!);
 	const typical = $derived(chains.find((c) => c.key === productFor(selected)) ?? null);
 	const highest = $derived(typical ? Math.max(...typical.prices.map((p) => p.price), typical.usAverage ?? 0) : 1);
 	const per = $derived(typical?.unit === 'LB' ? '/lb' : '');
 	const money = (n: number) => `$${n.toFixed(2)}`;
+
+	// same as the Prices page: on a phone, picking from an aisle below the price brings the price back into view
+	function pick(name: string) {
+		selected = name;
+		const top = result?.getBoundingClientRect().top ?? 0;
+		if (matchMedia('(max-width: 959px)').matches && (top < 0 || top > innerHeight * 0.6))
+			result?.scrollIntoView({ behavior: prefersReducedMotion.current ? 'auto' : 'smooth' });
+	}
 </script>
 
 <svelte:head>
 	<title>Demo · BillBuddy</title>
 </svelte:head>
 
-<header class="top">
-	<a href="/" class="wordmark"><span>B</span>ill<span>B</span>uddy</a>
-	<a href="/" class="start">Use it with your receipts</a>
-</header>
+<div class="app">
+	<header class="top">
+		<div class="top-inner">
+			<Wordmark />
+			<span class="sample">Sample shopper</span>
+			<a href="/" class="pill-button start">Use your receipts</a>
+		</div>
+	</header>
 
-<main class="layout">
-	<div class="intro">
-		<h1>What did I pay last time?</h1>
-		<p>
+	<main>
+		<h1 class="large-title">What did I pay last time?</h1>
+		<p class="ask">
 			A sample shopper with {sampleReceipts.length} receipts from the last three months. Pick something they buy to see
-			what they paid, where, and how the price moved. Your own receipts work the same way.
+			what they paid, where, and how the price moved.
 		</p>
-	</div>
 
-	<div class="picker">
-		<ItemPicker items={all} bind:selected />
-	</div>
-
-	<div class="result">
-		{#key selected}
-			<div in:fade={{ duration: 250 }}>
-				<PriceHistory {history} />
+		<div class="columns">
+			<div class="picker">
+				<ItemPicker items={all} bind:selected={() => selected, pick} />
 			</div>
 
-				{#if typical}
-					<section class="card" in:fade={{ duration: 300 }}>
-						<header>
-							<h2>Typical price elsewhere</h2>
-							<span>{typical.unit === 'LB' ? 'per lb' : 'each'}</span>
-						</header>
+			<div class="result" bind:this={result}>
+				{#key selected}
+					<div in:fade={{ duration: 250 }}>
+						<PriceHistory {history} />
+					</div>
 
-						<ul class="rows">
-							{#each typical.prices as row, i (row.store)}
-								<li class:cheapest={i === 0}>
-									<span class="store">
-										{row.store}
-										{#if i === 0}<em>cheapest</em>{/if}
-									</span>
-									<span class="track">
-										<span class="bar" style:--size={row.price / highest} style:--delay="{i * 60}ms"></span>
-										{#if typical.usAverage !== null}
-											<span class="average" style:left="{(typical.usAverage / highest) * 100}%"></span>
-										{/if}
-									</span>
-									<span class="price">{money(row.price)}</span>
-								</li>
-							{/each}
-						</ul>
+					{#if typical}
+						<section class="typical surface" in:fade={{ duration: 300 }} aria-labelledby="typical-title">
+							<header>
+								<h2 id="typical-title">Typical price elsewhere</h2>
+								<span>{typical.unit === 'LB' ? 'per lb' : 'each'}</span>
+							</header>
 
-						<footer>
-							{#if typical.usAverage !== null}
-								<p class="legend">
-									<span class="tick"></span>
-									US average {money(typical.usAverage)}{per} · BLS, August 2026
-								</p>
-							{/if}
-							<p class="note">Typical 2026 shelf prices from store price reports. Real prices vary by city and week.</p>
-						</footer>
-					</section>
-				{/if}
-		{/key}
-	</div>
-
-	<aside class="receipts">
-		<h2>Their receipts</h2>
-		<p>Tap one to see what was printed and the name BillBuddy gave it.</p>
-			<ul>
-				{#each sampleReceipts as receipt (receipt.id)}
-					<li>
-						<details>
-							<summary>
-								<span>
-									<strong>{receipt.store}</strong>
-									<small>{shortDay(receipt.date)}{receipt.via ? ` · ${receipt.via} delivery` : ''}</small>
-								</span>
-								<span class="total">{cents(receipt.totalCents)}</span>
-							</summary>
-							<ul class="lines">
-								{#each receipt.lines as line (line.raw)}
-									<li>
-										<span class="printed">{line.raw}</span>
-										<span class="named">{line.name}</span>
-										<span class="price">{cents(line.totalCents)}</span>
+							<ul class="bars">
+								{#each typical.prices as row, i (row.store)}
+									<li class:cheapest={i === 0}>
+										<span class="store">
+											{row.store}
+											{#if i === 0}<em>Cheapest</em>{/if}
+										</span>
+										<span class="track">
+											<span class="fill" style:--size={row.price / highest} style:--delay="{i * 60}ms"></span>
+											{#if typical.usAverage !== null}
+												<span class="average" style:left="{(typical.usAverage / highest) * 100}%"></span>
+											{/if}
+										</span>
+										<span class="price">{money(row.price)}</span>
 									</li>
 								{/each}
 							</ul>
-						</details>
-					</li>
-				{/each}
-			</ul>
-	</aside>
-</main>
+
+							<footer>
+								{#if typical.usAverage !== null}
+									<p class="legend">
+										<span class="tick"></span>
+										US average {money(typical.usAverage)}{per} · BLS, August 2026
+									</p>
+								{/if}
+								<p>Typical 2026 shelf prices from store price reports. Real prices vary by city and week.</p>
+							</footer>
+						</section>
+					{/if}
+				{/key}
+			</div>
+
+			<section class="receipts" aria-labelledby="receipts-title">
+				<h2 class="list-label" id="receipts-title">Their receipts</h2>
+				<ul class="group">
+					{#each sampleReceipts as receipt (receipt.id)}
+						<li>
+							<details>
+								<summary class="row">
+									<span class="row-title">{receipt.store}</span>
+									<span class="row-value">{cents(receipt.totalCents)}</span>
+									<span class="row-sub">{shortDay(receipt.date)}{receipt.via ? ` · ${receipt.via} delivery` : ''}</span>
+								</summary>
+								<ul class="lines">
+									{#each receipt.lines as line (line.raw)}
+										<li>
+											<span class="printed">{line.raw}</span>
+											<span class="named">{line.name}</span>
+											<span class="price">{cents(line.totalCents)}</span>
+										</li>
+									{/each}
+								</ul>
+							</details>
+						</li>
+					{/each}
+				</ul>
+				<p class="hint">Open one to see what was printed and the name BillBuddy gave it.</p>
+			</section>
+		</div>
+	</main>
+</div>
 
 <style>
+	/* the demo is the app itself, so it sits on the same grouped grey as the signed-in pages */
+	.app {
+		min-height: 100dvh;
+		background: var(--color-raised);
+	}
+
 	.top {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		background: color-mix(in srgb, var(--color-raised) 82%, transparent);
+		backdrop-filter: saturate(1.8) blur(20px);
+		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
+	}
+
+	.top-inner {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
+		gap: 0.75rem;
 		margin: 0 auto;
-		max-width: 90rem;
-		border-bottom: 1px dashed var(--color-line);
-		padding: 1.5rem 1.25rem 1.25rem;
+		max-width: 76rem;
+		padding: 0.7rem 1.25rem;
 	}
 
-	@media (min-width: 1024px) {
-		.top {
-			padding: 2rem 2.5rem 1.25rem;
-		}
-	}
-
-	.wordmark {
-		font-family: var(--font-display);
-		font-size: 1.75rem;
-		font-weight: 700;
-		font-synthesis: none;
-		font-variation-settings: 'SOFT' 100;
-		color: var(--color-ink);
-	}
-
-	.wordmark span {
-		color: var(--color-brand);
+	.sample {
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0.2rem 0.65rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--color-muted);
+		white-space: nowrap;
 	}
 
 	.start {
-		border-radius: 999px;
-		background: var(--color-ink);
-		padding: 0.55rem 1.1rem;
-		font-size: 0.9rem;
-		font-weight: 500;
-		color: var(--color-on-ink);
+		margin-left: auto;
+		padding: 0.5rem 1.05rem;
+		font-size: 0.9375rem;
+		white-space: nowrap;
 	}
 
-	.wordmark:focus-visible,
-	.start:focus-visible,
-	summary:focus-visible {
-		outline: 2px solid var(--color-brand);
-		outline-offset: 2px;
-	}
-
-	h1 {
-		font-size: 1.75rem;
-		font-weight: 600;
-		color: var(--color-ink);
-	}
-
-	.intro p,
-	.receipts > p {
-		margin-top: 0.5rem;
-		max-width: 36rem;
-		color: var(--color-muted);
-	}
-
-	.receipts > p {
-		font-size: 0.9rem;
-	}
-
-	.receipts h2 {
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: var(--color-muted);
-	}
-
-	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */
-	@media (hover: hover) {
-		details:not([open]) summary:hover {
-			border-radius: 0.75rem;
-			background: var(--color-receipt);
+	@media (max-width: 420px) {
+		.sample {
+			display: none;
 		}
 	}
 
-	.card {
-		margin-top: 2rem;
-		border-radius: 0.875rem;
-		background: var(--color-receipt);
-		padding: 1.5rem;
-		font-family: var(--font-mono);
-		color: var(--color-receipt-ink);
-		box-shadow: 0 0 0 1px var(--color-receipt-line);
+	main {
+		margin: 0 auto;
+		max-width: 76rem;
+		padding: 1.75rem 1.25rem 4rem;
 	}
 
-	.card header {
+	.ask {
+		margin-top: 0.4rem;
+		max-width: 38rem;
+		font-size: 1.0625rem;
+		line-height: 1.45;
+		color: var(--color-muted);
+	}
+
+	.columns {
+		display: grid;
+		gap: 2rem;
+		margin-top: 1.75rem;
+	}
+
+	.result {
+		display: grid;
+		gap: 1.25rem;
+		scroll-margin-top: 5rem;
+	}
+
+	/* on a phone the price comes straight after the items tapped most; the aisles and receipts follow it */
+	@media (max-width: 959px) {
+		.columns {
+			display: flex;
+			flex-direction: column;
+			gap: 0;
+		}
+
+		.picker {
+			display: contents;
+		}
+
+		.result {
+			order: 2;
+			margin-top: 1.5rem;
+		}
+
+		.picker > :global(h2:nth-of-type(2)),
+		.picker > :global(.aisles) {
+			order: 3;
+		}
+
+		.receipts {
+			order: 4;
+			margin-top: 2rem;
+		}
+	}
+
+	/* on a laptop the list and receipts sit left; the price stays in view on the right */
+	@media (min-width: 960px) {
+		.columns {
+			grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
+			grid-template-areas: 'picker result' 'receipts result';
+			grid-template-rows: auto 1fr;
+			align-items: start;
+			gap: 2rem 3rem;
+		}
+
+		.picker {
+			grid-area: picker;
+		}
+
+		.receipts {
+			grid-area: receipts;
+		}
+
+		.result {
+			grid-area: result;
+			position: sticky;
+			top: 5rem;
+			max-height: calc(100dvh - 6.5rem);
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			border-radius: 18px;
+			scrollbar-width: thin;
+			scrollbar-color: var(--color-line) transparent;
+		}
+	}
+
+	.typical {
+		padding: 1.25rem 1.4rem 1.1rem;
+	}
+
+	.typical header {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1rem;
-		border-bottom: 1px dashed var(--color-receipt-line);
-		padding-bottom: 1rem;
 	}
 
-	.card h2 {
-		font-weight: 700;
-		letter-spacing: 0.03em;
+	.typical h2 {
+		font-family: var(--font-display);
+		font-size: 1.1875rem;
+		font-weight: 600;
+		letter-spacing: -0.015em;
 	}
 
-	.card header span {
-		font-size: 0.75rem;
-		color: var(--color-receipt-muted);
+	.typical header span {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
 	}
 
-	.rows {
+	.bars {
 		display: grid;
-		gap: 0.85rem;
-		margin-top: 1.25rem;
+		gap: 0.9rem;
+		margin-top: 1.1rem;
 	}
 
-	.rows li {
+	.bars li {
 		display: grid;
-		grid-template-columns: 7.5rem 1fr 4rem;
+		grid-template-columns: 7.5rem minmax(0, 1fr) 3.75rem;
 		align-items: center;
 		gap: 1rem;
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 	}
 
 	.store {
@@ -246,18 +309,34 @@
 
 	.store em {
 		border-radius: 999px;
-		background: color-mix(in srgb, var(--color-receipt-down) 14%, transparent);
-		padding: 0.1rem 0.4rem;
-		font-size: 0.625rem;
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		padding: 0.1rem 0.45rem;
+		font-size: 0.6875rem;
 		font-style: normal;
-		color: var(--color-receipt-down);
+		font-weight: 500;
+		color: var(--color-accent);
 	}
 
 	.track {
 		position: relative;
-		height: 0.6rem;
+		height: 0.5rem;
 		border-radius: 999px;
-		background: color-mix(in srgb, var(--color-receipt-line) 60%, transparent);
+		background: #ececf0;
+	}
+
+	/* bars grow from the left; transform only, so rows never shift */
+	.fill {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: #aeaeb2;
+		transform-origin: left;
+		transform: scaleX(var(--size));
+		animation: grow 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
+	}
+
+	.cheapest .fill {
+		background: var(--color-accent);
 	}
 
 	.price {
@@ -266,29 +345,15 @@
 	}
 
 	.cheapest .price {
-		font-weight: 700;
-		color: var(--color-receipt-down);
-	}
-
-	/* bars grow from the left; transform only, so rows never shift */
-	.bar {
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
-		background: color-mix(in srgb, var(--color-receipt-ink) 70%, transparent);
-		transform-origin: left;
-		transform: scaleX(var(--size));
-		animation: grow 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
-	}
-
-	.cheapest .bar {
-		background: var(--color-receipt-down);
+		font-weight: 600;
+		color: var(--color-accent);
 	}
 
 	.average,
 	.tick {
-		width: 0;
-		border-left: 2px dashed var(--color-receipt-up);
+		width: 2px;
+		border-radius: 1px;
+		background: var(--color-ink);
 	}
 
 	.average {
@@ -297,146 +362,108 @@
 		bottom: -0.3rem;
 	}
 
-	.card footer {
-		margin-top: 1.5rem;
-		border-top: 1px dashed var(--color-receipt-line);
-		padding-top: 1rem;
-		font-size: 0.75rem;
-		line-height: 1.6;
+	.typical footer {
+		display: grid;
+		gap: 0.4rem;
+		margin-top: 1.25rem;
+		border-top: 1px solid rgb(60 60 67 / 0.14);
+		padding-top: 0.9rem;
+		font-size: 0.8125rem;
+		line-height: 1.45;
+		color: var(--color-muted);
 	}
 
 	.legend {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		color: var(--color-receipt-muted);
 	}
 
 	.tick {
 		height: 0.9rem;
 	}
 
-	.note {
-		margin-top: 0.5rem;
-		color: var(--color-receipt-muted);
-	}
-
-	.layout {
-		display: grid;
-		gap: 2rem;
-		margin: 0 auto;
-		max-width: 90rem;
-		padding: 2rem 1.25rem 4rem;
-	}
-
-	/* the list and receipts on the left, what was paid on the right, like the Prices page */
-	@media (min-width: 960px) {
-		.layout {
-			grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
-			grid-template-areas: 'intro result' 'picker result' 'receipts result';
-			grid-template-rows: auto auto 1fr;
-			align-items: start;
-			column-gap: 3rem;
-			padding: 2rem 2.5rem 4rem;
-		}
-
-		.intro {
-			grid-area: intro;
-		}
-
-		.picker {
-			grid-area: picker;
-		}
-
-		.result {
-			grid-area: result;
-		}
-
-		.receipts {
-			grid-area: receipts;
-		}
-	}
-
-	.receipts > ul {
-		display: grid;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-
-	details {
-		border-radius: 0.75rem;
-		background: var(--color-raised);
-	}
-
-	details[open] {
-		background: var(--color-receipt);
-	}
-
+	/* each sample receipt opens in place, an iOS disclosure row */
 	summary {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.75rem 1rem;
 		list-style: none;
-		color: var(--color-ink);
+		grid-template-columns: minmax(0, 1fr) auto 0.5rem;
 	}
 
 	summary::-webkit-details-marker {
 		display: none;
 	}
 
-	summary small {
-		display: block;
-		font-size: 0.8rem;
-		color: var(--color-muted);
+	summary::after {
+		content: '';
+		grid-column: 3;
+		grid-row: 1 / span 2;
+		width: 0.45rem;
+		height: 0.45rem;
+		border-top: 2px solid rgb(60 60 67 / 0.3);
+		border-right: 2px solid rgb(60 60 67 / 0.3);
+		transform: rotate(45deg);
+		transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
-	.total {
-		font-family: var(--font-mono);
-		font-weight: 700;
+	details[open] summary::after {
+		transform: translateY(-2px) rotate(135deg);
+	}
+
+	@media (hover: hover) {
+		summary:hover {
+			background: rgb(0 0 0 / 0.025);
+		}
+	}
+
+	summary:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: -2px;
 	}
 
 	.lines {
 		display: grid;
-		gap: 0.6rem;
-		border-top: 1px dashed var(--color-receipt-line);
-		padding: 0.75rem 1rem 1rem;
-		color: var(--color-receipt-ink);
+		gap: 0.7rem;
+		margin: 0 1rem;
+		border-top: 1px solid rgb(60 60 67 / 0.14);
+		padding: 0.8rem 0 1rem;
 	}
 
 	.lines li {
 		display: grid;
-		grid-template-columns: 1fr auto;
+		grid-template-columns: minmax(0, 1fr) auto;
 		column-gap: 0.75rem;
 	}
 
 	.printed {
 		grid-column: 1 / -1;
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		color: var(--color-receipt-muted);
+		font-size: 0.75rem;
+		letter-spacing: 0.02em;
+		color: var(--color-muted);
 	}
 
 	.named {
-		font-size: 0.9rem;
-		font-weight: 500;
+		font-size: 0.9375rem;
 	}
 
 	.lines .price {
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
+		font-size: 0.9375rem;
+	}
+
+	.hint {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
 	}
 
 	@media (max-width: 480px) {
-		.card {
-			padding: 1.25rem 1rem;
+		.typical {
+			padding: 1.1rem 1rem 1rem;
 		}
 
-		.rows li {
-			grid-template-columns: 5.25rem 1fr 3.5rem;
-			gap: 0.6rem;
-			font-size: 0.8125rem;
+		.bars li {
+			grid-template-columns: 5.5rem minmax(0, 1fr) 3.5rem;
+			gap: 0.65rem;
+			font-size: 0.875rem;
 		}
 
 		.store {
@@ -453,7 +480,7 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.bar {
+		.fill {
 			animation: none;
 		}
 	}
