@@ -331,7 +331,7 @@
 	}
 
 	.cheapest .fill {
-		background: var(--color-accent);
+		background: var(--color-cheaper);
 	}
 
 	.price {
@@ -341,7 +341,7 @@
 
 	.cheapest .price {
 		font-weight: 600;
-		color: var(--color-accent);
+		color: var(--color-cheaper);
 	}
 
 	.average,

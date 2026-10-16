@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { money, shortDay, storeName } from '../../format';
 	import AppShell from '../AppShell.svelte';
+	import Trend from '../Trend.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 
 	let { data } = $props();
@@ -47,8 +48,8 @@
 									<a class="row" href="/prices?item={encodeURIComponent(change.name)}">
 										<span class="row-title">{change.name}</span>
 										<span class="row-value">{money(change.now_cents)}{change.per === 'lb' ? '/lb' : ''}</span>
-										<span class="row-sub move" class:up={diff > 0}>
-											{diff > 0 ? 'Up' : 'Down'} {step(Math.abs(diff))} from {storeName(change.before_store) ?? 'last time'}
+										<span class="row-sub move" class:up={diff > 0} class:down={diff < 0}>
+											<Trend up={diff > 0} />{diff > 0 ? 'Up' : 'Down'} {step(Math.abs(diff))} from {storeName(change.before_store) ?? 'last time'}
 										</span>
 									</a>
 								</li>
@@ -157,6 +158,10 @@
 
 	.move.up {
 		color: var(--color-up);
+	}
+
+	.move.down {
+		color: var(--color-cheaper);
 	}
 
 	.empty {

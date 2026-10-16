@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { History } from '../price-history';
 	import { money, shortDay, storeName } from '../format';
+	import Trend from './Trend.svelte';
 
 	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"
 	let { history, tags = {} }: { history: History; tags?: Record<string, string[]> } = $props();
@@ -30,7 +31,7 @@
 				{#if change.cents === 0}
 					Same as the time before at {storeName(previous.store) ?? 'an unknown store'}.
 				{:else}
-					{change.cents > 0 ? 'Up' : 'Down'}
+					<Trend up={change.cents > 0} />{change.cents > 0 ? 'Up' : 'Down'}
 					{money(Math.abs(change.cents))} ({Math.abs(change.percent)}%) from {storeName(previous.store) ?? 'an unknown store'} on {shortDay(previous.date)}.
 				{/if}
 			</p>
