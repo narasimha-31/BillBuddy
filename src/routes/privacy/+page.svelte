@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Wordmark from '../Wordmark.svelte';
 
+	let { data } = $props();
+
 	const promises = [
 		['We never sell or share your data.', 'No ads, no trackers, no "partners". Your receipts are not a product.'],
 		['Card details are never saved.', 'We keep the items, prices, store and date. The card digits, cash given and change stay on the paper.'],
@@ -38,7 +40,11 @@
 		<div class="intro">
 			<h1 class="large-title">Private by design.</h1>
 			<p class="lead">What happens to your receipts, line by line.</p>
-			<p class="manage">You choose what’s kept in <a href="/settings">Settings</a>, once you’re signed in.</p>
+			{#if data.signedIn}
+				<p class="manage">Choose what’s kept in <a href="/settings">Settings</a>.</p>
+			{:else}
+				<p class="manage">Once you sign in, you choose what’s kept in Settings.</p>
+			{/if}
 		</div>
 
 		<div class="promises">
