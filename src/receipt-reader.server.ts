@@ -60,8 +60,11 @@ Rules:
 Return only the JSON object described by the schema:
 ${JSON.stringify(schema)}`;
 
+// the model bake-off sends every candidate exactly what the app sends
+export { schema as readingSchema, instructions as readingInstructions };
+
 // chunked so a large photo never overflows the argument list
-function base64(bytes: Uint8Array) {
+export function base64(bytes: Uint8Array) {
 	let binary = '';
 	for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
 	return btoa(binary);
