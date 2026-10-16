@@ -209,7 +209,9 @@
 									<a class="row" href="/receipts/{receipt.id}">
 										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
 										<span class="row-value">{money(receipt.total_cents)}</span>
-										<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
+										<span class="row-sub"
+											>{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}{#if receipt.toCheck}<span class="to-check">{` · ${receipt.toCheck} to check`}</span>{/if}</span
+										>
 									</a>
 								</li>
 							{/each}
@@ -362,6 +364,11 @@
 	.attention {
 		font-size: 0.9375rem;
 		color: var(--color-up);
+	}
+
+	.to-check {
+		color: var(--color-accent);
+		font-weight: 500;
 	}
 
 	.status {

@@ -13,7 +13,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [list, uploaded] = await Promise.all([
 		locals.supabase
 			.from('receipts')
-			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, stores(name)')
+			// names the reader was unsure of, counted in the same request as the list
+			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, stores(name), to_check:receipt_items(count)')
+			.in('receipt_items.issue', ['unsure', 'unreadable'])
 			.order('created_at', { ascending: false })
 			.limit(100),
 		// counted from the upload log, so deleted receipts still count, exactly like the limit itself
@@ -26,8 +28,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
-		receipts: list.data.map(({ stores, ...receipt }) => ({
+		receipts: list.data.map(({ stores, to_check, ...receipt }) => ({
 			...receipt,
+			toCheck: (to_check as { count: number }[])[0]?.count ?? 0,
 			store: (Array.isArray(stores) ? stores[0]?.name : (stores as { name: string } | null)?.name) ?? null
 		}))
 	};
