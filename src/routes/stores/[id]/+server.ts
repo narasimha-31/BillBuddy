@@ -9,8 +9,9 @@ const UUID = /^[0-9a-f-]{36}$/;
 // One of the shopper's stores for the store sheet: its branches, nearest first, and what it is
 // cheapest for. Row level security makes anyone else's store simply not found.
 async function details(locals: App.Locals, id: string) {
-	const [stores, map, branches, cheapest, unplaced] = await Promise.all([
+	const [stores, named, map, branches, cheapest, unplaced] = await Promise.all([
 		myStores(locals.supabase),
+		locals.supabase.from('stores').select('id, name').eq('id', id).maybeSingle(),
 		mapState(locals.supabase),
 		myBranches(locals.supabase),
 		locals.supabase.rpc('store_cheapest', { p_store: id, how_many: 4 }),
@@ -18,8 +19,10 @@ async function details(locals: App.Locals, id: string) {
 	]);
 	if (cheapest.error) throw cheapest.error;
 	if (unplaced.error) throw unplaced.error;
-	const store = stores.find((s) => s.id === id);
-	if (!store) error(404, 'Not found');
+	if (named.error) throw named.error;
+	if (!named.data) error(404, 'Not found');
+	// a store whose receipts are all still waiting for review has no saved visits yet
+	const store = stores.find((s) => s.id === id) ?? { ...named.data, visits: 0 };
 	const mine = branches.filter((b) => b.storeId === id);
 	return {
 		store,

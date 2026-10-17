@@ -1,13 +1,50 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import { slide } from 'svelte/transition';
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { streetOf, townOf } from '../../../branches';
+	import { shortMiles } from '../../../distance';
 	import { money, storeName } from '../../../format';
 	import AisleIcon from '../../AisleIcon.svelte';
 	import AppShell from '../../AppShell.svelte';
+	import StoreSheet from '../../StoreSheet.svelte';
 
 	let { data, form } = $props();
 
 	// the aisle each line is set to on this page, so its icon follows the menu
 	let picked = $state<Record<number, string>>({});
+
+	// "Which one?": this receipt's branch, changed for this receipt only
+	let choosing = $state(false);
+	let nearby = $state<{ lat: number; lng: number; address: string | null; miles: number }[] | null>(null);
+	let finding = $state(false);
+	let typingBranch = $state(false);
+	let sheetStore = $state<string | null>(null);
+	const branchLabel = (b: { address: string | null; miles: number; away?: boolean }) =>
+		[streetOf(b.address) ?? 'This branch', b.away ? (townOf(b.address) ?? 'away') : shortMiles(b.miles)].join(' · ');
+	const near = (a: { lat: number; lng: number }, b: { lat: number; lng: number } | null) => !!b && Math.abs(a.lat - b.lat) < 0.001 && Math.abs(a.lng - b.lng) < 0.001;
+	// the shopper's other branches first, then ones found on the map that are not already listed
+	const options = $derived([
+		...data.otherBranches,
+		...(nearby ?? []).filter((n) => !data.otherBranches.some((b) => near(n, b)) && !near(n, data.branch))
+	]);
+	const branchPicked: SubmitFunction = () => async ({ update, result }) => {
+		await update({ reset: false });
+		if (result.type === 'success') {
+			choosing = false;
+			typingBranch = false;
+		}
+	};
+
+	async function findNearby() {
+		if (!r.store_id) return;
+		finding = true;
+		const response = await fetch(`/stores/${r.store_id}/nearby`);
+		nearby = response.ok ? (await response.json()).branches : [];
+		finding = false;
+	}
 
 	const channels: Record<string, string> = { in_store: 'In store', delivery: 'Delivery', pickup: 'Pickup', unknown: '' };
 
@@ -38,7 +75,66 @@
 		<div class="layout">
 			<section class="summary surface" aria-labelledby="store">
 				<h1 class="large-title" id="store">{store}</h1>
-				{#if r.store_address}<p class="address">{r.store_address}</p>{/if}
+				{#if data.map.on && r.store_id}
+					<div class="branch-line">
+						{#if data.branch}
+							<button type="button" class="branch-name" onclick={() => (sheetStore = r.store_id)}>
+								{data.branch.guess ? 'Probably ' : ''}{branchLabel(data.branch)}
+							</button>
+						{:else}
+							<span class="unknown">Branch not known</span>
+						{/if}
+						<button type="button" class="change" aria-expanded={choosing} onclick={() => (choosing = !choosing)}>{choosing ? 'Done' : data.branch ? 'Change' : 'Add it'}</button>
+					</div>
+					{#if choosing}
+						<div class="which" transition:slide={{ duration: prefersReducedMotion.current ? 0 : 220 }}>
+							<p class="which-title">Which {storeName(r.store)}?</p>
+							<ul>
+								{#if data.branch?.guess}
+									<li>
+										<form method="POST" action="?/branch" use:enhance={branchPicked}>
+											<input type="hidden" name="lat" value={data.branch.lat} />
+											<input type="hidden" name="lng" value={data.branch.lng} />
+											<input type="hidden" name="address" value={data.branch.address} />
+											<button class="option"><span>{branchLabel(data.branch)}</span><span class="note">Yes, this one</span></button>
+										</form>
+									</li>
+								{/if}
+								{#each options as option (`${option.lat},${option.lng}`)}
+									<li>
+										<form method="POST" action="?/branch" use:enhance={branchPicked}>
+											<input type="hidden" name="lat" value={option.lat} />
+											<input type="hidden" name="lng" value={option.lng} />
+											<input type="hidden" name="address" value={option.address} />
+											<button class="option">
+												<span>{branchLabel(option)}</span>
+												{#if 'visits' in option}<span class="note">{option.visits} {option.visits === 1 ? 'visit' : 'visits'}</span>{/if}
+											</button>
+										</form>
+									</li>
+								{/each}
+								{#if nearby === null}
+									<li><button type="button" class="option quiet" disabled={finding} onclick={findNearby}>{finding ? 'Looking on the map…' : 'Find others nearby'}</button></li>
+								{:else if nearby.length === 0}
+									<li class="none">No other branches found near your ZIP.</li>
+								{/if}
+								<li>
+									{#if typingBranch}
+										<form class="typed" method="POST" action="?/branch" use:enhance={branchPicked}>
+											<input name="typed" placeholder="Street, city and state" autocomplete="off" maxlength="200" required />
+											<button class="pill-button small">Save</button>
+										</form>
+									{:else}
+										<button type="button" class="option quiet" onclick={() => (typingBranch = true)}>Type the address</button>
+									{/if}
+								</li>
+							</ul>
+							{#if form?.branchProblem}<p class="branch-problem" role="alert">{form.branchProblem}</p>{/if}
+						</div>
+					{/if}
+				{:else if r.store_address}
+					<p class="address">{r.store_address}</p>
+				{/if}
 				<p class="meta">
 					<label>
 						<span class="visually-hidden">Date bought</span>
@@ -167,6 +263,7 @@
 			</div>
 		</div>
 	</main>
+	<StoreSheet bind:storeId={sheetStore} />
 </AppShell>
 
 <style>
@@ -215,6 +312,120 @@
 
 	.summary {
 		padding: 1.4rem 1.5rem;
+	}
+
+	/* the branch: one quiet line; its choices open under it as big rows, for a thumb */
+	.branch-line {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.75rem;
+		margin-top: 0.3rem;
+		font-size: 0.9375rem;
+	}
+
+	.branch-name {
+		border-radius: 6px;
+		text-align: left;
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-decoration-color: rgb(60 60 67 / 0.25);
+		text-underline-offset: 3px;
+	}
+
+	.unknown {
+		color: var(--color-muted);
+	}
+
+	.change {
+		border-radius: 6px;
+		color: var(--color-accent);
+	}
+
+	.branch-name:focus-visible,
+	.change:focus-visible,
+	.option:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.which {
+		margin-top: 0.6rem;
+		overflow: hidden;
+		border-radius: 12px;
+		background: var(--color-raised);
+	}
+
+	.which-title {
+		padding: 0.7rem 0.9rem 0.3rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-muted);
+	}
+
+	.which li + li {
+		border-top: 1px solid rgb(60 60 67 / 0.1);
+	}
+
+	.option {
+		display: flex;
+		width: 100%;
+		min-height: 3rem;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.6rem 0.9rem;
+		text-align: left;
+		font-size: 0.9375rem;
+		color: var(--color-ink);
+		transition: background-color var(--quick) var(--ease);
+	}
+
+	.option:active {
+		background: rgb(0 0 0 / 0.05);
+		transition-duration: 0s;
+	}
+
+	.option.quiet {
+		color: var(--color-accent);
+	}
+
+	.note,
+	.none {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.none {
+		padding: 0.75rem 0.9rem;
+	}
+
+	.typed {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.6rem 0.9rem;
+	}
+
+	/* 16px text: iOS Safari zooms the page on any smaller field */
+	.typed input {
+		flex: 1;
+		min-width: 0;
+		border: 1px solid rgb(60 60 67 / 0.18);
+		border-radius: 10px;
+		background: #fff;
+		padding: 0.5rem 0.7rem;
+		font-size: 1rem;
+	}
+
+	.pill-button.small {
+		padding: 0.4rem 0.9rem;
+		font-size: 0.875rem;
+	}
+
+	.branch-problem {
+		padding: 0 0.9rem 0.75rem;
+		font-size: 0.875rem;
+		color: var(--color-danger);
 	}
 
 	.address {

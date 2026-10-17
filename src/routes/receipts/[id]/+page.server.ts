@@ -4,7 +4,9 @@ import { CATEGORIES, type Category } from '../../../item-names';
 import { AiUnavailable } from '../../../nebius.server';
 import { assignProducts } from '../../../product-merge.server';
 import { readDate, reconcile } from '../../../receipt-check';
+import { placed } from '../../../branches';
 import { firstNameOf } from '../../../session.server';
+import { mapState, myBranches, pickBranch, typeBranch } from '../../../store-map.server';
 import { readEdits } from './review-edits';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -16,17 +18,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!UUID.test(params.id)) httpError(404, 'Not found');
 
 	// row level security makes someone else's receipt simply not found
-	const [receipt, items] = await Promise.all([
+	const [receipt, items, map, branches] = await Promise.all([
 		locals.supabase
 			.from('receipts')
-			.select('id, status, problem, purchased_on, channel, subtotal_cents, tax_cents, total_cents, skipped_lines, store_id, store_address, stores(name)')
+			.select('id, status, problem, purchased_on, channel, subtotal_cents, tax_cents, total_cents, skipped_lines, store_id, store_address, store_lat, store_lng, branch_key, branch_guess, stores(name)')
 			.eq('id', params.id)
 			.maybeSingle(),
 		locals.supabase
 			.from('receipt_items')
 			.select('id, position, kind, raw_text, name, brand, category, quantity, unit, unit_price_cents, total_cents, computed, issue')
 			.eq('receipt_id', params.id)
-			.order('position')
+			.order('position'),
+		mapState(locals.supabase),
+		myBranches(locals.supabase)
 	]);
 	if (receipt.error) throw receipt.error;
 	if (items.error) throw items.error;
@@ -40,7 +44,23 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		rest.tax_cents,
 		rest.total_cents
 	);
-	return { firstName: firstNameOf(user), receipt: { ...rest, store }, items: items.data, math, categories: [...CATEGORIES] };
+	// this receipt's branch, and the shopper's other branches of the same store for "Which one?"
+	const mine = map.you ? placed(branches.filter((b) => b.storeId === rest.store_id), map.you) : [];
+	// read from the receipt itself, so a receipt still waiting for review shows its branch too
+	const [branch] =
+		map.you && rest.store_lat !== null && rest.store_lng !== null && rest.branch_key
+			? placed([{ storeId: rest.store_id ?? '', name: store ?? '', key: rest.branch_key, lat: rest.store_lat, lng: rest.store_lng, address: rest.store_address, visits: 1, lastVisit: rest.purchased_on, guess: rest.branch_guess }], map.you)
+			: [null];
+	return {
+		firstName: firstNameOf(user),
+		receipt: { ...rest, store },
+		items: items.data,
+		math,
+		categories: [...CATEGORIES],
+		map: { on: map.on, zip: map.zip },
+		branch,
+		otherBranches: mine.filter((b) => b.key !== rest.branch_key)
+	};
 };
 
 export const actions: Actions = {
@@ -138,6 +158,26 @@ export const actions: Actions = {
 		const { error } = await locals.supabase.from('receipts').update(update).eq('id', params.id);
 		if (error) throw error;
 		redirect(303, '/receipts');
+	},
+
+	// "Which one?": this receipt only moves to the branch picked, or to an address typed for it
+	branch: async ({ params, request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+		if (!UUID.test(params.id)) httpError(404, 'Not found');
+		const form = await request.formData();
+		const typed = String(form.get('typed') ?? '').trim();
+		if (typed) {
+			if (typed.length < 6 || typed.length > 200) return fail(400, { branchProblem: 'Type the street address, city and state.' });
+			if ((await typeBranch(locals.supabase, params.id, typed)) === 'not_found') return fail(400, { branchProblem: 'That address couldn’t be found on the map. Check the street and city.' });
+			return { branch: 'typed' };
+		}
+		const lat = Number(form.get('lat'));
+		const lng = Number(form.get('lng'));
+		const address = String(form.get('address') ?? '').trim();
+		if (!(lat >= 18 && lat <= 72 && lng >= -180 && lng <= -64) || !address || address.length > 200) return fail(400, { branchProblem: 'Pick a branch from the list.' });
+		await pickBranch(locals.supabase, params.id, { lat, lng, address });
+		return { branch: 'picked' };
 	},
 
 	delete: async ({ params, locals }) => {
