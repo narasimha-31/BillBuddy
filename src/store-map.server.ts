@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { placed, type Branch } from './branches';
-import type { Point } from './distance';
+import { milesBetween, type Point } from './distance';
 import { branchesOf } from './store-branch.server';
 import { placeStore } from './store-place.server';
 
@@ -10,6 +10,9 @@ type Spot = { lat: number; lng: number; address: string | null };
 
 // stores looked up on OpenStreetMap in one go; at one request a second this is about 9 seconds
 const MOST_LOOKUPS = 8;
+// Two lookups of one address can land ~100 m apart (Census against OpenStreetMap), so a typed or
+// picked address this close to a branch the shopper already has is that branch.
+const SAME_BRANCH_MILES = 0.15;
 
 async function zipPoint(supabase: SupabaseClient, zip: string): Promise<Point | null> {
 	const { data, error } = await supabase.from('zip_codes').select('lat, lng').eq('zip', zip).maybeSingle();
@@ -103,9 +106,25 @@ export async function turnMapOff(supabase: SupabaseClient, userId: string) {
 	for (const result of [settings, receipts]) if (result.error) throw result.error;
 }
 
+// the exact point of the shopper's nearest branch of this store within reach of the spot, or the spot
+export async function snapToBranch(supabase: SupabaseClient, storeId: string, spot: Spot): Promise<Spot> {
+	const close = (await myBranches(supabase))
+		.filter((b) => b.storeId === storeId)
+		.map((b) => ({ key: b.key, miles: milesBetween(spot, b) }))
+		.filter((b) => b.miles <= SAME_BRANCH_MILES)
+		.sort((a, b) => a.miles - b.miles)[0];
+	if (!close) return spot;
+	const { data, error } = await supabase.from('receipts').select('store_lat, store_lng, store_address').eq('store_id', storeId).eq('branch_key', close.key).limit(1).single();
+	if (error) throw error;
+	return { lat: data.store_lat, lng: data.store_lng, address: data.store_address ?? spot.address };
+}
+
 // "Which Walmart?": one receipt moves to the branch the shopper picked, and stops being a guess
 export async function pickBranch(supabase: SupabaseClient, receiptId: string, spot: Spot) {
-	const { error } = await supabase.from('receipts').update({ store_lat: spot.lat, store_lng: spot.lng, store_address: spot.address, branch_guess: false }).eq('id', receiptId);
+	const receipt = await supabase.from('receipts').select('store_id').eq('id', receiptId).single();
+	if (receipt.error) throw receipt.error;
+	const at = receipt.data.store_id ? await snapToBranch(supabase, receipt.data.store_id, spot) : spot;
+	const { error } = await supabase.from('receipts').update({ store_lat: at.lat, store_lng: at.lng, store_address: at.address, branch_guess: false }).eq('id', receiptId);
 	if (error) throw error;
 }
 

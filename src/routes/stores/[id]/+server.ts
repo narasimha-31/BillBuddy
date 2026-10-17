@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { placed } from '../../../branches';
-import { mapState, myBranches, myStores } from '../../../store-map.server';
+import { mapState, myBranches, myStores, snapToBranch } from '../../../store-map.server';
 import { placeStore } from '../../../store-place.server';
 import type { RequestHandler } from './$types';
 
@@ -55,10 +55,11 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 		if (address.length < 6 || address.length > 200) return json({ problem: 'Type the street address, city and state.' }, { status: 400 });
 		const point = await placeStore(address);
 		if (!point) return json({ problem: 'That address couldn’t be found on the map. Check the street and city.' }, { status: 400 });
-		// every receipt from that branch moves together, and is no longer a guess
+		// every receipt from that branch moves together, onto another branch if it is the same place
+		const at = await snapToBranch(locals.supabase, params.id, { ...point, address });
 		const { error: failed } = await locals.supabase
 			.from('receipts')
-			.update({ store_lat: point.lat, store_lng: point.lng, store_address: address, branch_guess: false })
+			.update({ store_lat: at.lat, store_lng: at.lng, store_address: at.address, branch_guess: false })
 			.eq('store_id', params.id)
 			.eq('branch_key', body.key);
 		if (failed) throw failed;
@@ -67,9 +68,10 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 		if (address.length < 6 || address.length > 200) return json({ problem: 'Type the street address, city and state.' }, { status: 400 });
 		const point = await placeStore(address);
 		if (!point) return json({ problem: 'That address couldn’t be found on the map. Check the street and city.' }, { status: 400 });
+		const at = await snapToBranch(locals.supabase, params.id, { ...point, address });
 		const { error: failed } = await locals.supabase
 			.from('receipts')
-			.update({ store_lat: point.lat, store_lng: point.lng, store_address: address, branch_guess: false })
+			.update({ store_lat: at.lat, store_lng: at.lng, store_address: at.address, branch_guess: false })
 			.eq('store_id', params.id)
 			.eq('status', 'saved')
 			.is('store_lat', null);
