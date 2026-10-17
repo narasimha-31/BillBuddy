@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { placed } from '../../../branches';
-import { mapState, myBranches, myStores, snapToBranch } from '../../../store-map.server';
+import { mapState, myBranches, myStores, placeWaiting, snapToBranch } from '../../../store-map.server';
 import { placeStore } from '../../../store-place.server';
 import type { RequestHandler } from './$types';
 
@@ -45,9 +45,15 @@ export const POST: RequestHandler = async ({ params, locals, request }) => {
 	if (!(await locals.getUser())) error(401, 'Signed out');
 	if (!UUID.test(params.id)) error(404, 'Not found');
 	const body = (await request.json().catch(() => null)) as { action?: string; key?: unknown; address?: unknown } | null;
-	if (!(await mapState(locals.supabase)).on) return json({ problem: 'Turn on the store map first.' }, { status: 400 });
+	const map = await mapState(locals.supabase);
+	if (!map.on || !map.you) return json({ problem: 'Turn on the store map first.' }, { status: 400 });
 
-	if (body?.action === 'confirm' && typeof body.key === 'string') {
+	if (body?.action === 'lookup') {
+		await placeWaiting(locals.supabase, map.you, params.id);
+		const left = await locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).eq('store_id', params.id).eq('status', 'saved').is('store_lat', null);
+		if (left.error) throw left.error;
+		if (left.count) return json({ ...(await details(locals, params.id)), problem: 'This store isn’t on OpenStreetMap near your ZIP. Type its address instead.' });
+	} else if (body?.action === 'confirm' && typeof body.key === 'string') {
 		const { error: failed } = await locals.supabase.from('receipts').update({ branch_guess: false }).eq('store_id', params.id).eq('branch_key', body.key).eq('branch_guess', true);
 		if (failed) throw failed;
 	} else if (body?.action === 'move' && typeof body.key === 'string') {

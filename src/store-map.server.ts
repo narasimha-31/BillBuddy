@@ -64,8 +64,10 @@ export async function guessSpot(store: { id: string; name: string }, you: Point,
 }
 
 // receipts saved before the map was on, or without an address, get a guessed branch per store
-export async function placeWaiting(supabase: SupabaseClient, you: Point) {
-	const waiting = await supabase.from('receipts').select('store_id, stores(name)').eq('status', 'saved').is('store_lat', null).not('store_id', 'is', null);
+export async function placeWaiting(supabase: SupabaseClient, you: Point, onlyStore?: string) {
+	let query = supabase.from('receipts').select('store_id, stores(name)').eq('status', 'saved').is('store_lat', null).not('store_id', 'is', null);
+	if (onlyStore) query = query.eq('store_id', onlyStore);
+	const waiting = await query;
 	if (waiting.error) throw waiting.error;
 	const stores = new Map<string, string>();
 	for (const r of waiting.data as unknown as { store_id: string; stores: { name: string } | { name: string }[] }[])

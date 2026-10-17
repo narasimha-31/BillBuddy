@@ -55,6 +55,7 @@
 		details = answer;
 		typing = null;
 		fixing = null;
+		if (answer.problem) problem = answer.problem;
 		await invalidateAll();
 	}
 
@@ -149,7 +150,10 @@
 						<span>{details.unplaced === 1 ? 'One receipt here has' : `${details.unplaced} receipts here have`} no branch yet. Where was this?</span>
 						<input bind:value={typing} placeholder="Street, city and state" autocomplete="off" maxlength="200" required disabled={busy} />
 					</label>
-					<button class="pill-button small" disabled={busy}>{busy ? 'Finding it…' : 'Save'}</button>
+					<div class="actions">
+						<button class="pill-button small" disabled={busy}>{busy ? 'Finding it…' : 'Save'}</button>
+						<button type="button" class="text" disabled={busy} onclick={() => send({ action: 'lookup' })}>Look it up on the map</button>
+					</div>
 				</form>
 			{/if}
 
