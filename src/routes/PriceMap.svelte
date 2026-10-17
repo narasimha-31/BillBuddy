@@ -94,14 +94,17 @@
 
 {#snippet answer(label: string, store: string, where: string, cents: number, date: string | null, point: Pin | null)}
 	<div class="answer">
-		<span class="label">{label}</span>
+		<svelte:element this={point ? 'button' : 'div'} type={point ? 'button' : undefined} class="main" role={point ? undefined : 'group'} onclick={point ? () => pick(idOf(point)) : undefined}>
+			<span class="label">{label}</span>
+			<span class="store">{store}{#if where}<span class="where">{` · ${where}`}</span>{/if}</span>
+			<span class="paid">{money(cents)}{per}<span class="when" class:old={isOld(date)}>{` · ${date ? (isOld(date) ? `last there ${shortDay(date)}` : shortDay(date)) : 'no date'}`}</span></span>
+		</svelte:element>
 		{#if point}
-			<button type="button" class="store" onclick={() => pick(idOf(point))}>{store}<span class="where">{` · ${where}`}</span></button>
-		{:else}
-			<span class="store">{store}</span>
+			<a class="go" href={directionsTo(point)} target="_blank" rel="noopener" aria-label="Directions to {store}">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12l-9 9-9-9z M9 13.5v-2a1.5 1.5 0 0 1 1.5-1.5H15m-2-2 2 2-2 2" /></svg>
+				Directions
+			</a>
 		{/if}
-		<span class="paid">{money(cents)}{per}<span class="when" class:old={isOld(date)}>{` · ${date ? (isOld(date) ? `last there ${shortDay(date)}` : shortDay(date)) : 'no date'}`}</span></span>
-		{#if point}<a class="go" href={directionsTo(point)} target="_blank" rel="noopener">Directions</a>{/if}
 	</div>
 {/snippet}
 
@@ -109,7 +112,7 @@
 	{#if answers.length}
 		<div class="answers">
 			{#each answers as line (line.label)}
-				{@const where = [streetOf(line.pin.address), shortMiles(line.pin.miles)].filter(Boolean).join(' · ')}
+				{@const where = [shortMiles(line.pin.miles).replace(' ', '\u00a0'), streetOf(line.pin.address)].filter(Boolean).join(' · ')}
 				{@render answer(line.label, storeName(line.pin.name) ?? line.pin.name, where, line.pin.cents!, line.pin.date, line.pin)}
 			{/each}
 			{#if sold.length > 1}<p class="count">Bought at {sold.length} of your stores nearby</p>{/if}
@@ -204,13 +207,41 @@
 		margin-top: 1rem;
 	}
 
+	/* One answer is one row: the whole left part picks that store on the map and in the list, the
+	   pill opens directions. Both are full-size targets for a thumb. */
 	.answer {
 		display: grid;
-		grid-template-columns: 10.5rem minmax(0, 1fr) auto auto;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.75rem;
+		font-size: 0.9375rem;
+	}
+
+	.main {
+		display: grid;
+		grid-template-columns: 10.5rem minmax(0, 1fr) auto;
 		align-items: baseline;
 		gap: 0.25rem 1rem;
-		padding: 0.35rem 0;
-		font-size: 0.9375rem;
+		min-height: 3rem;
+		margin: 0 -0.6rem;
+		border-radius: 12px;
+		padding: 0.55rem 0.6rem;
+		text-align: left;
+		color: inherit;
+		-webkit-tap-highlight-color: transparent;
+		transition:
+			background-color var(--quick) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	button.main:hover {
+		background: rgb(118 118 128 / 0.08);
+	}
+
+	button.main:active {
+		background: rgb(118 118 128 / 0.14);
+		transform: scale(0.985);
+		transition-duration: var(--quick);
 	}
 
 	.label {
@@ -227,16 +258,7 @@
 		color: var(--color-ink);
 	}
 
-	button.store {
-		border-radius: 6px;
-		transition: color var(--quick) var(--ease);
-	}
-
-	button.store:hover {
-		color: var(--color-accent);
-	}
-
-	button.store:focus-visible,
+	button.main:focus-visible,
 	.go:focus-visible {
 		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
@@ -263,14 +285,40 @@
 	}
 
 	.go {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-height: 2.75rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+		padding: 0 0.95rem 0 0.75rem;
 		font-size: 0.875rem;
+		font-weight: 600;
 		color: var(--color-accent);
 		white-space: nowrap;
+		-webkit-tap-highlight-color: transparent;
+		transition:
+			background-color var(--quick) var(--ease),
+			transform var(--standard) var(--ease);
 	}
 
 	.go:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+	}
+
+	.go:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.go svg {
+		width: 1.05rem;
+		height: 1.05rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 
 	.count {
@@ -278,34 +326,25 @@
 		color: var(--color-muted);
 	}
 
-	/* on a phone each answer stacks: the label, the store, then price and the way there */
+	/* on a phone each answer stacks inside its row: the label, the store, then what was paid; the
+	   pill stays at the right edge, where the thumb already is */
 	@media (max-width: 640px) {
-		.answer {
-			grid-template-columns: minmax(0, 1fr) auto;
-			grid-template-areas: 'label label' 'store store' 'paid go';
-			gap: 0.1rem 0.75rem;
-			padding: 0.5rem 0;
+		.answers {
+			margin-top: 0;
 		}
 
 		.answer + .answer {
 			border-top: 1px solid rgb(60 60 67 / 0.12);
 		}
 
-		.label {
-			grid-area: label;
+		.main {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0.1rem;
+			padding: 0.6rem 0.6rem;
 		}
 
 		.answer .store {
-			grid-area: store;
 			white-space: normal;
-		}
-
-		.paid {
-			grid-area: paid;
-		}
-
-		.go {
-			grid-area: go;
 		}
 	}
 
@@ -355,6 +394,25 @@
 
 	.link.quiet {
 		font-size: 0.8125rem;
+	}
+
+	/* on a touch screen the small text links get a full-height target without looking bigger */
+	@media (pointer: coarse) {
+		.link {
+			display: inline-flex;
+			align-items: center;
+			min-height: 2.75rem;
+			padding: 0 0.25rem;
+			margin: -0.5rem -0.25rem;
+		}
+
+		.missing,
+		.picked {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0 0.5rem;
+		}
 	}
 
 	/* the locked map: our own drawn streets, softened, with the ask resting on top */
@@ -465,7 +523,12 @@
 		}
 
 		.frame {
-			height: 10rem;
+			height: 9rem;
+		}
+
+		.ask .pill-button {
+			align-self: stretch;
+			justify-self: stretch;
 		}
 	}
 </style>

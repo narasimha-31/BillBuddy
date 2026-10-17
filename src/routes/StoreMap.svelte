@@ -191,6 +191,15 @@
 		box-shadow: 1.5px 1.5px 1px rgb(0 0 0 / 0.06);
 	}
 
+	/* a fingertip is bigger than a price tag: on touch screens each pin catches taps around it */
+	@media (pointer: coarse) {
+		.store-map :global(.price-pin::before) {
+			content: '';
+			position: absolute;
+			inset: -12px -10px;
+		}
+	}
+
 	.store-map :global(.price-pin.dot) {
 		bottom: 4px;
 		width: 12px;
