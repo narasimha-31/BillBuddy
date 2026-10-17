@@ -8,6 +8,9 @@ export type Purchase = {
 	unit: string;
 	unitPriceCents: number | null;
 	totalCents: number;
+	// where the line came from, so a purchase can open its receipt; sample data has none
+	receiptId?: string;
+	itemId?: string;
 };
 
 export type Paid = Purchase & { per: 'lb' | 'ea'; unitCents: number };

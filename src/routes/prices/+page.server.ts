@@ -10,7 +10,7 @@ type Product = { name: string; times: number; last_bought: string | null; stores
 
 // enough lines for years of one product; the list itself is grouped in SQL
 const MOST_LINES = 1000;
-const LINE_FIELDS = 'id, name, raw_text, brand, category, quantity, unit, unit_price_cents, total_cents, maybe_product_id, receipts!inner(store_id, purchased_on, channel, stores(name))';
+const LINE_FIELDS = 'id, receipt_id, name, raw_text, brand, category, quantity, unit, unit_price_cents, total_cents, maybe_product_id, receipts!inner(store_id, purchased_on, channel, stores(name))';
 
 // Every line of one product as the shopper sees it: lines joined to the shared product of that
 // name, and lines with no product yet that carry the name themselves. Two indexed queries, run

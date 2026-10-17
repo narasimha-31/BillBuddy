@@ -35,4 +35,10 @@ describe('toPurchases', () => {
 	it('turns a numeric quantity sent as text into a number', () => {
 		expect(toPurchases([row({ quantity: '1.25' as unknown as number })])[0].quantity).toBe(1.25);
 	});
+
+	it('keeps the receipt and line so a purchase can open its receipt', () => {
+		const [p] = toPurchases([row({ id: 'line-1', receipt_id: 'r-1' })]);
+		expect(p).toMatchObject({ receiptId: 'r-1', itemId: 'line-1' });
+		expect(toPurchases([row({})])[0]).not.toHaveProperty('receiptId');
+	});
 });

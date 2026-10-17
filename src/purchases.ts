@@ -3,6 +3,8 @@ import type { Purchase } from './price-history';
 type One<T> = T | T[] | null;
 
 export type ItemRow = {
+	id?: string;
+	receipt_id?: string;
 	name: string | null;
 	category: string | null;
 	quantity: number;
@@ -29,7 +31,8 @@ export function toPurchases(rows: ItemRow[]): Purchase[] {
 				quantity: Number(row.quantity),
 				unit: row.unit,
 				unitPriceCents: row.unit_price_cents,
-				totalCents: row.total_cents
+				totalCents: row.total_cents,
+				...(row.receipt_id && { receiptId: row.receipt_id, itemId: row.id })
 			}
 		];
 	});

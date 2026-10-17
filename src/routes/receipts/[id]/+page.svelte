@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { money, storeName } from '../../../format';
 	import AisleIcon from '../../AisleIcon.svelte';
 	import AppShell from '../../AppShell.svelte';
@@ -17,6 +18,8 @@
 	// names BillBuddy guessed come first, so they can be checked without hunting down the receipt
 	const toCheck = $derived(data.items.filter((i) => i.issue === 'unsure' || i.issue === 'unreadable'));
 	const rest = $derived(data.items.filter((i) => i.issue !== 'unsure' && i.issue !== 'unreadable'));
+	// opened from an item's price history: back goes to that item, and its line is lit up
+	const from = $derived(page.url.searchParams.get('from'));
 	const subtotalPlusTax = $derived((r.subtotal_cents ?? 0) + (r.tax_cents ?? 0));
 </script>
 
@@ -26,7 +29,11 @@
 
 <AppShell firstName={data.firstName}>
 	<main>
-		<a href="/receipts" class="back">Receipts</a>
+		{#if from}
+			<a href="/prices?item={encodeURIComponent(from)}" class="back">Prices</a>
+		{:else}
+			<a href="/receipts" class="back">Receipts</a>
+		{/if}
 
 		<div class="layout">
 			<section class="summary surface" aria-labelledby="store">
@@ -105,7 +112,7 @@
 					</ul>
 
 					{#snippet line(item: (typeof data.items)[number])}
-							<li class:flagged={item.issue === 'line_math'} class:guessed={item.issue === 'unsure' || item.issue === 'unreadable'}>
+							<li id="line-{item.id}" class:arrived={page.url.hash === `#line-${item.id}`} class:flagged={item.issue === 'line_math'} class:guessed={item.issue === 'unsure' || item.issue === 'unreadable'}>
 								<p class="printed">{item.raw_text}</p>
 								{#if item.kind === 'discount'}
 									<div class="line-row">
@@ -388,6 +395,42 @@
 	.lines li.guessed + li,
 	.lines li.flagged + li {
 		border-top-color: transparent;
+	}
+
+	/* the line opened from Prices: lands clear of the header, glows, then settles back */
+	.lines li {
+		scroll-margin-top: 6rem;
+	}
+
+	.lines li.arrived {
+		margin: 0 -0.6rem;
+		border-radius: 10px;
+		border-top-color: transparent;
+		padding: 0.7rem 0.6rem;
+		animation: arrived 2.4s var(--ease) both;
+	}
+
+	.lines li.arrived + li {
+		border-top-color: transparent;
+	}
+
+	@keyframes arrived {
+		0%,
+		40% {
+			background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+		}
+		100% {
+			background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+			box-shadow: 0 0 0 0 transparent;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.lines li.arrived {
+			animation: none;
+			background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+		}
 	}
 
 	.printed {
