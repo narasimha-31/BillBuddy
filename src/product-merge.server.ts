@@ -1,6 +1,6 @@
 import { admin } from './admin.server';
 import { embed, structured } from './nebius.server';
-import { matchKey, numbersConflict, pickProducts, type Candidate } from './product-match';
+import { chunks, matchKey, numbersConflict, pickProducts, type Candidate } from './product-match';
 
 export type Verdict = 'same' | 'different' | 'unsure';
 
@@ -56,11 +56,18 @@ export function verdictsFrom(answer: JudgeAnswer, count: number): Verdict[] {
 	return verdicts;
 }
 
-// one call for every pair that the key and the numbers could not settle
+// Every pair the key and the numbers could not settle, a few to a call, all calls at once: one call
+// for a long receipt's 40 pairs outran the 10 second limit (Oct 17), twelve answer in about three.
+const PAIRS_PER_CALL = 12;
+
 export async function judgePairs(userId: string | null, pairs: { a: string; b: string }[]): Promise<Verdict[]> {
-	if (!pairs.length) return [];
-	const answer = await structured<JudgeAnswer>({ role: 'judge', purpose: 'judge_products', userId, maxTokens: 30 * pairs.length + 100, ...judgeRequest(pairs) });
-	return verdictsFrom(answer, pairs.length);
+	const answers = await Promise.all(
+		chunks(pairs, PAIRS_PER_CALL).map(async (batch) => {
+			const answer = await structured<JudgeAnswer>({ role: 'judge', purpose: 'judge_products', userId, maxTokens: 30 * batch.length + 100, ...judgeRequest(batch) });
+			return verdictsFrom(answer, batch.length);
+		})
+	);
+	return answers.flat();
 }
 
 const TASK = 'Instruct: Name the grocery product a shopper would compare prices for\nQuery: ';

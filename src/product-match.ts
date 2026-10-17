@@ -49,3 +49,8 @@ export function pickProducts(slots: number, candidates: Candidate[], verdicts: (
 	for (const pick of picks) if (pick.same) pick.maybe = null;
 	return picks;
 }
+
+// a list cut into runs of at most `size`, in order
+export function chunks<T>(items: T[], size: number): T[][] {
+	return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
+}

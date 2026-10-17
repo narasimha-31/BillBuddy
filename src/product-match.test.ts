@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchKey, numbersConflict, pickProducts } from './product-match';
+import { matchKey, numbersConflict, pickProducts, chunks } from './product-match';
 
 describe('match key', () => {
 	it('is the same for plurals, word order, capitals and punctuation', () => {
@@ -74,5 +74,13 @@ describe('picking products', () => {
 			{ same: null, maybe: null },
 			{ same: null, maybe: null }
 		]);
+	});
+});
+
+describe('chunks', () => {
+	it('cuts a list into runs, keeping the order and the last short run', () => {
+		expect(chunks([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+		expect(chunks([], 12)).toEqual([]);
+		expect(chunks([1, 2], 12)).toEqual([[1, 2]]);
 	});
 });
