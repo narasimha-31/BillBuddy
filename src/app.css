@@ -311,8 +311,14 @@ a.row::after {
 		margin-right: calc(-0.5rem - 8px);
 		padding-right: 0.5rem;
 		overflow-y: auto;
-		overscroll-behavior: contain;
 		scrollbar-gutter: stable;
+	}
+
+	/* On a one-screen page nothing behind a box can scroll, so a box keeps its own scroll at its end.
+	   On a page that scrolls (the demo), a box at its end hands the scroll back to the page; holding
+	   it there traps the reader inside a box whose end is off screen. */
+	.fit .scroll-area {
+		overscroll-behavior: contain;
 	}
 
 	.scroll-area::-webkit-scrollbar {
