@@ -11,7 +11,7 @@ export type ItemRow = {
 	unit: string;
 	unit_price_cents: number | null;
 	total_cents: number;
-	receipts: One<{ purchased_on: string | null; channel: string | null; stores: One<{ name: string }> }>;
+	receipts: One<{ purchased_on: string | null; channel: string | null; store_id?: string | null; branch_key?: string | null; stores: One<{ name: string }> }>;
 };
 
 // supabase types a joined row as a list even when the foreign key makes it a single row
@@ -32,7 +32,8 @@ export function toPurchases(rows: ItemRow[]): Purchase[] {
 				unit: row.unit,
 				unitPriceCents: row.unit_price_cents,
 				totalCents: row.total_cents,
-				...(row.receipt_id && { receiptId: row.receipt_id, itemId: row.id })
+				...(row.receipt_id && { receiptId: row.receipt_id, itemId: row.id }),
+				...(receipt.store_id !== undefined && { storeId: receipt.store_id, branchKey: receipt.branch_key ?? null })
 			}
 		];
 	});

@@ -4,22 +4,39 @@
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
 
-	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what sits below the name
-	let { history, tags = {}, under }: { history: History; tags?: Record<string, string[]>; under?: Snippet } = $props();
+	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what sits below the name;
+	// map, what sits above the prices; awayOf, the town of a purchase made far from home
+	let {
+		history,
+		tags = {},
+		under,
+		map,
+		awayOf,
+		only = $bindable(null)
+	}: {
+		history: History;
+		tags?: Record<string, string[]>;
+		under?: Snippet;
+		map?: Snippet;
+		awayOf?: (visit: History['visits'][number]) => string | null;
+		only?: string | null;
+	} = $props();
 
 	const SHOWN = 6;
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
 	const previous = $derived(history.visits[1]);
-	const change = $derived(history.change);
+	// Ohio against Houston says nothing about prices going up, so a change is only told within one area
+	const lastAway = $derived(awayOf?.(history.last) ?? null);
+	const change = $derived(previous && lastAway === (awayOf?.(previous) ?? null) ? history.change : null);
 
 	// One list for both questions: newest first answers "what did I pay", cheapest first answers
 	// "where is it cheapest". Each row opens the receipt it came from.
 	let order = $state<'newest' | 'cheapest'>('newest');
-	let only = $state<string | null>(null);
 	let everything = $state(false);
 	const storeOf = (store: string | null) => store ?? 'Unknown store';
 	const stores = $derived(history.stores.map((s) => s.store));
-	const lowest = $derived(Math.min(...history.visits.map((v) => v.unitCents)));
+	// a price paid far from home never counts as the cheapest; it does not help the next trip
+	const lowest = $derived(Math.min(...history.visits.filter((v) => !awayOf?.(v)).map((v) => v.unitCents)));
 	const priciest = $derived(Math.max(...history.visits.map((v) => v.unitCents)));
 	const rows = $derived.by(() => {
 		const kept = history.visits.filter((v) => only === null || storeOf(v.store) === only);
@@ -49,14 +66,16 @@
 		<span>{history.per === 'lb' ? 'price per lb' : 'price each'}</span>
 	</header>
 
+	{#if map}<div class="map-slot">{@render map()}</div>{/if}
+
 	<div class="last">
 		<p class="label">You paid last time</p>
 		<p class="big">{money(history.last.unitCents)}<small>{per}</small></p>
 		<p class="where">
 			{#if lastLink}
-				<a href={lastLink}>at {storeName(history.last.store) ?? 'an unknown store'} on {shortDay(history.last.date)}</a>
+				<a href={lastLink}>at {storeName(history.last.store) ?? 'an unknown store'}{lastAway ? `, ${lastAway},` : ''} on {shortDay(history.last.date)}</a>
 			{:else}
-				at {storeName(history.last.store) ?? 'an unknown store'} on {shortDay(history.last.date)}
+				at {storeName(history.last.store) ?? 'an unknown store'}{lastAway ? `, ${lastAway},` : ''} on {shortDay(history.last.date)}
 			{/if}
 			{#if history.last.channel === 'delivery'}<em class="tag">delivery</em>{/if}
 		</p>
@@ -78,7 +97,7 @@
 			{#if history.visits.length > 1}
 				<div class="order" role="group" aria-label="Sort">
 					<button type="button" aria-pressed={order === 'newest'} onclick={() => (order = 'newest')}>Newest</button>
-					<button type="button" aria-pressed={order === 'cheapest'} onclick={() => (order = 'cheapest')}>Cheapest</button>
+					<button type="button" aria-pressed={order === 'cheapest'} onclick={() => (order = 'cheapest')}>Lowest</button>
 				</div>
 			{/if}
 		</div>
@@ -96,15 +115,16 @@
 
 		<ul class="visits">
 			{#each shown as visit (visit.itemId ?? `${visit.date}${visit.store}${visit.unitCents}`)}
-				{@const cheapest = stores.length > 1 && visit.unitCents === lowest}
+				{@const cheapest = stores.length > 1 && visit.unitCents === lowest && !awayOf?.(visit)}
 				{@const href = opens(visit)}
 				<li class:cheapest>
 					<svelte:element this={href ? 'a' : 'div'} class="visit" {href}>
 						<span class="day">{shortDay(visit.date)}</span>
 						<span class="store">
 							<span class="name">{storeName(visit.store) ?? 'Unknown store'}</span>
-							{#if cheapest}<em>cheapest</em>{/if}
+							{#if cheapest}<em>lowest</em>{/if}
 							{#if visit.channel === 'delivery'}<em class="tag">delivery</em>{/if}
+							{#if awayOf?.(visit)}<em class="fact">Away · {awayOf(visit)}</em>{/if}
 						</span>
 						<span class="track" aria-hidden="true"><span class="bar" style:--size={visit.unitCents / priciest}></span></span>
 						<span class="price">{money(visit.unitCents)}{per}</span>
@@ -454,6 +474,23 @@
 		font-size: 0.875rem;
 		color: var(--color-accent);
 		transition: transform var(--standard) var(--ease);
+	}
+
+	/* on a phone the price answers first and the map follows it */
+	@media (max-width: 640px) {
+		.card {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.map-slot {
+			order: 1;
+			margin-bottom: 0.5rem;
+		}
+
+		.part {
+			order: 2;
+		}
 	}
 
 	@media (max-width: 480px) {

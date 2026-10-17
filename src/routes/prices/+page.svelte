@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { itemPins, townOf } from '../../branches';
 	import { storeTags } from '../../store-facts';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { fade, slide } from 'svelte/transition';
@@ -10,6 +10,8 @@
 	import AppShell from '../AppShell.svelte';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
+	import PriceMap from '../PriceMap.svelte';
+	import StoreSheet from '../StoreSheet.svelte';
 
 	let { data } = $props();
 
@@ -19,56 +21,17 @@
 
 	let history = $state<HTMLElement>();
 
-	// Where the shopper is stays in this page's memory: it is never sent or saved. Only the choice to
-	// use it is remembered on this device, so the browser can be asked again on the next visit.
-	const REMEMBER = 'billbuddy-nearest';
-	let here = $state<{ lat: number; lng: number } | null>(null);
-	let locating = $state(false);
-	let locateProblem = $state('');
-	const anyPoint = $derived(data.places.some((p) => p.lat !== null));
-	// nearest among the stores that sold this item; the usual store is the same for every item
-	const sold = $derived(new Set(data.history?.stores.map((s) => s.store) ?? []));
-	const tags = $derived(storeTags(data.places.filter((p) => sold.has(p.name)), data.usual, here));
-
-	function locate() {
-		locating = true;
-		locateProblem = '';
-		navigator.geolocation.getCurrentPosition(
-			(found) => {
-				here = { lat: found.coords.latitude, lng: found.coords.longitude };
-				locating = false;
-				try {
-					localStorage.setItem(REMEMBER, 'on');
-				} catch {
-					// private windows refuse storage; the button simply shows again next time
-				}
-			},
-			(failed) => {
-				locating = false;
-				locateProblem = failed.code === failed.PERMISSION_DENIED ? 'Location is off for this site in your browser.' : 'Couldn’t find where you are. Try again.';
-			},
-			{ maximumAge: 600_000, timeout: 10_000 }
-		);
-	}
-
-	function forget() {
-		here = null;
-		try {
-			localStorage.removeItem(REMEMBER);
-		} catch {
-			// nothing was stored
-		}
-	}
-
-	onMount(() => {
-		let remembered = false;
-		try {
-			remembered = localStorage.getItem(REMEMBER) === 'on';
-		} catch {
-			// storage blocked: start with location off
-		}
-		if (remembered && anyPoint && 'geolocation' in navigator) locate();
-	});
+	// the store filter is shared by the map's pins and the list's chips
+	let only = $state<string | null>(null);
+	let sheetStore = $state<string | null>(null);
+	const pins = $derived(data.history && data.map.on ? itemPins(data.places, data.history.visits) : []);
+	const nearest = $derived(pins.find((p) => p.nearest) ?? null);
+	const tags = $derived(storeTags(data.usual, nearest && { name: nearest.name, miles: nearest.miles }));
+	// a purchase from a branch far from home says where it was
+	const awayOf = (visit: { storeId?: string | null; branchKey?: string | null }) => {
+		const branch = data.places.find((p) => p.storeId === visit.storeId && p.key === visit.branchKey);
+		return branch?.away ? (townOf(branch.address) ?? 'away') : null;
+	};
 
 	// the app's signature curve, cubic-bezier(0.32, 0.72, 0, 1), close enough for a fold
 	const settle = (t: number) => 1 - Math.pow(1 - t, 3.2);
@@ -137,22 +100,6 @@
 				<h1 class="large-title">Prices</h1>
 				<p class="ask">What did I pay last time?</p>
 			</div>
-			{#if anyPoint}
-				<div class="near">
-					{#if here}
-						<button class="place on" onclick={forget}>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></svg>
-							Nearest shown · Turn off
-						</button>
-					{:else}
-						<button class="place" onclick={locate} disabled={locating}>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></svg>
-							{locating ? 'Finding you…' : 'Show nearest store'}
-						</button>
-					{/if}
-					{#if locateProblem}<p class="problem" role="alert">{locateProblem}</p>{/if}
-				</div>
-			{/if}
 		</div>
 
 		{#if data.products.length}
@@ -182,7 +129,10 @@
 					{#key data.selected}
 						{#if data.history}
 							<div class="focus-in">
-								<PriceHistory history={data.history} {tags}>
+								<PriceHistory history={data.history} {tags} {awayOf} bind:only>
+									{#snippet map()}
+										<PriceMap map={data.map} places={data.places} stores={data.stores} history={data.history!} bind:only onstore={(id) => (sheetStore = id)} />
+									{/snippet}
 									{#snippet under()}
 										<form class="aisle-pick" method="POST" action="?/aisle" use:enhance={saveAisle}>
 											<input type="hidden" name="item" value={data.selected} />
@@ -217,6 +167,7 @@
 			</p>
 		{/if}
 	</main>
+	<StoreSheet bind:storeId={sheetStore} />
 </AppShell>
 
 <style>
@@ -317,56 +268,9 @@
 		gap: 0.75rem 1.5rem;
 	}
 
-	.near {
-		display: grid;
-		justify-items: end;
-		gap: 0.3rem;
-	}
-
-	.place {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		border-radius: 999px;
-		background: #fff;
-		padding: 0.5rem 0.95rem;
-		font-size: 0.9375rem;
-		font-weight: 500;
-		color: var(--color-accent);
-		box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-	}
-
-	.place.on {
-		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-		box-shadow: none;
-	}
-
-	.place:disabled {
-		color: var(--color-muted);
-	}
-
-	.place:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
-	}
-
-	.place svg {
-		width: 1.1rem;
-		height: 1.1rem;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 1.8;
-	}
-
 	.problem {
 		font-size: 0.8125rem;
 		color: var(--color-up);
-	}
-
-	@media (max-width: 640px) {
-		.near {
-			justify-items: start;
-		}
 	}
 
 	.columns {

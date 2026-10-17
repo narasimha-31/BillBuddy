@@ -11,6 +11,9 @@ export type Purchase = {
 	// where the line came from, so a purchase can open its receipt; sample data has none
 	receiptId?: string;
 	itemId?: string;
+	// which store and branch the receipt was from, for the map
+	storeId?: string | null;
+	branchKey?: string | null;
 };
 
 export type Paid = Purchase & { per: 'lb' | 'ea'; unitCents: number };

@@ -2,19 +2,28 @@ import { fail, redirect } from '@sveltejs/kit';
 import { confirmsDelete, deleteAccount, removePhotos } from '../../delete-account.server';
 import { DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow } from '../../display';
 import { firstNameOf } from '../../session.server';
+import { mapState, myBranches, myStores, turnMapOff, turnMapOn } from '../../store-map.server';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const settings = await locals.supabase.from('user_settings').select('keep_store_location, keep_photos, text_size, more_contrast, palette').maybeSingle();
+	const [settings, map, stores, branches] = await Promise.all([
+		locals.supabase.from('user_settings').select('keep_photos, text_size, more_contrast, palette').maybeSingle(),
+		mapState(locals.supabase),
+		myStores(locals.supabase),
+		myBranches(locals.supabase)
+	]);
 	if (settings.error) throw settings.error;
 
 	return {
 		firstName: firstNameOf(user),
 		email: user.email ?? null,
-		keepStoreAddress: settings.data?.keep_store_location ?? false,
+		map,
+		stores: [...stores]
+			.sort((a, b) => b.visits - a.visits)
+			.map((store) => ({ ...store, branches: branches.filter((b) => b.storeId === store.id).length, guessed: branches.some((b) => b.storeId === store.id && b.guess) })),
 		keepPhotos: settings.data?.keep_photos ?? false,
 		display: fromRow(settings.data)
 	};
@@ -27,22 +36,8 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const keepPhotos = form.get('keep_photos') === 'on';
-		const keepAddress = form.get('keep_store_location') === 'on';
-		const saved = await locals.supabase.from('user_settings').upsert({
-			user_id: user.id,
-			keep_store_location: keepAddress,
-			keep_photos: keepPhotos,
-			updated_at: new Date().toISOString()
-		});
+		const saved = await locals.supabase.from('user_settings').upsert({ user_id: user.id, keep_photos: keepPhotos, updated_at: new Date().toISOString() });
 		if (saved.error) throw saved.error;
-
-		if (!keepAddress) {
-			const cleared = await locals.supabase
-				.from('receipts')
-				.update({ store_address: null, store_lat: null, store_lng: null })
-				.not('store_address', 'is', null);
-			if (cleared.error) throw cleared.error;
-		}
 
 		// switching it off deletes what was kept; photos still waiting to be read stay until they are
 		if (!keepPhotos) {
@@ -52,6 +47,22 @@ export const actions: Actions = {
 			const cleared = await locals.supabase.from('receipts').update({ image_path: null }).not('status', 'in', '(pending,processing)').not('image_path', 'is', null);
 			if (cleared.error) throw cleared.error;
 		}
+	},
+
+	// The store map: on needs a ZIP code, and looks up the stores that have no place yet; off deletes
+	// the ZIP and every store place. Also sent from the locked map on Prices.
+	location: async ({ request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+		const form = await request.formData();
+		if (form.get('map') !== 'on') {
+			await turnMapOff(locals.supabase, user.id);
+			return { map: 'off' };
+		}
+		const zip = String(form.get('zip') ?? '').trim();
+		if (!/^\d{5}$/.test(zip)) return fail(400, { mapProblem: 'Enter a 5-digit ZIP code.' });
+		if ((await turnMapOn(locals.supabase, user.id, zip)) === 'unknown_zip') return fail(400, { mapProblem: 'That ZIP code isn’t one we know. Check it and try again.' });
+		return { map: 'on' };
 	},
 
 	// how the app is drawn; also from the laptop's Aa panel, so it answers wherever it was sent from

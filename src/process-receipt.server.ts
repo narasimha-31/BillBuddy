@@ -7,6 +7,7 @@ import { readReceipt } from './receipt-reader.server';
 import { itemRows } from './receipt-rows';
 import { assignProducts } from './product-merge.server';
 import { placeStore } from './store-place.server';
+import { guessSpot, mapState, myBranches } from './store-map.server';
 import { sizeProblem } from './routes/receipts/photo-rules';
 
 // what was saved, for the screen to print back as a receipt
@@ -127,15 +128,23 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		if (!keepPhoto) await dropPhoto();
 
 		const needsReview = checked.needs_review || rows.some((r) => r.issue === 'line_math');
-		// the branch only means something next to a kept store name, and only with consent
-		const storeAddress = storeId && settings?.keep_store_location === true ? checked.storeAddress : null;
+		// The branch only means something next to a kept store name, and only with the map on. With no
+		// address printed, the shopper's usual branch of that store stands in, marked as a guess.
+		const mapOn = storeId !== null && settings?.keep_store_location === true;
+		const storeAddress = mapOn ? checked.storeAddress : null;
 		const point = storeAddress ? await placeStore(storeAddress) : null;
+		let guess = null;
+		if (mapOn && !storeAddress && checked.store) {
+			const map = await mapState(supabase);
+			if (map.you) guess = await guessSpot({ id: storeId!, name: checked.store }, map.you, await myBranches(supabase));
+		}
 		await finish({
 			status: needsReview ? 'review' : 'saved',
 			store_id: storeId,
-			store_address: storeAddress,
-			store_lat: point?.lat ?? null,
-			store_lng: point?.lng ?? null,
+			store_address: storeAddress ?? guess?.address ?? null,
+			store_lat: point?.lat ?? guess?.lat ?? null,
+			store_lng: point?.lng ?? guess?.lng ?? null,
+			branch_guess: guess !== null,
 			purchased_on: checked.purchasedOn,
 			channel: checked.channel,
 			subtotal_cents: checked.subtotalCents,

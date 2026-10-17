@@ -4,7 +4,9 @@ import { CATEGORIES, type Category } from '../../item-names';
 import { historyOf } from '../../price-history';
 import { toPurchases, type ItemRow } from '../../purchases';
 import { firstNameOf } from '../../session.server';
-import { usualStore, type Place } from '../../store-facts';
+import { placed } from '../../branches';
+import { mapState, myBranches, myStores } from '../../store-map.server';
+import { usualStore } from '../../store-facts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -12,7 +14,7 @@ type Product = { name: string; times: number; last_bought: string | null; stores
 
 // enough lines for years of one product; the list itself is grouped in SQL
 const MOST_LINES = 1000;
-const LINE_FIELDS = 'id, receipt_id, name, raw_text, brand, category, quantity, unit, unit_price_cents, total_cents, maybe_product_id, receipts!inner(store_id, purchased_on, channel, stores(name))';
+const LINE_FIELDS = 'id, receipt_id, name, raw_text, brand, category, quantity, unit, unit_price_cents, total_cents, maybe_product_id, receipts!inner(store_id, purchased_on, channel, branch_key, stores(name))';
 
 // Every line of one product as the shopper sees it: lines joined to the shared product of that
 // name, and lines with no product yet that carry the name themselves. Two indexed queries, run
@@ -35,17 +37,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const [listed, placed] = await Promise.all([locals.supabase.rpc('my_products'), locals.supabase.rpc('my_store_places')]);
+	const [listed, stores, branches, map] = await Promise.all([locals.supabase.rpc('my_products'), myStores(locals.supabase), myBranches(locals.supabase), mapState(locals.supabase)]);
 	if (listed.error) throw listed.error;
-	if (placed.error) throw placed.error;
 	const products = (listed.data as Product[]).map((p) => ({ name: p.name, times: Number(p.times), category: p.category, maybeSame: p.maybe_same }));
-	const places = (placed.data as Place[]).map((p) => ({ ...p, visits: Number(p.visits) }));
-	const usual = usualStore(places);
+	const usual = usualStore(stores);
+	// every branch, nearest the ZIP first, only once the shopper has turned the map on
+	const places = map.you ? placed(branches, map.you) : [];
 
 	const asked = url.searchParams.get('item');
 	const chosen = products.find((p) => p.name === asked) ?? products[0] ?? null;
 	const selected = chosen?.name ?? null;
-	if (!selected) return { firstName: firstNameOf(user), products, places, usual, selected, aisle: null, categories: [...CATEGORIES], maybeSame: null, history: null };
+	if (!selected) return { firstName: firstNameOf(user), products, places, stores: stores.map(({ id, name }) => ({ id, name })), map: { on: map.on, zip: map.zip, you: map.you }, usual, selected, aisle: null, categories: [...CATEGORIES], maybeSame: null, history: null };
 
 	// every line of the product counts under its one shared name, whatever each receipt called it
 	const lines = (await linesOf(locals.supabase, selected)).map((line) => ({ ...line, name: selected }));
@@ -53,6 +55,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		firstName: firstNameOf(user),
 		products,
 		places,
+		stores: stores.map(({ id, name }) => ({ id, name })),
+		map: { on: map.on, zip: map.zip, you: map.you },
 		usual,
 		selected,
 		aisle: chosen?.category ?? 'Other',

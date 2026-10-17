@@ -652,18 +652,30 @@ describe('store places', () => {
 		carolStoreId = store.data.id;
 	});
 
-	it("gives each shopper only their own stores, with visits and the latest branch's point", async () => {
-		const saved = await carol
-			.from('receipts')
-			.insert({ store_id: carolStoreId, status: 'saved', purchased_on: '2026-10-02', total_cents: 500, store_address: '8130 Kirby Dr, Houston, TX 77054', store_lat: 29.689, store_lng: -95.4126 })
-			.select()
-			.single();
+	it('gives each shopper only their own stores and branches; receipts at one spot are one branch', async () => {
+		const receipt = (day: string, lat: number, guess = false) => ({
+			store_id: carolStoreId, status: 'saved', purchased_on: day, total_cents: 500, store_address: '8130 Kirby Dr, Houston, TX 77054', store_lat: lat, store_lng: -95.4126, branch_guess: guess
+		});
+		const saved = await carol.from('receipts').insert([receipt('2026-10-02', 29.6890), receipt('2026-10-09', 29.68902), receipt('2026-10-12', 29.75, true)]).select();
 		expect(saved.error).toBeNull();
 
 		const mine = await carol.rpc('my_store_places');
-		expect(mine.data).toEqual([{ name: 'Fiesta', visits: 1, lat: 29.689, lng: -95.4126 }]);
-		expect((await bob.rpc('my_store_places')).data).toEqual([]);
-		expect((await createClient(url, publishable, noSession).rpc('my_store_places')).error).not.toBeNull();
+		expect(mine.data).toEqual([{ id: carolStoreId, name: 'Fiesta', visits: 3 }]);
+		const branches = await carol.rpc('my_branches');
+		expect(branches.data.map((b: { branch_key: string; visits: number; guess: boolean; last_visit: string }) => [b.branch_key, b.visits, b.guess, b.last_visit]).sort()).toEqual([
+			['29.689,-95.413', 2, false, '2026-10-09'],
+			['29.750,-95.413', 1, true, '2026-10-12']
+		]);
+		for (const fn of ['my_store_places', 'my_branches']) {
+			expect((await bob.rpc(fn)).data).toEqual([]);
+			expect((await createClient(url, publishable, noSession).rpc(fn)).error).not.toBeNull();
+		}
+	});
+
+	it('reads every US ZIP code to a point, for signed-in shoppers only', async () => {
+		expect((await carol.from('zip_codes').select('lat, lng').eq('zip', '77036').single()).data).toEqual({ lat: expect.closeTo(29.7, 1), lng: expect.closeTo(-95.53, 1) });
+		expect((await carol.from('zip_codes').insert({ zip: '00000', lat: 30, lng: -90 })).error).not.toBeNull();
+		expect((await createClient(url, publishable, noSession).from('zip_codes').select('zip').eq('zip', '77036')).data ?? []).toEqual([]);
 	});
 
 	it('refuses a map point without the address it came from, or half a point', async () => {
