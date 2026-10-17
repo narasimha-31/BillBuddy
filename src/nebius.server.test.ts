@@ -57,6 +57,13 @@ describe('structured', () => {
 		expect(error).not.toBeInstanceOf(AiUnavailable);
 	});
 
+	it('treats spent provider credit as the budget running out, so receipts wait', async () => {
+		const fetch = vi.fn().mockResolvedValue(answer(402));
+		vi.stubGlobal('fetch', fetch);
+		await expect(call()).rejects.toMatchObject({ budget: true });
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
 	it('refuses before calling out once the budget for the day, or for this person, is spent', async () => {
 		const fetch = vi.fn();
 		vi.stubGlobal('fetch', fetch);
