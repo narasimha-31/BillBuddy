@@ -17,7 +17,8 @@
 		history,
 		only = $bindable(null),
 		onstore,
-		demo = false
+		demo = false,
+		onpretend
 	}: {
 		map: { on: boolean; zip: string | null; you: Point | null };
 		places: Placed[];
@@ -26,6 +27,8 @@
 		only?: string | null;
 		onstore?: (storeId: string) => void;
 		demo?: boolean;
+		// the demo's pretend unlock: nothing is sent or saved
+		onpretend?: () => void;
 	} = $props();
 
 	let opening = $state(false);
@@ -113,9 +116,12 @@
 		</div>
 	{/if}
 	<div class="price-map">
+		<!-- with none of the shopper's stores placed yet, an empty map says nothing; the list below does -->
+		{#if pins.length}
 		<div class="frame">
 			<StoreMap you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
 		</div>
+		{/if}
 		<div class="under">
 			{#if pin}
 				<p class="picked" transition:slide={{ duration: still ? 0 : 200 }}>
@@ -124,10 +130,10 @@
 					</span>
 					{#if onstore}<button type="button" class="link" onclick={() => onstore(pin.storeId)}>Store details</button>{/if}
 				</p>
-			{:else}
-				<p class="hint">
-					{#if pins.some((p) => p.cents !== null)}Tap a price to see only that store.{:else}No branch on the map sold this yet.{/if}
-				</p>
+			{:else if pins.some((p) => p.cents !== null)}
+				<p class="hint">Tap a price to see only that store.</p>
+			{:else if pins.length}
+				<p class="hint">None of your stores on the map has sold you this yet.</p>
 			{/if}
 			{#if awayCount && !demo}
 				<button type="button" class="link quiet" onclick={() => (withAway = !withAway)}>
@@ -154,7 +160,25 @@
 		{#if opening}
 			<div class="sheet" transition:slide={{ duration: still ? 0 : 260 }}>
 				<p class="title">Where you paid what</p>
-				<MapUnlock ondone={() => (opening = false)} />
+				{#if demo}
+					<form
+						class="pretend"
+						onsubmit={(e) => {
+							e.preventDefault();
+							opening = false;
+							onpretend?.();
+						}}
+					>
+						<label>
+							<span>Your ZIP code</span>
+							<input value={map.zip ?? ''} readonly inputmode="numeric" />
+						</label>
+						<button class="pill-button">Show my stores on a map</button>
+						<p class="why">In the demo nothing is sent or saved. In your account only the ZIP is kept, never your address.</p>
+					</form>
+				{:else}
+					<MapUnlock ondone={() => (opening = false)} />
+				{/if}
 			</div>
 		{:else}
 			<div class="ask">
@@ -399,6 +423,39 @@
 
 	.ask .pill-button {
 		margin-top: 0.6rem;
+	}
+
+	.pretend {
+		display: grid;
+		grid-template-columns: minmax(0, 9rem) auto;
+		align-items: end;
+		justify-content: start;
+		gap: 0.6rem 0.75rem;
+	}
+
+	.pretend label {
+		display: grid;
+		gap: 0.3rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.pretend input {
+		width: 100%;
+		border: 1px solid rgb(60 60 67 / 0.18);
+		border-radius: 10px;
+		background: #fff;
+		padding: 0.55rem 0.75rem;
+		font-size: 1rem;
+		letter-spacing: 0.08em;
+		color: var(--color-ink);
+	}
+
+	.pretend .why {
+		grid-column: 1 / -1;
+		max-width: 40ch;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
 	}
 
 	@media (max-width: 480px) {

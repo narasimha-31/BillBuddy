@@ -8,12 +8,18 @@
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
 	import Wordmark from '../Wordmark.svelte';
-	import { productFor, samplePurchases, sampleReceipts } from './sample-receipts';
+	import { placed } from '../../branches';
+	import PriceMap from '../PriceMap.svelte';
+	import { productFor, sampleBranches, sampleHome, samplePurchases, sampleReceipts } from './sample-receipts';
 
 	const all = itemsBought(samplePurchases);
 	const chains = comparisons();
 
 	let selected = $state('Large eggs, 12 ct');
+	// the sample shopper's map is on; "See how it asks first" shows the locked map they started from
+	let asking = $state(false);
+	let only = $state<string | null>(null);
+	const places = placed(sampleBranches, sampleHome);
 	let result = $state<HTMLElement>();
 
 	const history = $derived(historyOf(samplePurchases, selected)!);
@@ -59,7 +65,17 @@
 			<div class="result scroll-area" bind:this={result}>
 				{#key selected}
 					<div in:fade={{ duration: 250 }}>
-						<PriceHistory {history} />
+						<PriceHistory {history} bind:only>
+							{#snippet map()}
+								<PriceMap map={{ on: !asking, zip: sampleHome.zip, you: sampleHome }} {places} stores={[]} {history} bind:only demo onpretend={() => (asking = false)} />
+								{#if !asking}
+									<p class="map-note">
+										Sample shopper near ZIP {sampleHome.zip}. In your account the map stays off until you turn it on.
+										<button type="button" class="ask-again" onclick={() => (asking = true)}>See how it asks first</button>
+									</p>
+								{/if}
+							{/snippet}
+						</PriceHistory>
 					</div>
 
 					{#if typical}
@@ -256,6 +272,27 @@
 			top: 5rem;
 			max-height: calc(100dvh - 6.5rem);
 		}
+	}
+
+	.map-note {
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.ask-again {
+		border-radius: 6px;
+		color: var(--color-accent);
+	}
+
+	.ask-again:hover {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.ask-again:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
 	}
 
 	.typical {

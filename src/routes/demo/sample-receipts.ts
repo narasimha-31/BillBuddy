@@ -1,3 +1,4 @@
+import type { Branch } from '../../branches';
 import type { Purchase } from '../../price-history';
 
 // one made-up shopper's last three months, priced from the same 2026 research as the landing receipt
@@ -132,9 +133,35 @@ export const samplePurchases: Purchase[] = sampleReceipts.flatMap((r) =>
 		quantity: l.quantity,
 		unit: l.unit,
 		unitPriceCents: l.unitPriceCents,
-		totalCents: l.totalCents
+		totalCents: l.totalCents,
+		storeId: r.store,
+		branchKey: 'sample'
 	}))
 );
 
 // which researched product an item is, so the demo can show typical prices elsewhere
 export const productFor = (name: string) => sampleReceipts.flatMap((r) => r.lines).find((l) => l.name === name)?.product ?? null;
+
+// Where the sample shopper lives and shops: downtown Houston (ZIP 77002), with each chain's branch
+// nearest it as OpenStreetMap listed them on Oct 17, 2026. Saved here, so the demo never looks anything up.
+export const sampleHome = { zip: '77002', lat: 29.7568, lng: -95.3634 };
+
+const visits = (store: string) => raw.filter((r) => r.store === store);
+const branch = (name: string, lat: number, lng: number, address: string): Branch => ({
+	storeId: name,
+	name,
+	key: 'sample',
+	lat,
+	lng,
+	address,
+	visits: visits(name).length,
+	lastVisit: visits(name).map((r) => r.date).sort().at(-1) ?? null,
+	guess: false
+});
+
+export const sampleBranches: Branch[] = [
+	branch('Walmart', 29.77322, -95.401, 'Koehler Street, Houston, TX 77007'),
+	branch('Kroger', 29.73973, -95.3405, '4000 Polk Street, Houston, TX 77023'),
+	branch('Aldi', 29.70137, -95.36336, '3618 Old Spanish Trail, Houston, TX 77021'),
+	branch('Target', 29.77417, -95.38544, '2580 Shearn Street, Houston, TX 77007')
+];
