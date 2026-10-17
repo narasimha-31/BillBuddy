@@ -83,3 +83,6 @@ export async function nameLines(supabase: SupabaseClient, userId: string | null,
 	});
 	return applyNames(raws, remembered, answer);
 }
+
+// the aisle bake-off sends the naming model exactly what the app sends
+export { schema as namingSchema, instructions as namingInstructions };
