@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { streetOf } from '../../branches';
 	import { money, shortDay, storeName } from '../../format';
 	import { keyMatches, storeKey } from '../../store-search';
 	import AppShell from '../AppShell.svelte';
@@ -71,12 +72,27 @@
 		return keyed.filter(({ key }) => keyMatches(key, wanted)).map(({ receipt }) => receipt);
 	});
 	const shownStores = $derived([...new Set(shown.map((r) => storeName(r.store)))]);
+
+	// One store found with receipts from more than one place: a chip per branch, all of them first.
+	// Every receipt stays its own row; the chips only narrow the list.
+	let branch = $state<string | null>(null);
+	const branches = $derived.by(() => {
+		if (!searching || shownStores.length !== 1) return [];
+		const seen = new Map<string, string>();
+		for (const r of shown) if (r.branch_key && !seen.has(r.branch_key)) seen.set(r.branch_key, streetOf(r.store_address) ?? 'Another branch');
+		return seen.size > 1 ? [...seen] : [];
+	});
+	const listed = $derived(branch && branches.some(([key]) => key === branch) ? shown.filter((r) => r.branch_key === branch) : shown);
+	$effect.pre(() => {
+		void storeQuery;
+		branch = null;
+	});
 	const shownCents = $derived(shown.reduce((sum, r) => sum + (r.total_cents ?? 0), 0));
 
 	// read receipts by the month they were bought, newest first, each month with its total
 	const months = $derived.by(() => {
 		const groups = new Map<string, typeof shown>();
-		const newest = [...shown].sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? ''));
+		const newest = [...listed].sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? ''));
 		for (const r of newest) {
 			const key = r.purchased_on?.slice(0, 7) ?? '';
 			groups.set(key, [...(groups.get(key) ?? []), r]);
@@ -132,6 +148,14 @@
 								No receipts from a store called “{storeQuery.trim()}”.
 							{/if}
 						</p>
+						{#if branches.length}
+							<div class="branch-chips" role="group" aria-label="Branch">
+								<button type="button" aria-pressed={branch === null} onclick={() => (branch = null)}>All {shownStores[0]}</button>
+								{#each branches as [key, street] (key)}
+									<button type="button" aria-pressed={branch === key} onclick={() => (branch = branch === key ? null : key)}>{street}</button>
+								{/each}
+							</div>
+						{/if}
 					{/if}
 				</div>
 			{/if}
@@ -210,7 +234,7 @@
 										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
 										<span class="row-value">{money(receipt.total_cents)}</span>
 										<span class="row-sub"
-											>{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}{#if receipt.toCheck}<span class="to-check">{` · ${receipt.toCheck} to check`}</span>{/if}</span
+											>{shortDay(receipt.purchased_on)}{receipt.store_address ? ` · ${receipt.branch_guess ? 'probably ' : ''}${streetOf(receipt.store_address)}` : ''}{receipt.channel === 'delivery' ? ' · Delivery' : ''}{#if receipt.toCheck}<span class="to-check">{` · ${receipt.toCheck} to check`}</span>{/if}</span
 										>
 									</a>
 								</li>
@@ -285,6 +309,45 @@
 	.find {
 		flex: none;
 		margin-top: 1.25rem;
+	}
+
+	/* branches of the one store found; a row of chips that scrolls sideways on a phone */
+	.branch-chips {
+		contain: inline-size;
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.6rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.branch-chips button {
+		flex: none;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0.35rem 0.8rem;
+		font-size: 0.8125rem;
+		color: var(--color-ink);
+		white-space: nowrap;
+		transition:
+			background-color var(--quick) var(--ease),
+			color var(--quick) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	.branch-chips button[aria-pressed='true'] {
+		background: var(--color-ink);
+		color: #fff;
+	}
+
+	.branch-chips button:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.branch-chips button:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
 	}
 
 	.search {

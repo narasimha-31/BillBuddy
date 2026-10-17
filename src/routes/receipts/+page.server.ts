@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.supabase
 			.from('receipts')
 			// names the reader was unsure of, counted in the same request as the list
-			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, stores(name), to_check:receipt_items(count)')
+			.select('id, status, problem, purchased_on, channel, total_cents, skipped_lines, created_at, processing_at, store_address, branch_key, branch_guess, stores(name), to_check:receipt_items(count)')
 			.in('receipt_items.issue', ['unsure', 'unreadable'])
 			.order('created_at', { ascending: false })
 			.limit(100),
