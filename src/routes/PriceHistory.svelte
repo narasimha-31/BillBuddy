@@ -3,7 +3,7 @@
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
 
-	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"
+	// extra facts per store, such as "Your usual" or "Nearest Â· 0.8 mi"
 	let { history, tags = {} }: { history: History; tags?: Record<string, string[]> } = $props();
 
 	const SHOWN = 6;
