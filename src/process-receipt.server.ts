@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { nameLines } from './item-names.server';
+import { myAisles } from './aisle-choice.server';
 import { AiUnavailable } from './nebius.server';
 import { checkReading } from './receipt-check';
 import { readReceipt } from './receipt-reader.server';
@@ -102,12 +103,23 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		const sure = rows.filter((r) => r.kind === 'item' && r.name !== null && r.issue !== 'unsure');
 		const products = await assignProducts(userId, sure.map((r) => r.name!));
 		const productOf = new Map(sure.map((r, i) => [r, products[i]]));
+		// an aisle the shopper picked for a product beats the model's guess
+		const mine = await myAisles(supabase, products.map((p) => p.productId));
 
 		// a crashed earlier attempt may have left lines behind
 		const cleared = await supabase.from('receipt_items').delete().eq('receipt_id', receiptId);
 		if (cleared.error) throw cleared.error;
 		const inserted = await supabase.from('receipt_items').insert(
-			rows.map((row) => ({ ...row, receipt_id: receiptId, product_id: productOf.get(row)?.productId ?? null, maybe_product_id: productOf.get(row)?.maybeProductId ?? null }))
+			rows.map((row) => {
+				const product = productOf.get(row);
+				return {
+					...row,
+					category: (product?.productId && mine.get(product.productId)) || row.category,
+					receipt_id: receiptId,
+					product_id: product?.productId ?? null,
+					maybe_product_id: product?.maybeProductId ?? null
+				};
+			})
 		);
 		if (inserted.error) throw inserted.error;
 

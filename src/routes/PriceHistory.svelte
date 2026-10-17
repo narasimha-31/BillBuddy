@@ -1,10 +1,11 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { History } from '../price-history';
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
 
-	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"
-	let { history, tags = {} }: { history: History; tags?: Record<string, string[]> } = $props();
+	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what sits below the name
+	let { history, tags = {}, under }: { history: History; tags?: Record<string, string[]>; under?: Snippet } = $props();
 
 	const SHOWN = 6;
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
@@ -29,9 +30,10 @@
 	const opens = (v: History['visits'][number]) => (v.receiptId ? `/receipts/${v.receiptId}?from=${encodeURIComponent(history.name)}#line-${v.itemId}` : null);
 	const lastLink = $derived(opens(history.last));
 
-	// another product starts from the full, newest-first list
+	// another product starts from the full, newest-first list; a refresh of the same one keeps the view
+	const product = $derived(history.name);
 	$effect.pre(() => {
-		void history.name;
+		void product;
 		order = 'newest';
 		only = null;
 		everything = false;
@@ -40,7 +42,10 @@
 
 <section class="card">
 	<header>
-		<h2>{history.name}</h2>
+		<div class="title">
+			<h2>{history.name}</h2>
+			{@render under?.()}
+		</div>
 		<span>{history.per === 'lb' ? 'price per lb' : 'price each'}</span>
 	</header>
 
@@ -131,6 +136,13 @@
 		gap: 1rem;
 		border-bottom: 1px solid rgb(60 60 67 / 0.12);
 		padding-bottom: 0.9rem;
+	}
+
+	.title {
+		display: grid;
+		justify-items: start;
+		gap: 0.35rem;
+		min-width: 0;
 	}
 
 	h2 {

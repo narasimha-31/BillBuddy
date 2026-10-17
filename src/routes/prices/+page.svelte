@@ -5,7 +5,8 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { storeTags } from '../../store-facts';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { slide } from 'svelte/transition';
+	import { fade, slide } from 'svelte/transition';
+	import AisleIcon from '../AisleIcon.svelte';
 	import AppShell from '../AppShell.svelte';
 	import ItemPicker from '../ItemPicker.svelte';
 	import PriceHistory from '../PriceHistory.svelte';
@@ -88,6 +89,32 @@
 		};
 	};
 
+	// The aisle changes the moment it is picked; the server then moves every line of the product and
+	// the list regroups. A refusal puts the old aisle back.
+	let chosenAisle = $state<string | null>(null);
+	let aisleNote = $state('');
+	let noteTimer: ReturnType<typeof setTimeout> | undefined;
+	const shownAisle = $derived(chosenAisle ?? data.aisle ?? 'Other');
+	const saveAisle: SubmitFunction = () => {
+		clearTimeout(noteTimer);
+		aisleNote = '';
+		return async ({ result, update }) => {
+			if (result.type === 'success') {
+				await update({ reset: false, invalidateAll: true });
+				aisleNote = `Moved to ${chosenAisle}, on every receipt`;
+				noteTimer = setTimeout(() => (aisleNote = ''), 3000);
+			} else aisleNote = 'That did not save. Try again.';
+			chosenAisle = null;
+		};
+	};
+	// a refresh brings a new data object; only another item resets the aisle
+	const item = $derived(data.selected);
+	$effect.pre(() => {
+		void item;
+		chosenAisle = null;
+		aisleNote = '';
+	});
+
 	// on a phone the history sits below the list, so it is brought into view once it arrives
 	async function pick(name: string) {
 		picked = name;
@@ -155,7 +182,29 @@
 					{#key data.selected}
 						{#if data.history}
 							<div class="focus-in">
-								<PriceHistory history={data.history} {tags} />
+								<PriceHistory history={data.history} {tags}>
+									{#snippet under()}
+										<form class="aisle-pick" method="POST" action="?/aisle" use:enhance={saveAisle}>
+											<input type="hidden" name="item" value={data.selected} />
+											<label>
+												<AisleIcon aisle={shownAisle} />
+												<span class="visually-hidden">Aisle for {data.selected}</span>
+												<select
+													name="aisle"
+													value={shownAisle}
+													onchange={(e) => {
+														chosenAisle = e.currentTarget.value;
+														e.currentTarget.form?.requestSubmit();
+													}}
+												>
+													{#each data.categories as aisle (aisle)}<option value={aisle}>{aisle}</option>{/each}
+												</select>
+												<svg class="down" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+											</label>
+											{#if aisleNote}<span class="aisle-note" role="status" transition:fade={{ duration: 160 }}>{aisleNote}</span>{/if}
+										</form>
+									{/snippet}
+								</PriceHistory>
 							</div>
 						{/if}
 					{/key}
@@ -171,6 +220,89 @@
 </AppShell>
 
 <style>
+	/* the aisle reads as a quiet pill under the name; the whole pill opens the menu */
+	.aisle-pick {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.6rem;
+	}
+
+	.aisle-pick label {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.1);
+		color: var(--color-ink);
+		transition:
+			background-color var(--quick) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	.aisle-pick label:hover {
+		background: rgb(118 118 128 / 0.16);
+	}
+
+	.aisle-pick label:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.aisle-pick label:focus-within {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.aisle-pick :global(.aisle-icon) {
+		position: absolute;
+		left: 0.6rem;
+		width: 1rem;
+		height: 1rem;
+		color: var(--color-accent);
+		pointer-events: none;
+	}
+
+	/* 16px text: iOS Safari zooms the page on any smaller field */
+	.aisle-pick select {
+		appearance: none;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		padding: 0.2rem 1.9rem 0.2rem 2rem;
+		font-size: 1rem;
+		color: inherit;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.aisle-pick .down {
+		position: absolute;
+		right: 0.6rem;
+		width: 0.95rem;
+		height: 0.95rem;
+		fill: none;
+		stroke: var(--color-muted);
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		pointer-events: none;
+	}
+
+	.aisle-note {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
 	.ask {
 		margin-top: 0.3rem;
 		font-size: 1.0625rem;

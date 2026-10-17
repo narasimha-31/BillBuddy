@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { chooseAisle, myAisles } from '../../src/aisle-choice.server';
 
 const url = process.env.PUBLIC_SUPABASE_URL!;
 const publishable = process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -597,6 +598,44 @@ describe('shared products', () => {
 			expect((await alice.rpc('nearest_products', { p_embedding: vector(3), p_count: 1 })).error).not.toBeNull();
 		} finally {
 			await admin.from('products').delete().in('id', made.data!.map((p) => p.id));
+		}
+	});
+});
+
+describe('chosen aisles', () => {
+	it('moves only the lines of the shopper who chose, now and for later receipts, and stays private', async () => {
+		const dee = await signedInUser('dee');
+		const deeId = userIds[userIds.length - 1];
+		const eve = await signedInUser('eve');
+		const eveId = userIds[userIds.length - 1];
+		const tag = crypto.randomUUID().slice(0, 8);
+		const vector = `[${Array.from({ length: 1024 }, (_, i) => (i === 5 ? 1 : 0)).join(',')}]`;
+		const made = await admin.from('products').insert({ name: `Noodle soup ${tag}`, match_key: `noodle soup ${tag}`, embedding: vector }).select('id').single();
+		if (made.error) throw made.error;
+		const soup = made.data.id as string;
+		try {
+			const lineFor = async (userId: string) => {
+				const receipt = (await admin.from('receipts').insert({ user_id: userId, created_at: '2026-09-01T00:00:00Z' }).select('id').single()).data!.id;
+				const line = await admin.from('receipt_items').insert({ user_id: userId, receipt_id: receipt, position: 0, kind: 'item', raw_text: 'A F CHICKEN NOODLE SOUP', name: `Noodle soup ${tag}`, category: 'Produce', quantity: 1, unit: 'ea', total_cents: 189, computed: false, product_id: soup }).select('id').single();
+				if (line.error) throw line.error;
+				return line.data.id as string;
+			};
+			const [deeLine, eveLine] = [await lineFor(deeId), await lineFor(eveId)];
+
+			await chooseAisle(dee, soup, 'Pantry');
+			const aisleOf = async (id: string) => (await admin.from('receipt_items').select('category').eq('id', id).single()).data!.category;
+			expect(await aisleOf(deeLine)).toBe('Pantry');
+			expect(await aisleOf(eveLine)).toBe('Produce');
+
+			expect((await myAisles(dee, [soup, null])).get(soup)).toBe('Pantry');
+			expect((await myAisles(eve, [soup])).size).toBe(0);
+			expect((await eve.from('my_aisles').insert({ user_id: deeId, product_id: soup, aisle: 'Frozen' })).error).not.toBeNull();
+			expect((await dee.from('my_aisles').insert({ product_id: soup, aisle: 'Aisle 9' })).error).not.toBeNull();
+
+			await chooseAisle(dee, soup, 'Frozen');
+			expect((await myAisles(dee, [soup])).get(soup)).toBe('Frozen');
+		} finally {
+			await admin.from('products').delete().eq('id', soup);
 		}
 	});
 });

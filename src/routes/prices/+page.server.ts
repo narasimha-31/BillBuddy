@@ -1,4 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { chooseAisle, chooseAisleByName } from '../../aisle-choice.server';
+import { CATEGORIES, type Category } from '../../item-names';
 import { historyOf } from '../../price-history';
 import { toPurchases, type ItemRow } from '../../purchases';
 import { firstNameOf } from '../../session.server';
@@ -43,7 +45,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const asked = url.searchParams.get('item');
 	const chosen = products.find((p) => p.name === asked) ?? products[0] ?? null;
 	const selected = chosen?.name ?? null;
-	if (!selected) return { firstName: firstNameOf(user), products, places, usual, selected, maybeSame: null, history: null };
+	if (!selected) return { firstName: firstNameOf(user), products, places, usual, selected, aisle: null, categories: [...CATEGORIES], maybeSame: null, history: null };
 
 	// every line of the product counts under its one shared name, whatever each receipt called it
 	const lines = (await linesOf(locals.supabase, selected)).map((line) => ({ ...line, name: selected }));
@@ -53,6 +55,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		places,
 		usual,
 		selected,
+		aisle: chosen?.category ?? 'Other',
+		categories: [...CATEGORIES],
 		maybeSame: chosen?.maybeSame ?? null,
 		history: historyOf(toPurchases(lines as unknown as ItemRow[]), selected)
 	};
@@ -61,6 +65,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 type Line = { id: number; raw_text: string; brand: string | null; category: string | null; maybe_product_id: string | null; receipts: { store_id: string | null } | { store_id: string | null }[] };
 
 export const actions: Actions = {
+	// The shopper moves a product to another aisle: all their lines of it, and every later receipt
+	aisle: async ({ locals, request }) => {
+		const user = await locals.getUser();
+		if (!user) redirect(303, '/');
+		const form = await request.formData();
+		const item = String(form.get('item') ?? '');
+		const aisle = String(form.get('aisle') ?? '');
+		if (!item || !(CATEGORIES as readonly string[]).includes(aisle)) return fail(400, { problem: 'Pick an aisle from the list.' });
+
+		const product = await locals.supabase.from('products').select('id').eq('name', item).maybeSingle();
+		if (product.error) throw product.error;
+		await Promise.all([
+			product.data ? chooseAisle(locals.supabase, product.data.id, aisle as Category) : null,
+			chooseAisleByName(locals.supabase, item, aisle as Category)
+		]);
+		return { aisle };
+	},
+
 	// The shopper's answer to "Same as ...?". It changes only their own lines (row level security),
 	// never the shared product, and a yes is remembered so the next receipt lands there by itself.
 	same: async ({ locals, request }) => {

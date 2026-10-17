@@ -1,5 +1,6 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
-import { CATEGORIES } from '../../../item-names';
+import { chooseAisle } from '../../../aisle-choice.server';
+import { CATEGORIES, type Category } from '../../../item-names';
 import { AiUnavailable } from '../../../nebius.server';
 import { assignProducts } from '../../../product-merge.server';
 import { readDate, reconcile } from '../../../receipt-check';
@@ -53,7 +54,7 @@ export const actions: Actions = {
 		if (!receipt.data) httpError(404, 'Not found');
 		const storeId: string | null = receipt.data.store_id;
 
-		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, brand, category, size_amount, size_unit, issue').eq('receipt_id', params.id);
+		const items = await locals.supabase.from('receipt_items').select('id, kind, raw_text, name, brand, category, size_amount, size_unit, issue, product_id').eq('receipt_id', params.id);
 		if (items.error) throw items.error;
 
 		const editable = items.data.filter((i) => i.kind === 'item');
@@ -98,9 +99,11 @@ export const actions: Actions = {
 
 		// A renamed line, or a guessed one the shopper has now seen and kept, joins the shared product
 		// of its name. If the models are down the save still stands: the line keeps its own name on
-		// Prices until the next save.
+		// Prices until the next save. A new aisle alone needs no model.
+		const renamed = changed.filter((edit) => editable.find((i) => i.id === edit.id)!.name !== edit.name);
+		const productOf = new Map<string, string | null>(editable.map((i) => [i.id, i.product_id]));
 		const confirmed = [
-			...changed.map((edit) => ({ id: edit.id, name: edit.name })),
+			...renamed.map((edit) => ({ id: edit.id, name: edit.name })),
 			...editable.filter((i) => i.name && ['unsure', 'unreadable'].includes(i.issue) && !changed.some((e) => e.id === i.id)).map((i) => ({ id: i.id, name: i.name as string }))
 		];
 		if (confirmed.length) {
@@ -112,11 +115,19 @@ export const actions: Actions = {
 						.update({ product_id: products[i].productId, maybe_product_id: products[i].maybeProductId })
 						.eq('id', line.id);
 					if (error) throw error;
+					productOf.set(line.id, products[i].productId);
 				}
 			} catch (problem) {
 				if (!(problem instanceof AiUnavailable)) throw problem;
 				console.warn('renamed lines kept without a product:', problem.message);
 			}
+		}
+
+		// a new aisle covers the whole product for this shopper: every line of it, now and later
+		for (const edit of changed) {
+			const before = editable.find((i) => i.id === edit.id)!;
+			const product = productOf.get(edit.id);
+			if (before.category !== edit.category && product) await chooseAisle(locals.supabase, product, edit.category as Category);
 		}
 
 		// the shopper has seen the guessed names, so they stop being marked
