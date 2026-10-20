@@ -69,7 +69,7 @@
 								onclick={() => (picked = picked === i ? null : i)}
 							>
 								<span class="col">
-									<span class="cap">${Math.round(bar.cents / 100)}</span>
+									{#if bar.cents}<span class="cap">${Math.round(bar.cents / 100)}</span>{/if}
 									<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
 								</span>
 								<span class="tick">{bar.label}</span>
@@ -282,27 +282,23 @@
 		background: var(--color-accent);
 	}
 
-	/* the amount rides only the highlighted bar; with a mouse, any bar shows it on hover */
+	/* every amount is readable without a tap; the highlighted one is bold */
 	.cap {
 		margin-bottom: 0.25rem;
 		font-size: 0.75rem;
-		font-weight: 600;
 		font-variant-numeric: tabular-nums;
-		color: var(--color-ink);
-		visibility: hidden;
+		white-space: nowrap;
+		color: var(--color-muted);
 	}
 
 	.on .cap {
-		visibility: visible;
+		font-weight: 600;
+		color: var(--color-ink);
 	}
 
 	@media (hover: hover) {
 		.bars button:not(.on):hover .bar {
 			background: rgb(118 118 128 / 0.4);
-		}
-
-		.bars button:hover .cap {
-			visibility: visible;
 		}
 	}
 
