@@ -4,6 +4,8 @@
 	import Trend from '../Trend.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { spendBars, type Bar } from '../../spend';
+	import { invalidateAll } from '$app/navigation';
+	import { readReceipt } from '../receipts/reading';
 
 	let { data } = $props();
 
@@ -25,6 +27,18 @@
 		by = next;
 		picked = null;
 	};
+	// receipts uploaded but never read (the page was left mid-way, or reading failed); read them right here
+	let rereading = $state(false);
+	async function readUnread() {
+		rereading = true;
+		try {
+			await Promise.all(data.unread.map((id) => readReceipt(id)));
+		} finally {
+			rereading = false;
+		}
+		await invalidateAll();
+	}
+
 	const SHOWN_CHANGES = 3;
 	let allChanges = $state(false);
 </script>
@@ -36,6 +50,13 @@
 <AppShell fit firstName={data.firstName}>
 	<main>
 		<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
+
+		{#if data.unread.length}
+			<p class="unread surface" aria-live="polite">
+				<span>{data.unread.length === 1 ? '1 receipt wasn’t read' : `${data.unread.length} receipts weren’t read`}</span>
+				<button type="button" class="small-button" disabled={rereading} onclick={readUnread}>{rereading ? 'Reading…' : data.unread.length === 1 ? 'Read it now' : 'Read them now'}</button>
+			</p>
+		{/if}
 
 		<div class="board">
 			<section class="add surface" aria-label="Add a receipt">
@@ -135,10 +156,64 @@
 				{/if}
 			</section>
 		</div>
+
+		<!-- on a phone Settings is otherwise only behind the avatar -->
+		<ul class="group settings">
+			<li><a class="row" href="/settings"><span class="row-title">Settings</span></a></li>
+		</ul>
 	</main>
 </AppShell>
 
 <style>
+	.unread {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-top: 1rem;
+		padding: 0.75rem 0.85rem 0.75rem 1.1rem;
+		font-size: 0.9375rem;
+		color: var(--color-ink);
+	}
+
+	.small-button {
+		flex: none;
+		min-height: 2.25rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		padding: 0.35rem 0.95rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-accent);
+		transition: transform var(--standard) var(--ease);
+	}
+
+	.small-button:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.small-button:disabled {
+		opacity: 0.6;
+	}
+
+	@media (pointer: coarse) {
+		.small-button {
+			min-height: 2.75rem;
+		}
+	}
+
+	.settings {
+		display: none;
+	}
+
+	@media (max-width: 640px) {
+		.settings {
+			display: block;
+			margin-top: 1.75rem;
+		}
+	}
+
 	.board {
 		display: grid;
 		gap: 1.75rem;
