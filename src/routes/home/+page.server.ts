@@ -25,14 +25,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.order('purchased_on', { ascending: false, nullsFirst: false })
 			.order('created_at', { ascending: false })
 			.limit(5),
-		locals.supabase.from('receipts').select('purchased_on, total_cents, store_id').eq('status', 'saved').gte('purchased_on', since),
+		locals.supabase.from('receipts').select('id, purchased_on, total_cents, store_id').eq('status', 'saved').gte('purchased_on', since),
 		locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).eq('status', 'saved').is('purchased_on', null),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
 		locals.supabase.rpc('my_upload_window')
 	]);
 	for (const answer of [recent, spend, undated, changes, uploaded]) if (answer.error) throw answer.error;
 
-	const spendRows = (spend.data ?? []) as { purchased_on: string; total_cents: number | null; store_id: string | null }[];
+	const spendRows = (spend.data ?? []) as { id: string; purchased_on: string; total_cents: number | null; store_id: string | null }[];
 	const monthRows = spendRows.filter((r) => r.purchased_on >= monthStart);
 	return {
 		firstName: firstNameOf(user),
@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			receipts: monthRows.length,
 			stores: new Set(monthRows.map((r) => r.store_id).filter(Boolean)).size
 		},
-		spend: { today, rows: spendRows.map(({ purchased_on, total_cents }) => ({ purchased_on, total_cents })), undated: undated.count ?? 0 },
+		spend: { today, rows: spendRows.map(({ id, purchased_on, total_cents }) => ({ id, purchased_on, total_cents })), undated: undated.count ?? 0 },
 		changes: (changes.data ?? []) as Change[],
 		recent: (recent.data ?? []).map(({ stores, ...r }) => ({ ...r, store: storeOf(stores as One<{ name: string }>) }))
 	};

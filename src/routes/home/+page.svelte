@@ -53,7 +53,7 @@
 				<p class="spent">{money(chosen ? chosen.cents : data.month.spentCents)}</p>
 				<p class="note">
 					{#if chosen}
-						{plural(chosen.receipts, 'receipt')}{#if chosen.receipts}{' · '}<a href="/receipts?from={chosen.from}&to={chosen.to}">See receipts</a>{/if}
+						{plural(chosen.receipts, 'receipt')}{#if chosen.ids.length === 1}{' · '}<a href="/receipts/{chosen.ids[0]}">Open it</a>{:else if chosen.receipts}{' · '}<a href="/receipts?from={chosen.from}&to={chosen.to}">See them</a>{/if}
 					{:else}
 						{data.month.receipts ? `${plural(data.month.receipts, 'receipt')} at ${plural(data.month.stores, 'store')}` : 'Nothing dated this month yet'}{lastMonth ? ` · last month ${money(lastMonth)}` : ''}
 					{/if}

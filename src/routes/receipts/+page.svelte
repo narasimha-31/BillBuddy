@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { streetOf } from '../../branches';
 	import { money, shortDay, storeName } from '../../format';
 	import { keyMatches, storeKey } from '../../store-search';
@@ -66,7 +67,11 @@
 	// searching filters by store name only, never by what is on the receipts; keys are made once per load
 	let storeQuery = $state('');
 	const searching = $derived(storeQuery.trim().length > 0);
-	const keyed = $derived(saved.map((receipt) => ({ receipt, key: storeKey(storeName(receipt.store)) })));
+	// a week or month opened from a bar on Home
+	const from = $derived(page.url.searchParams.get('from'));
+	const to = $derived(page.url.searchParams.get('to'));
+	const inPeriod = $derived(from && to ? saved.filter((r) => r.purchased_on !== null && r.purchased_on >= from && r.purchased_on <= to) : saved);
+	const keyed = $derived(inPeriod.map((receipt) => ({ receipt, key: storeKey(storeName(receipt.store)) })));
 	const shown = $derived.by(() => {
 		const wanted = storeKey(storeQuery);
 		return keyed.filter(({ key }) => keyMatches(key, wanted)).map(({ receipt }) => receipt);
@@ -158,6 +163,13 @@
 						{/if}
 					{/if}
 				</div>
+			{/if}
+
+			{#if from && to}
+				<p class="period">
+					{shortDay(from)} – {shortDay(to)} · {shown.length} receipt{shown.length === 1 ? '' : 's'} · {money(shownCents)}
+					<a href="/receipts">Show all</a>
+				</p>
 			{/if}
 
 			<div class="scroll scroll-area">
@@ -416,6 +428,19 @@
 	.clear:focus-visible {
 		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
+	}
+
+	.period {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 0.75rem;
+		margin: 1rem 1rem 0;
+		font-size: 0.9375rem;
+		color: var(--color-ink);
+	}
+
+	.period a {
+		color: var(--color-accent);
 	}
 
 	.found {

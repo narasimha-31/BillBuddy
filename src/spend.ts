@@ -1,5 +1,5 @@
-export type Spend = { purchased_on: string; total_cents: number | null };
-export type Bar = { from: string; to: string; label: string; cents: number; receipts: number };
+export type Spend = { id?: string; purchased_on: string; total_cents: number | null };
+export type Bar = { from: string; to: string; label: string; cents: number; receipts: number; ids: string[] };
 
 const DAY = 864e5;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -17,6 +17,6 @@ export function spendBars(rows: Spend[], by: 'week' | 'month', today: string): B
 		const end = by === 'month' ? new Date(Date.UTC(y, m - back + 1, 0)) : new Date(start.getTime() + 6 * DAY);
 		const [from, to] = [iso(start), iso(end)];
 		const inside = rows.filter((r) => r.purchased_on >= from && r.purchased_on <= to);
-		return { from, to, label: short(start, by === 'month'), cents: inside.reduce((sum, r) => sum + (r.total_cents ?? 0), 0), receipts: inside.length };
+		return { from, to, label: short(start, by === 'month'), cents: inside.reduce((sum, r) => sum + (r.total_cents ?? 0), 0), receipts: inside.length, ids: inside.flatMap((r) => (r.id ? [r.id] : [])) };
 	});
 }

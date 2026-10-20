@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spendBars } from './spend';
 
 const rows = [
-	{ purchased_on: '2026-10-18', total_cents: 500 },
+	{ id: 'a', purchased_on: '2026-10-18', total_cents: 500 },
 	{ purchased_on: '2026-10-17', total_cents: 300 },
 	{ purchased_on: '2026-09-30', total_cents: 1000 },
 	{ purchased_on: '2026-04-30', total_cents: 9999 },
@@ -21,7 +21,7 @@ describe('spendBars', () => {
 	it('gives eight Sunday to Saturday weeks ending this week', () => {
 		const bars = spendBars(rows, 'week', '2026-10-20');
 		expect(bars).toHaveLength(8);
-		expect(bars[7]).toMatchObject({ from: '2026-10-18', to: '2026-10-24', label: '10/18', cents: 500 });
+		expect(bars[7]).toMatchObject({ from: '2026-10-18', to: '2026-10-24', label: '10/18', cents: 500, ids: ['a'] });
 		expect(bars[6]).toMatchObject({ from: '2026-10-11', to: '2026-10-17', cents: 300 });
 		expect(bars[0].from).toBe('2026-08-30');
 	});
