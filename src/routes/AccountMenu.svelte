@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { clearToasts } from '../toasts.svelte';
+
 	let { firstName }: { firstName: string | null } = $props();
 
 	let menu: HTMLDetailsElement;
@@ -20,7 +22,7 @@
 		</summary>
 		<div class="menu">
 			<a href="/settings">Settings</a>
-			<form method="POST" action="/?/signout">
+			<form method="POST" action="/?/signout" onsubmit={clearToasts}>
 				<button>Sign out</button>
 			</form>
 		</div>

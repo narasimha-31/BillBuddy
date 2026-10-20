@@ -4,6 +4,7 @@
 	import DisplayChoices from '../DisplayChoices.svelte';
 	import MapUnlock from '../MapUnlock.svelte';
 	import { storeName } from '../../format';
+	import { clearToasts } from '../../toasts.svelte';
 
 	let { data, form } = $props();
 
@@ -108,7 +109,7 @@
 				</li>
 			{/if}
 			<li>
-				<form method="POST" action="/?/signout_everywhere">
+				<form method="POST" action="/?/signout_everywhere" onsubmit={clearToasts}>
 					<button class="row action">Sign out of all devices</button>
 				</form>
 			</li>

@@ -1,5 +1,7 @@
 import { deserialize } from '$app/forms';
 import type { Printed } from '../../process-receipt.server';
+import { money, storeName } from '../../format';
+import { toast } from '../../toasts.svelte';
 
 export type { Printed };
 export type Outcome = { state: 'saved' | 'review' | 'paused' | 'reading' | 'failed'; note?: string; printed?: Printed };
@@ -28,4 +30,23 @@ export async function readReceipt(id: string): Promise<Outcome> {
 	if (outcome.status === 'paused') return { state: 'paused' };
 	if (outcome.status === 'busy') return { state: 'reading', note: 'It is already being read.' };
 	return { state: 'failed', note: problems[outcome.problem ?? ''] ?? 'Try again.' };
+}
+
+// Told only when the result is not already on screen: the shopper left the page the photo was added on,
+// or a read started from a one-line prompt failed.
+export function announce(id: string, outcome: Outcome) {
+	const store = storeName(outcome.printed?.store ?? null);
+	const open = { label: 'Open', href: `/receipts/${id}` };
+	if (outcome.state === 'saved') {
+		const total = outcome.printed?.totalCents;
+		toast({ key: `read:${id}`, kind: 'done', text: `${store ?? 'Your'} receipt is ready${total != null ? ` · ${money(total)}` : ''}`, action: open });
+	} else if (outcome.state === 'review') toast({ key: `read:${id}`, kind: 'done', text: `${store ?? 'A'} receipt needs a quick look`, action: open });
+	else if (outcome.state === 'paused') toast({ key: `read:${id}`, kind: 'error', text: 'Reading is paused. The photo is saved to try later.' });
+	else if (outcome.state === 'failed')
+		toast({
+			key: `read:${id}`,
+			kind: 'error',
+			text: `A receipt couldn't be read. ${outcome.note ?? ''}`.trim(),
+			action: { label: 'Try again', run: async () => announce(id, await readReceipt(id)) }
+		});
 }

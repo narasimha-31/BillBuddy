@@ -11,6 +11,7 @@
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
 	import DisplayPanel from './DisplayPanel.svelte';
+	import Toaster from './Toaster.svelte';
 	import Wordmark from './Wordmark.svelte';
 
 	let { firstName, fit = false, children }: { firstName: string | null; fit?: boolean; children: Snippet } = $props();
@@ -60,6 +61,7 @@
 	<div class="page" class:entering>
 		{@render children()}
 	</div>
+	<Toaster />
 </div>
 
 <style>

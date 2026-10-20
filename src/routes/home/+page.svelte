@@ -5,7 +5,7 @@
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
-	import { readReceipt } from '../receipts/reading';
+	import { announce, readReceipt } from '../receipts/reading';
 
 	let { data } = $props();
 
@@ -32,7 +32,13 @@
 	async function readUnread() {
 		rereading = true;
 		try {
-			await Promise.all(data.unread.map((id) => readReceipt(id)));
+			// a read that worked shows up in the lists; one that failed would vanish without a word
+			await Promise.all(
+				data.unread.map(async (id) => {
+					const outcome = await readReceipt(id);
+					if (outcome.state === 'failed' || outcome.state === 'paused') announce(id, outcome);
+				})
+			);
 		} finally {
 			rereading = false;
 		}

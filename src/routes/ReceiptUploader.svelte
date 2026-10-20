@@ -2,7 +2,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { money, shortDay, storeName } from '../format';
 	import { canAdd, cannotOpen, isPdf, prepareUpload } from './receipts/prepare-photo';
-	import { post, readReceipt, type Printed } from './receipts/reading';
+	import { onDestroy } from 'svelte';
+	import { announce, post, readReceipt, type Printed } from './receipts/reading';
 
 	let {
 		uploads,
@@ -28,6 +29,10 @@
 	let camera: HTMLInputElement;
 	let nextKey = 0;
 
+	// the scanning card shows the result while this page is open; once it is left, a popup tells it instead
+	let here = true;
+	onDestroy(() => (here = false));
+
 	const SHOWN_LINES = 8;
 	const SLOW_MS = 20_000;
 
@@ -44,7 +49,9 @@
 		onreading?.(id, true);
 		const timer = setTimeout(() => (entry.slow = true), SLOW_MS);
 		try {
-			Object.assign(entry, await readReceipt(id));
+			const outcome = await readReceipt(id);
+			Object.assign(entry, outcome);
+			if (!here) announce(id, outcome);
 		} finally {
 			clearTimeout(timer);
 			onreading?.(id, false);
