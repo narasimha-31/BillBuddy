@@ -28,11 +28,11 @@
 	const per = $derived(typical?.unit === 'LB' ? '/lb' : '');
 	const money = (n: number) => `$${n.toFixed(2)}`;
 
-	// same as the Prices page: on a phone, picking from an aisle below the price brings the price back into view
+	// the whole page scrolls, so picking something far from the price brings the price back into view
 	function pick(name: string) {
 		selected = name;
 		const top = result?.getBoundingClientRect().top ?? 0;
-		if (matchMedia('(max-width: 959px)').matches && (top < 0 || top > innerHeight * 0.6))
+		if (top < 0 || top > innerHeight * 0.6)
 			result?.scrollIntoView({ behavior: prefersReducedMotion.current ? 'auto' : 'smooth' });
 	}
 </script>
@@ -62,7 +62,7 @@
 				<ItemPicker items={all} bind:selected={() => selected, pick} />
 			</div>
 
-			<div class="result scroll-area" bind:this={result}>
+			<div class="result" bind:this={result}>
 				{#key selected}
 					<div in:fade={{ duration: 250 }}>
 						<PriceHistory {history} bind:only>
@@ -249,7 +249,7 @@
 		}
 	}
 
-	/* on a laptop the list and receipts sit left; the price stays in view on the right */
+	/* on a laptop the list and receipts sit left, the price on the right; one page scroll for both */
 	@media (min-width: 960px) {
 		.columns {
 			grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
@@ -269,9 +269,6 @@
 
 		.result {
 			grid-area: result;
-			position: sticky;
-			top: 5rem;
-			max-height: calc(100dvh - 6.5rem);
 		}
 	}
 
