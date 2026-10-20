@@ -23,6 +23,8 @@
 	} = $props();
 
 	const SHOWN = 6;
+	// three rows or fewer read at a glance; sorting or filtering them is clutter
+	const FILTERS_FROM = 4;
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
 	const previous = $derived(history.visits[1]);
 	// Ohio against Houston says nothing about prices going up, so a change is only told within one area
@@ -94,7 +96,7 @@
 	<div class="part">
 		<div class="list-head">
 			<p class="label">Every time you bought it</p>
-			{#if history.visits.length > 1}
+			{#if history.visits.length >= FILTERS_FROM}
 				<div class="order" role="group" aria-label="Sort">
 					<button type="button" aria-pressed={order === 'newest'} onclick={() => (order = 'newest')}>Newest</button>
 					<button type="button" aria-pressed={order === 'cheapest'} onclick={() => (order = 'cheapest')}>Lowest</button>
@@ -102,7 +104,7 @@
 			{/if}
 		</div>
 
-		{#if stores.length > 1}
+		{#if stores.length > 1 && history.visits.length >= FILTERS_FROM}
 			<div class="only" role="group" aria-label="Store">
 				<button type="button" aria-pressed={only === null} onclick={() => (only = null)}>All stores</button>
 				{#each stores as store (store)}

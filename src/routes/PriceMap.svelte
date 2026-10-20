@@ -115,7 +115,6 @@
 				{@const where = [shortMiles(line.pin.miles).replace(' ', '\u00a0'), streetOf(line.pin.address)].filter(Boolean).join(' · ')}
 				{@render answer(line.label, storeName(line.pin.name) ?? line.pin.name, where, line.pin.cents!, line.pin.date, line.pin)}
 			{/each}
-			{#if sold.length > 1}<p class="count">Bought at {sold.length} of your stores nearby</p>{/if}
 		</div>
 	{/if}
 	<div class="price-map">
@@ -133,9 +132,7 @@
 					</span>
 					{#if onstore}<button type="button" class="link" onclick={() => onstore(pin.storeId)}>Store details</button>{/if}
 				</p>
-			{:else if pins.some((p) => p.cents !== null)}
-				<p class="hint">Tap a price to see only that store.</p>
-			{:else if pins.length}
+			{:else if pins.length && !pins.some((p) => p.cents !== null)}
 				<p class="hint">None of your stores on the map has sold you this yet.</p>
 			{/if}
 			{#if awayCount && !demo}
@@ -143,12 +140,14 @@
 					{withAway ? 'Home area only' : `${awayCount} ${awayCount === 1 ? 'store' : 'stores'} away from home · Show`}
 				</button>
 			{/if}
-			{#each missing as store (store.id)}
+			{#if missing.length}
 				<p class="missing">
-					{storeName(store.name)} isn’t on the map yet.
-					{#if onstore}<button type="button" class="link" onclick={() => onstore(store.id)}>Add it</button>{/if}
+					Not on the map yet:
+					{#each missing as store, i (store.id)}
+						<span>{#if onstore}<button type="button" class="link" onclick={() => onstore(store.id)}>{storeName(store.name)}</button>{:else}{storeName(store.name)}{/if}{i < missing.length - 1 ? ',' : ''}</span>{' '}
+					{/each}
 				</p>
-			{/each}
+			{/if}
 		</div>
 	</div>
 {:else}
@@ -319,11 +318,6 @@
 		stroke-width: 1.8;
 		stroke-linecap: round;
 		stroke-linejoin: round;
-	}
-
-	.count {
-		font-size: 0.8125rem;
-		color: var(--color-muted);
 	}
 
 	/* on a phone each answer stacks inside its row: the label, the store, then what was paid; the
