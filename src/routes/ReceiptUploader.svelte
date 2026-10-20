@@ -58,30 +58,32 @@
 		await read(begin(null), id);
 	}
 
+	async function send(file: File, entry: Entry) {
+		try {
+			const { jpeg, hash } = await prepareUpload(file);
+			if (!entry.photo) entry.photo = URL.createObjectURL(jpeg);
+			const body = new FormData();
+			body.set('photo', jpeg, 'receipt.jpg');
+			body.set('hash', hash);
+			const result = await post('upload', body);
+			if (result.type === 'success' && result.data?.id) await read(entry, String(result.data.id));
+			else {
+				entry.state = result.type === 'failure' && result.status === 409 ? 'duplicate' : 'failed';
+				entry.note = result.type === 'failure' && result.status !== 409 ? String(result.data?.problem ?? '') : undefined;
+			}
+		} catch (problem) {
+			entry.state = 'failed';
+			entry.note = cannotOpen(problem, file);
+		} finally {
+			if (entry.photo && entry.state !== 'reading') URL.revokeObjectURL(entry.photo);
+		}
+	}
+
+	// every photo shows at once and is read alongside the others; one at a time hid the later ones for minutes
 	async function add(files: Iterable<File>) {
 		const batch = [...files].filter(canAdd);
-		for (const file of batch) {
-			// a PDF has no picture to show until its pages are drawn
-			const entry = begin(isPdf(file) ? '' : URL.createObjectURL(file));
-			try {
-				const { jpeg, hash } = await prepareUpload(file);
-				if (!entry.photo) entry.photo = URL.createObjectURL(jpeg);
-				const body = new FormData();
-				body.set('photo', jpeg, 'receipt.jpg');
-				body.set('hash', hash);
-				const result = await post('upload', body);
-				if (result.type === 'success' && result.data?.id) await read(entry, String(result.data.id));
-				else {
-					entry.state = result.type === 'failure' && result.status === 409 ? 'duplicate' : 'failed';
-					entry.note = result.type === 'failure' && result.status !== 409 ? String(result.data?.problem ?? '') : undefined;
-				}
-			} catch (problem) {
-				entry.state = 'failed';
-				entry.note = cannotOpen(problem, file);
-			} finally {
-				if (entry.photo && entry.state !== 'reading') URL.revokeObjectURL(entry.photo);
-			}
-		}
+		// a PDF has no picture to show until its pages are drawn
+		await Promise.all(batch.map((file) => send(file, begin(isPdf(file) ? '' : URL.createObjectURL(file)))));
 		if (batch.length) await invalidateAll();
 	}
 
