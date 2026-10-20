@@ -96,7 +96,7 @@
 										<span class="row-title">{change.name}</span>
 										<span class="row-value">{money(change.now_cents)}{change.per === 'lb' ? '/lb' : ''}</span>
 										<span class="row-sub move" class:up={diff > 0} class:down={diff < 0}>
-											<Trend up={diff > 0} />{diff > 0 ? 'Up' : 'Down'} {step(Math.abs(diff))} from {storeName(change.before_store) ?? 'last time'}
+											<Trend up={diff > 0} />{money(change.before_cents)} at {storeName(change.before_store) ?? 'last time'} → {money(change.now_cents)} at {storeName(change.store) ?? 'an unknown store'} · {shortDay(change.bought_on)} · {diff > 0 ? 'up' : 'down'} {step(Math.abs(diff))}
 										</span>
 									</a>
 								</li>
