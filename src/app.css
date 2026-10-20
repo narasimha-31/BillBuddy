@@ -207,7 +207,8 @@ body {
 	margin: 0;
 }
 
-.list-label-row a {
+.list-label-row a,
+.list-label-row button {
 	font-size: 0.9375rem;
 	color: var(--color-accent);
 }
