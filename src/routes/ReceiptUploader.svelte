@@ -252,6 +252,34 @@
 		font-weight: 600;
 	}
 
+	/* with a mouse the drop zone is one short row; it opens up while a file is dragged over it */
+	@media (pointer: fine) {
+		.drop {
+			flex-direction: row;
+			gap: 0.75rem;
+			padding: 0.7rem 0.75rem 0.7rem 1rem;
+			transition:
+				background-color 150ms,
+				border-color 150ms,
+				padding 240ms var(--ease);
+		}
+
+		.drop.dragging {
+			padding-block: 1.75rem;
+		}
+
+		.drop svg {
+			width: 1.5rem;
+			height: 1.5rem;
+		}
+
+		.drop strong {
+			flex: 1;
+			text-align: left;
+			font-size: 1rem;
+		}
+	}
+
 	.camera {
 		display: none;
 	}
