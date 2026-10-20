@@ -68,7 +68,10 @@
 								aria-label="{periodName(bar)}: {money(bar.cents)}"
 								onclick={() => (picked = picked === i ? null : i)}
 							>
-								<span class="bar" style:--size={bar.cents / tallest}></span>
+								<span class="col">
+									<span class="cap">${Math.round(bar.cents / 100)}</span>
+									<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
+								</span>
 								<span class="tick">{bar.label}</span>
 							</button>
 						</li>
@@ -231,34 +234,75 @@
 
 	.bars button {
 		display: grid;
-		grid-template-rows: 4.75rem auto;
 		justify-items: center;
-		gap: 0.3rem;
+		gap: 0.35rem;
 		width: 100%;
 		border-radius: 8px;
-		padding-top: 0.25rem;
 		-webkit-tap-highlight-color: transparent;
 	}
 
+	/* each bar stands on one shared baseline; an empty period is just the baseline, never a stub */
+	.col {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		align-items: center;
+		width: calc(100% + 0.3rem);
+		height: 5.75rem;
+		border-bottom: 1px solid rgb(60 60 67 / 0.18);
+	}
+
 	.bar {
-		align-self: end;
 		width: 100%;
-		max-width: 2rem;
-		height: calc(0.25rem + 4.5rem * var(--size));
-		border-radius: 5px;
-		background: rgb(118 118 128 / 0.22);
+		max-width: 1.5rem;
+		height: calc(4.5rem * var(--size));
+		border-radius: 4px 4px 0 0;
+		background: rgb(118 118 128 / 0.24);
+		transform-origin: bottom;
 		transition:
 			height var(--slow) var(--ease),
-			background-color var(--quick) var(--ease);
+			background-color var(--quick) var(--ease),
+			transform var(--slow) var(--ease) calc(var(--i) * 25ms);
+	}
+
+	/* switching weeks and months grows the new bars up from the baseline, left to right */
+	@starting-style {
+		.bar {
+			transform: scaleY(0);
+		}
+	}
+
+	.bars button:active .bar {
+		transform: scaleY(0.94);
+		transition-delay: 0ms;
+		transition-duration: var(--quick);
 	}
 
 	.bars .on .bar {
 		background: var(--color-accent);
 	}
 
+	/* the amount rides only the highlighted bar; with a mouse, any bar shows it on hover */
+	.cap {
+		margin-bottom: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-ink);
+		visibility: hidden;
+	}
+
+	.on .cap {
+		visibility: visible;
+	}
+
 	@media (hover: hover) {
 		.bars button:not(.on):hover .bar {
-			background: rgb(118 118 128 / 0.36);
+			background: rgb(118 118 128 / 0.4);
+		}
+
+		.bars button:hover .cap {
+			visibility: visible;
 		}
 	}
 
@@ -292,6 +336,16 @@
 	@media (prefers-reduced-motion: reduce) {
 		.bar {
 			transition: none;
+		}
+
+		@starting-style {
+			.bar {
+				transform: none;
+			}
+		}
+
+		.bars button:active .bar {
+			transform: none;
 		}
 	}
 
