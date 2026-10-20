@@ -48,6 +48,7 @@
 			lat: p.lat,
 			lng: p.lng,
 			label: p.cents === null ? null : `${money(p.cents)}${per}`,
+			cents: p.cents,
 			title: `${storeName(p.name)}${streetOf(p.address) ? `, ${streetOf(p.address)}` : ''}`,
 			cheapest: p.cheapest,
 			guess: p.guess

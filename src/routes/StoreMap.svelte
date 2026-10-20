@@ -5,6 +5,8 @@
 		lng: number;
 		// the price on the pin, or null for a plain dot
 		label: string | null;
+		// what the label says, for deciding which of two touching tags stays put
+		cents?: number | null;
 		title: string;
 		cheapest?: boolean;
 		guess?: boolean;
@@ -14,7 +16,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import type { Map as LeafletMap, LayerGroup } from 'leaflet';
+	import type { Map as LeafletMap, LayerGroup, Marker } from 'leaflet';
 	import type { Point } from '../distance';
 
 	let { you, pins, selected = null, onpick, label }: { you: Point | null; pins: MapPin[]; selected?: string | null; onpick?: (id: string) => void; label: string } = $props();
@@ -24,9 +26,38 @@
 	let map: LeafletMap | null = null;
 	let layer: LayerGroup | null = null;
 	let framed = '';
-
 	// store names come from receipts, so nothing from them reaches the page as markup
 	const plain = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+	let priced: { marker: Marker; cents: number; id: string; label: string }[] = [];
+
+	// Tags close enough to cover each other merge into one: the picked one, then the lower price, keeps its tag
+	// and lists the others' prices after its own ("$2.10 · $2.44"); the others become dots at their true spots,
+	// so every price stays readable and none sits away from its store. Redone after every zoom (pixels).
+	const TAG_W = 62;
+	const TAG_H = 32;
+	function spread() {
+		if (!map) return;
+		const groups: { x: number; y: number; tag: HTMLElement; labels: string[]; cheapest: boolean }[] = [];
+		const order = [...priced].sort((a, b) => Number(b.id === selected) - Number(a.id === selected) || a.cents - b.cents);
+		for (const { marker, label } of order) {
+			const tag = marker.getElement()?.querySelector<HTMLElement>('.price-pin');
+			if (!tag) continue;
+			const at = map.latLngToContainerPoint(marker.getLatLng());
+			const near = groups.find((g) => Math.abs(g.x - at.x) < (TAG_W * (g.labels.length + 1)) / 2 && Math.abs(g.y - at.y) < TAG_H);
+			if (near) {
+				// a merged tag is white, so green never seems to cover the pricier stores; the first price leads
+				near.labels.push(label);
+				near.tag.innerHTML = `<b>${plain(near.labels[0])}</b> · ${near.labels.slice(1).map(plain).join(' · ')}`;
+				near.tag.classList.remove('cheapest');
+				near.tag.classList.toggle('merged-cheapest', near.cheapest);
+			} else groups.push({ x: at.x, y: at.y, tag, labels: [label], cheapest: tag.classList.contains('cheapest') });
+			tag.classList.toggle('priced', !near);
+			tag.classList.toggle('dot', !!near);
+			if (near) tag.textContent = '';
+			else tag.textContent = label;
+		}
+	}
+
 
 	// Leaflet and its styles load only where a map is shown. On a phone the strip never captures a
 	// swipe, so the page still scrolls through it; pins stay tappable.
@@ -58,6 +89,7 @@
 			map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 			if (!touch) L.control.zoom({ position: 'bottomright' }).addTo(map);
 			layer = L.layerGroup().addTo(map);
+			map.on('zoomend', spread);
 			leaflet = L;
 		})();
 		return () => {
@@ -70,11 +102,12 @@
 		const L = leaflet;
 		if (!L || !map || !layer) return;
 		layer.clearLayers();
+		priced = [];
 		if (you)
 			L.marker([you.lat, you.lng], { icon: L.divIcon({ className: 'you-pin', html: '<span></span>', iconSize: [16, 16] }), interactive: false, keyboard: false }).addTo(layer);
 		for (const pin of pins) {
 			const classes = ['price-pin', pin.label ? 'priced' : 'dot', pin.cheapest && 'cheapest', pin.guess && 'guess', pin.id === selected && 'on'].filter(Boolean).join(' ');
-			L.marker([pin.lat, pin.lng], {
+			const marker = L.marker([pin.lat, pin.lng], {
 				icon: L.divIcon({ className: 'pin-anchor', html: `<span class="${classes}">${pin.label ? plain(pin.label) : ''}</span>`, iconSize: [0, 0] }),
 				title: pin.title,
 				alt: pin.title,
@@ -84,15 +117,18 @@
 			})
 				.on('click', () => onpick?.(pin.id))
 				.addTo(layer);
+			if (pin.label && pin.cents != null) priced.push({ marker, cents: pin.cents, id: pin.id, label: pin.label });
 		}
 
 		// frame the pins once per set of pins, not on every selection
 		const points = [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(you ? [[you.lat, you.lng] as [number, number]] : [])];
 		const key = points.map((p) => p.join()).join('|');
-		if (key === framed || !points.length) return;
-		framed = key;
-		if (points.length === 1) map.setView(points[0], 14, { animate: false });
-		else map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15, animate: false });
+		if (key !== framed && points.length) {
+			framed = key;
+			if (points.length === 1) map.setView(points[0], 14, { animate: false });
+			else map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15, animate: false });
+		}
+		spread();
 	});
 </script>
 
@@ -221,6 +257,10 @@
 	}
 
 	/* a guessed branch: dashed edge, so it never reads as certain */
+	.store-map :global(.price-pin.merged-cheapest b) {
+		color: var(--color-cheaper);
+	}
+
 	.store-map :global(.price-pin.guess) {
 		outline: 2px dashed rgb(60 60 67 / 0.6);
 		outline-offset: 2.5px;
