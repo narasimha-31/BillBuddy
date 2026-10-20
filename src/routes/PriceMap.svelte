@@ -151,15 +151,15 @@
 		</div>
 	</div>
 {:else}
-	{#if cheapestPaid && history.stores.length > 1}
+	{#if cheapestPaid && history.stores.length > 1 && cheapestPaid.unitCents < history.last.unitCents}
 		<div class="answers">
 			{@render answer('Lowest you’ve paid', storeName(cheapestPaid.store) ?? 'Unknown store', '', cheapestPaid.unitCents, cheapestPaid.date, null)}
 		</div>
 	{/if}
-	<!-- locked: a picture of a map, never a real one, until the shopper turns it on -->
-	<div class="locked">
-		<div class="picture" aria-hidden="true"></div>
-		{#if opening}
+	<!-- locked: one quiet line; the picture of a map, never a real one, only once they ask -->
+	{#if opening}
+		<div class="locked">
+			<div class="picture" aria-hidden="true"></div>
 			<div class="sheet" transition:slide={{ duration: still ? 0 : 260 }}>
 				<p class="title">Where you paid what</p>
 				{#if demo}
@@ -182,15 +182,13 @@
 					<MapUnlock ondone={() => (opening = false)} />
 				{/if}
 			</div>
-		{:else}
-			<div class="ask">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>
-				<p class="title">See your stores on a map</p>
-				<p class="sub">Each branch with what you paid there, and which is nearest.</p>
-				<button type="button" class="pill-button" onclick={() => (opening = true)}>Show my stores on a map</button>
-			</div>
-		{/if}
-	</div>
+		</div>
+	{:else}
+		<p class="offer">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z M9 4v13.5 M15 6.5V20" /></svg>
+			<button type="button" class="link" onclick={() => (opening = true)}>See your stores on a map</button>
+		</p>
+	{/if}
 {/if}
 
 <style>
@@ -427,20 +425,10 @@
 		transform: scale(1.04);
 	}
 
-	.ask,
 	.sheet {
 		position: relative;
 		display: grid;
-		justify-items: center;
 		gap: 0.35rem;
-		padding: 1.75rem 1.25rem 1.5rem;
-		text-align: center;
-		background: radial-gradient(closest-side, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.6) 70%, transparent);
-	}
-
-	.sheet {
-		justify-items: stretch;
-		text-align: left;
 		margin: 0.75rem;
 		border-radius: 14px;
 		background: rgb(255 255 255 / 0.94);
@@ -450,11 +438,19 @@
 		padding: 1rem 1.1rem 1.1rem;
 	}
 
-	.ask svg {
-		width: 1.6rem;
-		height: 1.6rem;
+	.offer {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin-top: 0.75rem;
+		font-size: 0.875rem;
+	}
+
+	.offer svg {
+		width: 1.1rem;
+		height: 1.1rem;
 		fill: none;
-		stroke: var(--color-ink);
+		stroke: var(--color-accent);
 		stroke-width: 1.7;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -465,16 +461,6 @@
 		font-size: 1.0625rem;
 		font-weight: 650;
 		letter-spacing: -0.01em;
-	}
-
-	.sub {
-		max-width: 30ch;
-		font-size: 0.875rem;
-		color: var(--color-muted);
-	}
-
-	.ask .pill-button {
-		margin-top: 0.6rem;
 	}
 
 	.pretend {
@@ -518,11 +504,6 @@
 
 		.frame {
 			height: 9rem;
-		}
-
-		.ask .pill-button {
-			align-self: stretch;
-			justify-self: stretch;
 		}
 	}
 </style>

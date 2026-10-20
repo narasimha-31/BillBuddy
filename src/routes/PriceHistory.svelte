@@ -68,8 +68,6 @@
 		<span>{history.per === 'lb' ? 'price per lb' : 'price each'}</span>
 	</header>
 
-	{#if map}<div class="map-slot">{@render map()}</div>{/if}
-
 	<div class="last">
 		<p class="label">You paid last time</p>
 		<p class="big">{money(history.last.unitCents)}<small>{per}</small></p>
@@ -92,6 +90,8 @@
 			</p>
 		{/if}
 	</div>
+
+	{#if map}<div class="map-slot">{@render map()}</div>{/if}
 
 	<div class="part">
 		<div class="list-head">
@@ -478,21 +478,8 @@
 		transition: transform var(--standard) var(--ease);
 	}
 
-	/* on a phone the price answers first and the map follows it */
-	@media (max-width: 640px) {
-		.card {
-			display: flex;
-			flex-direction: column;
-		}
-
-		.map-slot {
-			order: 1;
-			margin-bottom: 0.5rem;
-		}
-
-		.part {
-			order: 2;
-		}
+	.map-slot {
+		margin-bottom: 0.5rem;
 	}
 
 	@media (max-width: 480px) {
