@@ -128,12 +128,13 @@
 									<span class="row-value">{cents(receipt.totalCents)}</span>
 									<span class="row-sub">{shortDay(receipt.date)}{receipt.via ? ` · ${receipt.via} delivery` : ''}</span>
 								</summary>
+								<p class="count">{receipt.lines.length} items</p>
 								<ul class="lines">
 									{#each receipt.lines as line (line.raw)}
 										<li>
-											<span class="printed">{line.raw}</span>
 											<span class="named">{line.name}</span>
 											<span class="price">{cents(line.totalCents)}</span>
+											<span class="printed">{line.raw}</span>
 										</li>
 									{/each}
 								</ul>
@@ -452,33 +453,49 @@
 		outline-offset: -2px;
 	}
 
-	.lines {
-		display: grid;
-		gap: 0.7rem;
+	/* an open receipt sits on a grey band so its items read apart from the receipt rows */
+	.count {
 		margin: 0 1rem;
 		border-top: 1px solid rgb(60 60 67 / 0.14);
-		padding: 0.8rem 0 1rem;
+		padding: 0.7rem 0 0.35rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.lines {
+		margin: 0 0.75rem 0.75rem;
+		border-radius: 12px;
+		background: var(--color-raised);
+		padding: 0 0.85rem;
 	}
 
 	.lines li {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
-		column-gap: 0.75rem;
+		align-items: baseline;
+		gap: 0.15rem 0.75rem;
+		padding: 0.6rem 0;
 	}
 
-	.printed {
-		grid-column: 1 / -1;
-		font-size: 0.75rem;
-		letter-spacing: 0.02em;
-		color: var(--color-muted);
+	.lines li + li {
+		border-top: 1px solid rgb(60 60 67 / 0.12);
 	}
 
 	.named {
 		font-size: 0.9375rem;
+		color: var(--color-ink);
 	}
 
 	.lines .price {
 		font-size: 0.9375rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.printed {
+		grid-column: 1 / -1;
+		font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+		font-size: 0.75rem;
+		color: var(--color-muted);
 	}
 
 	.hint {
