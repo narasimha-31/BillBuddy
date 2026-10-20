@@ -462,23 +462,25 @@
 		color: var(--color-muted);
 	}
 
+	/* each item is its own white tile on the grey band */
 	.lines {
+		display: grid;
+		gap: 0.375rem;
 		margin: 0 0.75rem 0.75rem;
-		border-radius: 12px;
+		border-radius: 16px;
 		background: var(--color-raised);
-		padding: 0 0.85rem;
+		padding: 0.375rem;
 	}
 
 	.lines li {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: baseline;
-		gap: 0.15rem 0.75rem;
-		padding: 0.6rem 0;
-	}
-
-	.lines li + li {
-		border-top: 1px solid rgb(60 60 67 / 0.12);
+		gap: 0.2rem 0.75rem;
+		border-radius: 12px;
+		background: #fff;
+		box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.06);
+		padding: 0.65rem 0.8rem;
 	}
 
 	.named {
