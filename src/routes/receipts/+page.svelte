@@ -71,6 +71,18 @@
 	const from = $derived(page.url.searchParams.get('from'));
 	const to = $derived(page.url.searchParams.get('to'));
 	const inPeriod = $derived(from && to ? saved.filter((r) => r.purchased_on !== null && r.purchased_on >= from && r.purchased_on <= to) : saved);
+	const thisYear = String(new Date().getUTCFullYear());
+	// one chip per month that has receipts, newest first
+	const monthChips = $derived(
+		[...new Set(saved.map((r) => r.purchased_on?.slice(0, 7)).filter((m): m is string => !!m))]
+			.sort()
+			.reverse()
+			.map((m) => {
+				const end = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).toISOString().slice(0, 10);
+				return { from: `${m}-01`, to: end, label: new Date(`${m}-15T12:00:00Z`).toLocaleDateString('en-US', m.slice(0, 4) === thisYear ? { month: 'short', timeZone: 'UTC' } : { month: 'short', year: '2-digit', timeZone: 'UTC' }) };
+			})
+	);
+	const wholeMonth = $derived(monthChips.some((c) => c.from === from && c.to === to));
 	const keyed = $derived(inPeriod.map((receipt) => ({ receipt, key: storeKey(storeName(receipt.store)) })));
 	const shown = $derived.by(() => {
 		const wanted = storeKey(storeQuery);
@@ -133,6 +145,7 @@
 			<div class="upload surface">
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
 			</div>
+			<p class="privacy">Card details are never saved and photos are deleted once read. <a href="/privacy">Privacy</a></p>
 
 			{#if saved.length > 1}
 				<div class="find">
@@ -145,6 +158,14 @@
 							</button>
 						{/if}
 					</label>
+					{#if monthChips.length > 1}
+						<nav class="month-chips" aria-label="Month">
+							<a href="/receipts" aria-current={!from ? 'true' : undefined} data-sveltekit-replacestate data-sveltekit-noscroll>All</a>
+							{#each monthChips as chip (chip.from)}
+								<a href="/receipts?from={chip.from}&to={chip.to}" aria-current={from === chip.from && to === chip.to ? 'true' : undefined} data-sveltekit-replacestate data-sveltekit-noscroll>{chip.label}</a>
+							{/each}
+						</nav>
+					{/if}
 					{#if searching}
 						<p class="found" aria-live="polite">
 							{#if shown.length}
@@ -165,7 +186,7 @@
 				</div>
 			{/if}
 
-			{#if from && to}
+			{#if from && to && !wholeMonth}
 				<p class="period">
 					{shortDay(from)} – {shortDay(to)} · {shown.length} receipt{shown.length === 1 ? '' : 's'} · {money(shownCents)}
 					<a href="/receipts">Show all</a>
@@ -246,7 +267,7 @@
 										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
 										<span class="row-value">{money(receipt.total_cents)}</span>
 										<span class="row-sub"
-											>{shortDay(receipt.purchased_on)}{receipt.store_address ? ` · ${receipt.branch_guess ? 'probably ' : ''}${streetOf(receipt.store_address)}` : ''}{receipt.channel === 'delivery' ? ' · Delivery' : ''}{#if receipt.toCheck}<span class="to-check">{` · ${receipt.toCheck} to check`}</span>{/if}</span
+											>{shortDay(receipt.purchased_on)}{receipt.items ? ` · ${receipt.items} item${receipt.items === 1 ? '' : 's'}` : ''}{receipt.store_address ? ` · ${receipt.branch_guess ? 'probably ' : ''}${streetOf(receipt.store_address)}` : ''}{receipt.channel === 'delivery' ? ' · Delivery' : ''}{#if receipt.toCheck}<span class="to-check">{` · ${receipt.toCheck} to check`}</span>{/if}</span
 										>
 									</a>
 								</li>
@@ -259,8 +280,8 @@
 
 		<aside>
 			<div class="card surface for-wide phone">
-				<h2>Use your phone</h2>
 				{#if phone}
+					<h2>Snap with your phone</h2>
 					<div class="code">
 						<div class="qr" role="img" aria-label="QR code for adding receipts from your phone">{@html phone.qr}</div>
 						<div>
@@ -270,31 +291,22 @@
 						</div>
 					</div>
 				{:else}
-					<p>
-						{phoneExpired
-							? 'That code has expired. Make a new one any time.'
-							: 'Snap receipts with your phone and they show up here.'}
-					</p>
-					<button class="pill-button" onclick={showPhoneCode}>Show a code</button>
+					<div class="phone-row">
+						<span>{phoneExpired ? 'That code expired' : 'Snap with your phone'}</span>
+						<button class="link" onclick={showPhoneCode}>{phoneExpired ? 'New code' : 'Show a code'}</button>
+					</div>
 				{/if}
 			</div>
-			<div class="card surface">
-				<h2>Good photo, good reading</h2>
-				<ul>
-					<li>Lay it flat in good light.</li>
-					<li>Fit the whole receipt in the frame.</li>
-					<li>Smooth out folds, they hide prices.</li>
-				</ul>
-			</div>
-			<div class="card surface">
-				<h2>Your privacy</h2>
-				<ul>
-					<li>Card details are never saved.</li>
-					<li>Photos are deleted once read.</li>
-					<li>Location is removed on your device.</li>
-				</ul>
-				<a href="/privacy" class="link">How we handle your receipts</a>
-			</div>
+			{#if saved.length < 3}
+				<div class="card surface">
+					<h2>Good photo, good reading</h2>
+					<ul>
+						<li>Lay it flat in good light.</li>
+						<li>Fit the whole receipt in the frame.</li>
+						<li>Smooth out folds, they hide prices.</li>
+					</ul>
+				</div>
+			{/if}
 		</aside>
 	</div>
 </AppShell>
@@ -357,7 +369,8 @@
 		transition-duration: var(--quick);
 	}
 
-	.branch-chips button:focus-visible {
+	.branch-chips button:focus-visible,
+	.month-chips a:focus-visible {
 		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
@@ -531,8 +544,68 @@
 		color: var(--color-muted);
 	}
 
-	.phone .pill-button {
-		margin-top: 0.9rem;
+	.phone-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		color: var(--color-ink);
+	}
+
+	.phone-row .link {
+		margin-top: 0;
+	}
+
+	.privacy {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.privacy a {
+		color: var(--color-accent);
+	}
+
+	/* months that have receipts; a row that scrolls sideways on a phone */
+	.month-chips {
+		contain: inline-size;
+		display: flex;
+		gap: 0.4rem;
+		margin: 0.75rem -1rem 0;
+		overflow-x: auto;
+		padding: 0.1rem 1rem;
+		scrollbar-width: none;
+	}
+
+	.month-chips a {
+		flex: none;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0.4rem 0.85rem;
+		font-size: 0.875rem;
+		color: var(--color-ink);
+		-webkit-tap-highlight-color: transparent;
+		transition:
+			background-color var(--quick) var(--ease),
+			transform var(--standard) var(--ease);
+	}
+
+	.month-chips a:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.month-chips a[aria-current='true'] {
+		background: var(--color-ink);
+		color: #fff;
+	}
+
+	@media (pointer: coarse) {
+		.month-chips a {
+			padding-block: 0.65rem;
+		}
 	}
 
 	.code {
