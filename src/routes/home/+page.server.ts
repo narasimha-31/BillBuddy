@@ -3,7 +3,20 @@ import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { PageServerLoad } from './$types';
 
-type Change = { name: string; per: 'lb' | 'ea'; now_cents: number; before_cents: number; store: string | null; before_store: string | null; bought_on: string };
+type Change = {
+	name: string;
+	per: 'lb' | 'ea';
+	now_cents: number;
+	before_cents: number;
+	store: string | null;
+	before_store: string | null;
+	bought_on: string;
+	before_on: string;
+	now_receipt: string;
+	now_item: string;
+	before_receipt: string;
+	before_item: string;
+};
 type One<T> = T | T[] | null;
 
 const storeOf = (stores: One<{ name: string }>) => (Array.isArray(stores) ? stores[0]?.name : stores?.name) ?? null;

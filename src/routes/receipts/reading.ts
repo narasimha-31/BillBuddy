@@ -46,7 +46,7 @@ export function announce(id: string, outcome: Outcome) {
 		toast({
 			key: `read:${id}`,
 			kind: 'error',
-			text: `A receipt couldn't be read. ${outcome.note ?? ''}`.trim(),
+			text: `A receipt couldn't be read.${outcome.note && !outcome.note.startsWith('Try again') ? ` ${outcome.note}` : ''}`,
 			action: { label: 'Try again', run: async () => announce(id, await readReceipt(id)) }
 		});
 }

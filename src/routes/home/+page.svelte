@@ -5,6 +5,8 @@
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
+	import { slide } from 'svelte/transition';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
 
 	let { data } = $props();
@@ -47,6 +49,8 @@
 
 	const SHOWN_CHANGES = 3;
 	let allChanges = $state(false);
+	let opened = $state<string | null>(null);
+	const still = $derived(prefersReducedMotion.current);
 </script>
 
 <svelte:head>
@@ -121,14 +125,30 @@
 						<ul class="group">
 							{#each allChanges ? data.changes : data.changes.slice(0, SHOWN_CHANGES) as change (change.name)}
 								{@const diff = change.now_cents - change.before_cents}
+								{@const per = change.per === 'lb' ? '/lb' : ''}
+								{@const back = `from=${encodeURIComponent(change.name)}`}
 								<li>
-									<a class="row" href="/prices?item={encodeURIComponent(change.name)}">
+									<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
 										<span class="row-title">{change.name}</span>
-										<span class="row-value">{money(change.now_cents)}{change.per === 'lb' ? '/lb' : ''}</span>
+										<span class="row-value">{money(change.now_cents)}{per}</span>
 										<span class="row-sub move" class:up={diff > 0} class:down={diff < 0}>
 											<Trend up={diff > 0} />{money(change.before_cents)} at {storeName(change.before_store) ?? 'last time'} → {money(change.now_cents)} at {storeName(change.store) ?? 'an unknown store'} · {shortDay(change.bought_on)} · {diff > 0 ? 'up' : 'down'} {step(Math.abs(diff))}
 										</span>
-									</a>
+									</button>
+									{#if opened === change.name}
+										<!-- the two purchases behind the change, each opening the receipt line it came from -->
+										<div class="both" transition:slide={{ duration: still ? 0 : 200 }}>
+											<a href="/receipts/{change.now_receipt}?{back}#line-{change.now_item}">
+												<span>{shortDay(change.bought_on)} · {storeName(change.store) ?? 'Unknown store'}</span>
+												<span class="paid">{money(change.now_cents)}{per}</span>
+											</a>
+											<a href="/receipts/{change.before_receipt}?{back}#line-{change.before_item}">
+												<span>{shortDay(change.before_on)} · {storeName(change.before_store) ?? 'Unknown store'}</span>
+												<span class="paid">{money(change.before_cents)}{per}</span>
+											</a>
+											<a class="history" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
+										</div>
+									{/if}
 								</li>
 							{/each}
 						</ul>
@@ -445,6 +465,31 @@
 	.note {
 		margin-top: 0.6rem;
 		color: var(--color-muted);
+	}
+
+	.both {
+		display: grid;
+		margin: -0.25rem 1rem 0;
+		padding-bottom: 0.6rem;
+	}
+
+	.both a {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		min-height: 2.75rem;
+		align-items: center;
+		border-top: 1px solid rgb(60 60 67 / 0.1);
+		font-size: 0.875rem;
+		color: var(--color-ink);
+	}
+
+	.both .paid {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.both .history {
+		color: var(--color-accent);
 	}
 
 	.move {
