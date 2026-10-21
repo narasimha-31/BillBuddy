@@ -20,11 +20,17 @@
 
 	// a short swipe down puts it away, like a phone notification
 	let startY: number | null = null;
-	const down = (e: PointerEvent) => (startY = e.clientY);
-	const up = (e: PointerEvent) => {
-		if (current && startY !== null && e.clientY - startY > 24) dismiss(current.id);
-		startY = null;
+	const down = (e: PointerEvent) => {
+		startY = e.clientY;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	};
+	const move = (e: PointerEvent) => {
+		if (current && startY !== null && e.clientY - startY > 24) {
+			startY = null;
+			dismiss(current.id);
+		}
+	};
+	const up = () => (startY = null);
 
 	function act() {
 		if (!current) return;
@@ -46,7 +52,9 @@
 				onpointerenter={() => (held = true)}
 				onpointerleave={() => (held = false)}
 				onpointerdown={down}
+				onpointermove={move}
 				onpointerup={up}
+				onpointercancel={up}
 			>
 				<span class="text">{current.text}</span>
 				{#if current.action?.href}

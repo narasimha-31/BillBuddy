@@ -8,6 +8,7 @@
 	import { slide } from 'svelte/transition';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
+	import { toast } from '../../toasts.svelte';
 
 	let { data } = $props();
 
@@ -34,13 +35,13 @@
 	async function readUnread() {
 		rereading = true;
 		try {
-			// a read that worked shows up in the lists; one that failed would vanish without a word
-			await Promise.all(
-				data.unread.map(async (id) => {
-					const outcome = await readReceipt(id);
-					if (outcome.state === 'failed' || outcome.state === 'paused') announce(id, outcome);
-				})
-			);
+			// a read that worked shows up in the lists; ones that failed would vanish without a word, so they are
+			// told in one popup, not one each
+			const outcomes = await Promise.all(data.unread.map(async (id) => ({ id, outcome: await readReceipt(id) })));
+			const failed = outcomes.filter(({ outcome }) => outcome.state === 'failed' || outcome.state === 'paused');
+			if (failed.length === 1) announce(failed[0].id, failed[0].outcome);
+			else if (failed.length > 1)
+				toast({ key: 'unread', kind: 'error', text: `${failed.length} receipts couldn't be read.`, action: { label: 'Try again', run: readUnread } });
 		} finally {
 			rereading = false;
 		}
