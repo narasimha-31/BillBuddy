@@ -563,10 +563,12 @@ describe('price changes', () => {
 		if (error) throw error;
 
 		const { data } = await yan.rpc('my_price_changes', { how_many: 5 });
-		expect(data).toEqual([
-			{ name: 'Ramen', per: 'ea', now_cents: 50, before_cents: 48, store: 'Fiesta', before_store: 'Parivar', bought_on: '2026-10-02' },
-			{ name: 'Okra', per: 'lb', now_cents: 297, before_cents: 299, store: 'Fiesta', before_store: 'Parivar', bought_on: '2026-10-02' }
+		const both = { bought_on: '2026-10-02', before_on: '2026-09-19', now_receipt: newer, before_receipt: older };
+		expect(data).toMatchObject([
+			{ name: 'Ramen', per: 'ea', now_cents: 50, before_cents: 48, store: 'Fiesta', before_store: 'Parivar', ...both },
+			{ name: 'Okra', per: 'lb', now_cents: 297, before_cents: 299, store: 'Fiesta', before_store: 'Parivar', ...both }
 		]);
+		expect(data).toHaveLength(2);
 		expect(((await alice.rpc('my_price_changes')).data ?? []).some((p: { name: string }) => p.name === 'Okra')).toBe(false);
 		const anon = createClient(url, publishable, noSession);
 		expect((await anon.rpc('my_price_changes')).error).not.toBeNull();
