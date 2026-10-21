@@ -5,6 +5,7 @@
 	import { money, shortDay, storeName } from '../../format';
 	import { keyMatches, storeKey } from '../../store-search';
 	import AppShell from '../AppShell.svelte';
+	import ConfirmButton from '../ConfirmButton.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { post, problems, readReceipt } from './reading';
 
@@ -240,7 +241,7 @@
 									<span class="row-title">Receipt photo</span>
 									<span class="row-value">
 										<form method="POST" action="/receipts/{receipt.id}?/delete">
-											<button class="remove" onclick={(e) => !confirm('Remove this receipt?') && e.preventDefault()}>Remove</button>
+											<ConfirmButton class="remove" question="Remove this receipt?" yes="Remove">Remove</ConfirmButton>
 										</form>
 									</span>
 									<span class="row-sub">{problems[receipt.problem ?? ''] ?? 'It couldn’t be read.'}</span>
@@ -486,7 +487,7 @@
 		color: var(--color-accent);
 	}
 
-	.remove {
+	.row-value :global(.remove) {
 		font-size: 0.9375rem;
 		color: var(--color-up);
 	}

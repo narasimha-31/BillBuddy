@@ -9,6 +9,7 @@
 	import { money, storeName } from '../../../format';
 	import AisleIcon from '../../AisleIcon.svelte';
 	import AppShell from '../../AppShell.svelte';
+	import ConfirmButton from '../../ConfirmButton.svelte';
 	import StoreSheet from '../../StoreSheet.svelte';
 
 	let { data, form } = $props();
@@ -184,9 +185,7 @@
 				<div class="actions">
 					<button form="confirm" class="pill-button">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
 					<form method="POST" action="?/delete">
-						<button class="quiet" onclick={(e) => !confirm('Delete this receipt? This cannot be undone.') && e.preventDefault()}>
-							Delete receipt
-						</button>
+						<ConfirmButton class="quiet" question="Delete this receipt?" detail="Its prices go too. This can't be undone." yes="Delete">Delete receipt</ConfirmButton>
 					</form>
 				</div>
 			</section>
@@ -515,12 +514,12 @@
 		margin-top: 1.5rem;
 	}
 
-	.quiet {
+	.actions :global(.quiet) {
 		font-size: 0.9375rem;
 		color: var(--color-up);
 	}
 
-	.quiet:focus-visible {
+	.actions :global(.quiet:focus-visible) {
 		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
