@@ -5,7 +5,7 @@
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
-	import { changeLine, toneOf } from '../../price-change';
+	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
@@ -17,22 +17,25 @@
 
 	const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-	// one tap on a bar shows that period in the big number; a second tap goes back to this month
+	// one tap on a bar shows that period in the big number; a second tap goes back
 	let by = $state<'week' | 'month'>('month');
 	let picked = $state<number | null>(null);
 	const bars = $derived(spendBars(data.spend.rows, by, data.spend.today));
 	const tallest = $derived(Math.max(1, ...bars.map((b) => b.cents)));
 	const periodName = (bar: Bar) =>
 		by === 'month' ? new Date(`${bar.from}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }) : `Week of ${shortDay(bar.from)}`;
-	// the highlighted period is the picked bar, or else this month (or this week), always compared with the one before
-	const at = $derived(picked ?? bars.length - 1);
+	// without a pick the big number is the latest period with spending, so an empty week never leads with $0
+	const latest = $derived(bars.findLastIndex((b) => b.cents > 0));
+	const at = $derived(picked ?? (latest < 0 ? bars.length - 1 : latest));
+	const current = $derived(at === bars.length - 1);
 	const focus = $derived(bars[at]);
 	const before = $derived(at > 0 ? bars[at - 1] : null);
-	const delta = $derived(before && (focus.cents || before.cents) ? focus.cents - before.cents : null);
+	// spending nothing is not a saving, so an empty period gets no comparison
+	const delta = $derived(before && focus.cents ? focus.cents - before.cents : null);
 	const filled = $derived(bars.filter((b) => b.cents > 0));
 	const average = $derived(filled.length > 1 ? Math.round(filled.reduce((sum, b) => sum + b.cents, 0) / filled.length) : null);
-	const title = $derived(picked === null ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
-	const versus = $derived(picked === null ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
+	const title = $derived(current ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
+	const versus = $derived(current ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
 	const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 	const show = (next: 'week' | 'month') => {
 		by = next;
@@ -61,6 +64,16 @@
 	const WIDE_CHANGES = 6;
 	let allChanges = $state(false);
 	let opened = $state<string | null>(null);
+	// rises first, then where it is cheaper; one shared order so the phone and laptop limits still apply
+	const lines = $derived(data.changes.map((change) => ({ change, per: change.per === 'lb' ? '/lb' : '', line: changeLine(change, change.per === 'lb' ? '/lb' : '') })));
+	const rises = $derived(lines.filter((l) => l.line.tone === 'up'));
+	const shown = $derived([...rises, ...lines.filter((l) => l.line.tone === 'down')].slice(0, allChanges ? undefined : WIDE_CHANGES));
+	const groups = $derived(
+		[
+			{ label: 'Went up', from: 0, rows: shown.slice(0, rises.length) },
+			{ label: 'Cheaper', from: rises.length, rows: shown.slice(rises.length) }
+		].filter((g) => g.rows.length)
+	);
 	const still = $derived(prefersReducedMotion.current);
 </script>
 
@@ -105,7 +118,7 @@
 					{#if focus.receipts}
 						{plural(focus.receipts, 'receipt')}{#if focus.ids.length === 1}{' · '}<a href="/receipts/{focus.ids[0]}">Open it</a>{:else}{' · '}<a href="/receipts?from={focus.from}&to={focus.to}">See them</a>{/if}
 					{:else}
-						Nothing dated {picked === null ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
+						Nothing dated {current ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
 					{/if}
 				</p>
 				<ul class="bars" class:weeks={by === 'week'}>
@@ -137,43 +150,49 @@
 
 			<section class="changes" aria-labelledby="changes-title">
 				<div class="list-label-row">
-					<h2 class="list-label" id="changes-title">Prices since last time</h2>
+					<h2 class="list-label" id="changes-title">Your prices</h2>
 					{#if data.changes.length > SHOWN_CHANGES}
 						<button type="button" onclick={() => (allChanges = !allChanges)}>{allChanges ? 'Show fewer' : `Show all ${data.changes.length}`}</button>
 					{/if}
 				</div>
 				{#if data.changes.length}
 					<div class="scroll-area">
-						<ul class="group">
-							{#each allChanges ? data.changes : data.changes.slice(0, WIDE_CHANGES) as change, i (change.name)}
-								{@const per = change.per === 'lb' ? '/lb' : ''}
-								{@const line = changeLine(change, per)}
-								{@const back = `from=${encodeURIComponent(change.name)}`}
-								<li class:extra={!allChanges && i >= SHOWN_CHANGES}>
-									<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
-										<span class="row-title">{change.name}</span>
-										<span class="row-value">{money(change.now_cents)}{per}</span>
-										<span class="row-sub move" class:up={line.tone === 'up'} class:down={line.tone === 'down'}>
-											<Trend up={line.tone === 'up'} />{line.text}
-										</span>
-									</button>
-									{#if opened === change.name}
-										<!-- the last few purchases by date, lowest green and highest red, each opening its receipt line -->
-										<div class="history" transition:slide={{ duration: still ? 0 : 200 }}>
-											{#each change.history as paid (paid.item)}
-												{@const tone = toneOf(change.history, paid.cents)}
-												<a href="/receipts/{paid.receipt}?{back}#line-{paid.item}">
-													<span class="when">{shortDay(paid.on)}</span>
-													<span class="where">{storeName(paid.store) ?? 'Unknown store'}</span>
-													<span class="paid" class:up={tone === 'up'} class:down={tone === 'down'}>{money(paid.cents)}{per}</span>
-												</a>
-											{/each}
-											<a class="all" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
-										</div>
-									{/if}
-								</li>
-							{/each}
-						</ul>
+						{#each groups as group (group.label)}
+							<h3 class="group-label" class:extra={!allChanges && group.from >= SHOWN_CHANGES}>{group.label}</h3>
+							<ul class="group">
+								{#each group.rows as { change, per, line }, n (change.name)}
+									{@const back = `from=${encodeURIComponent(change.name)}`}
+									{@const elsewhere = change.store !== change.before_store}
+									<li class:extra={!allChanges && group.from + n >= SHOWN_CHANGES}>
+										<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
+											<span class="row-title">{change.name}</span>
+											<span class="row-value">
+												{money(change.now_cents)}{per}
+												{#if elsewhere}<span class="at">at {storeName(change.store) ?? 'last store'}</span>{/if}
+											</span>
+											<span class="row-sub move" class:up={line.tone === 'up'} class:down={line.tone === 'down'}>
+												<Trend up={line.tone === 'up'} />{line.text}
+											</span>
+										</button>
+										{#if opened === change.name}
+											<!-- the last few purchases by date, the lowest in green, each opening its receipt line -->
+											<div class="history" transition:slide={{ duration: still ? 0 : 200 }} onintroend={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' })}>
+												{#each change.history as paid (paid.item)}
+													{@const low = isLowest(change.history, paid.cents)}
+													{@const where = storeName(paid.store) ?? 'Unknown store'}
+													<a href="/receipts/{paid.receipt}?{back}#line-{paid.item}" aria-label="{shortDay(paid.on)}, {where}, {money(paid.cents)}{per}{low ? ', lowest' : ''}">
+														<span class="when">{shortDay(paid.on)}</span>
+														<span class="where">{where}</span>
+														<span class="paid" class:down={low}>{money(paid.cents)}{per}</span>
+													</a>
+												{/each}
+												<a class="all" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
+											</div>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/each}
 					</div>
 				{:else}
 					<p class="empty surface">Buy something twice and you’ll see here whether it got cheaper.</p>
@@ -567,6 +586,13 @@
 		padding-bottom: 0.5rem;
 	}
 
+	/* opening a low row scrolls it clear of the floating tab bar */
+	@media (max-width: 640px) {
+		.history {
+			scroll-margin-bottom: calc(6rem + env(safe-area-inset-bottom));
+		}
+	}
+
 	.history a {
 		display: grid;
 		grid-template-columns: 3.25rem minmax(0, 1fr) auto;
@@ -598,13 +624,31 @@
 		color: var(--color-cheaper);
 	}
 
-	.history .paid.up {
-		color: var(--color-up);
-	}
-
 	.history .all {
 		display: flex;
-		color: var(--color-accent);
+		color: var(--color-ink);
+		font-weight: 500;
+	}
+
+	.changes .row-value {
+		text-align: right;
+	}
+
+	.row-value .at {
+		display: block;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.group-label {
+		margin: 0 0 0.4rem 1rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-muted);
+	}
+
+	.group + .group-label {
+		margin-top: 1rem;
 	}
 
 	.move {

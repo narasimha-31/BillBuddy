@@ -126,7 +126,7 @@
 		border-radius: 999px;
 		padding: 0.45rem 0.6rem;
 		font-weight: 600;
-		color: #4ade80;
+		color: color-mix(in srgb, var(--color-accent) 40%, #fff);
 	}
 
 	.error a,

@@ -54,8 +54,15 @@
 	}
 
 	summary {
+		position: relative;
 		list-style: none;
 		border-radius: 999px;
+	}
+
+	summary::after {
+		content: '';
+		position: absolute;
+		inset: -4px;
 	}
 
 	summary::-webkit-details-marker {

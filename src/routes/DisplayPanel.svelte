@@ -42,6 +42,7 @@
 	}
 
 	summary {
+		position: relative;
 		display: grid;
 		place-items: center;
 		width: 2.25rem;
@@ -52,6 +53,12 @@
 		transition:
 			background-color var(--quick) var(--ease),
 			transform var(--standard) var(--ease);
+	}
+
+	summary::after {
+		content: '';
+		position: absolute;
+		inset: -4px;
 	}
 
 	summary::-webkit-details-marker {

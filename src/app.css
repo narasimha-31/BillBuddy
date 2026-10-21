@@ -282,7 +282,7 @@ button.row:focus-visible {
 	outline-offset: -2px;
 }
 
-/* a row that opens something ends in a chevron; one that opens in place points down when open */
+/* a row that opens a page ends in a chevron; one that opens in place points down, and up when open */
 a.row,
 button.row {
 	grid-template-columns: minmax(0, 1fr) auto 0.5rem;
@@ -300,8 +300,13 @@ button.row::after {
 	transform: rotate(45deg);
 }
 
-button.row[aria-expanded='true']::after {
+button.row[aria-expanded]::after {
 	transform: translateY(-2px) rotate(135deg);
+	transition: transform var(--standard) var(--ease);
+}
+
+button.row[aria-expanded='true']::after {
+	transform: translateY(2px) rotate(-45deg);
 }
 
 /* whole-pixel line heights keep every row an exact height, so the hairlines stay crisp */

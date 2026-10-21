@@ -428,8 +428,8 @@
 		position: absolute;
 		inset: 0 0 auto;
 		height: 2px;
-		background: #34c77b;
-		box-shadow: 0 0 10px 3px rgb(52 199 123 / 0.55);
+		background: color-mix(in srgb, var(--color-accent) 70%, #fff);
+		box-shadow: 0 0 10px 3px color-mix(in srgb, var(--color-accent) 50%, transparent);
 		animation: scan 1.8s ease-in-out infinite alternate;
 	}
 
