@@ -569,6 +569,12 @@ describe('price changes', () => {
 			{ name: 'Okra', per: 'lb', now_cents: 297, before_cents: 299, store: 'Fiesta', before_store: 'Parivar', ...both }
 		]);
 		expect(data).toHaveLength(2);
+		// the short history: newest first, undated purchases left out
+		expect(data![1].history.map((h: { on: string; cents: number }) => [h.on, h.cents])).toEqual([
+			['2026-10-02', 297],
+			['2026-09-19', 299],
+			['2026-09-01', 100]
+		]);
 		expect(((await alice.rpc('my_price_changes')).data ?? []).some((p: { name: string }) => p.name === 'Okra')).toBe(false);
 		const anon = createClient(url, publishable, noSession);
 		expect((await anon.rpc('my_price_changes')).error).not.toBeNull();

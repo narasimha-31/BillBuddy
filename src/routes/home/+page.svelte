@@ -5,6 +5,7 @@
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import { spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
+	import { changeLine, toneOf } from '../../price-change';
 	import { slide } from 'svelte/transition';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
@@ -14,7 +15,6 @@
 
 	const monthName = $derived(new Date(`${data.month.start}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }));
 
-	const step = (cents: number) => (cents < 100 ? `${cents}¢` : money(cents));
 	const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 	// one tap on a bar shows that period in the big number; a second tap goes back to this month
@@ -22,10 +22,18 @@
 	let picked = $state<number | null>(null);
 	const bars = $derived(spendBars(data.spend.rows, by, data.spend.today));
 	const tallest = $derived(Math.max(1, ...bars.map((b) => b.cents)));
-	const chosen = $derived(picked === null ? null : bars[picked]);
-	const lastMonth = $derived(spendBars(data.spend.rows, 'month', data.spend.today)[4].cents);
 	const periodName = (bar: Bar) =>
 		by === 'month' ? new Date(`${bar.from}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }) : `Week of ${shortDay(bar.from)}`;
+	// the highlighted period is the picked bar, or else this month (or this week), always compared with the one before
+	const at = $derived(picked ?? bars.length - 1);
+	const focus = $derived(bars[at]);
+	const before = $derived(at > 0 ? bars[at - 1] : null);
+	const delta = $derived(before && (focus.cents || before.cents) ? focus.cents - before.cents : null);
+	const filled = $derived(bars.filter((b) => b.cents > 0));
+	const average = $derived(filled.length > 1 ? Math.round(filled.reduce((sum, b) => sum + b.cents, 0) / filled.length) : null);
+	const title = $derived(picked === null ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
+	const versus = $derived(picked === null ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
+	const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 	const show = (next: 'week' | 'month') => {
 		by = next;
 		picked = null;
@@ -48,7 +56,9 @@
 		await invalidateAll();
 	}
 
+	// three on a phone; a laptop has room for six beside the spend card
 	const SHOWN_CHANGES = 3;
+	const WIDE_CHANGES = 6;
 	let allChanges = $state(false);
 	let opened = $state<string | null>(null);
 	const still = $derived(prefersReducedMotion.current);
@@ -76,18 +86,26 @@
 
 			<section class="month surface" aria-labelledby="month-title">
 				<div class="month-head">
-					<h2 id="month-title">{chosen ? periodName(chosen) : `Spent in ${monthName}`}</h2>
+					<h2 id="month-title" aria-live="polite">{title}</h2>
 					<div class="order" role="group" aria-label="Group spending by">
 						<button type="button" aria-pressed={by === 'week'} onclick={() => show('week')}>Weeks</button>
 						<button type="button" aria-pressed={by === 'month'} onclick={() => show('month')}>Months</button>
 					</div>
 				</div>
-				<p class="spent">{money(chosen ? chosen.cents : data.month.spentCents)}</p>
+				<div class="headline">
+					<p class="spent">{money(focus.cents)}</p>
+					{#if delta}
+						<!-- spending more is the red direction here -->
+						<p class="delta" class:up={delta > 0} class:down={delta < 0}>
+							<Trend up={delta > 0} />{dollars(Math.abs(delta))} {delta > 0 ? 'more' : 'less'} than {versus}
+						</p>
+					{/if}
+				</div>
 				<p class="note">
-					{#if chosen}
-						{plural(chosen.receipts, 'receipt')}{#if chosen.ids.length === 1}{' · '}<a href="/receipts/{chosen.ids[0]}">Open it</a>{:else if chosen.receipts}{' · '}<a href="/receipts?from={chosen.from}&to={chosen.to}">See them</a>{/if}
+					{#if focus.receipts}
+						{plural(focus.receipts, 'receipt')}{#if focus.ids.length === 1}{' · '}<a href="/receipts/{focus.ids[0]}">Open it</a>{:else}{' · '}<a href="/receipts?from={focus.from}&to={focus.to}">See them</a>{/if}
 					{:else}
-						{data.month.receipts ? `${plural(data.month.receipts, 'receipt')} at ${plural(data.month.stores, 'store')}` : 'Nothing dated this month yet'}{lastMonth ? ` · last month ${money(lastMonth)}` : ''}
+						Nothing dated {picked === null ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
 					{/if}
 				</p>
 				<ul class="bars" class:weeks={by === 'week'}>
@@ -95,20 +113,23 @@
 						<li>
 							<button
 								type="button"
-								class:on={i === (picked ?? bars.length - 1)}
+								class:on={i === at}
 								aria-pressed={picked === i}
 								aria-label="{periodName(bar)}: {money(bar.cents)}"
 								onclick={() => (picked = picked === i ? null : i)}
 							>
 								<span class="col">
-									{#if bar.cents}<span class="cap">${Math.round(bar.cents / 100)}</span>{/if}
+									{#if average}<span class="avg" style:--size={average / tallest} aria-hidden="true"></span>{/if}
+									{#if bar.cents}<span class="cap">{dollars(bar.cents)}</span>{/if}
 									<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
 								</span>
-								<span class="tick">{bar.label}</span>
+								<!-- eight dates don't fit under eight thin bars: empty weeks drop every other date -->
+								<span class="tick" class:hide={by === 'week' && !bar.cents && i !== at && i % 2 === 0}>{bar.label}</span>
 							</button>
 						</li>
 					{/each}
 				</ul>
+				{#if average}<p class="legend"><span aria-hidden="true"></span>Average {by === 'month' ? 'month' : 'week'} with receipts · {dollars(average)}</p>{/if}
 				{#if data.spend.undated}
 					<p class="undated">{plural(data.spend.undated, 'receipt')} with no date {data.spend.undated === 1 ? 'is' : 'are'} left out</p>
 				{/if}
@@ -124,30 +145,30 @@
 				{#if data.changes.length}
 					<div class="scroll-area">
 						<ul class="group">
-							{#each allChanges ? data.changes : data.changes.slice(0, SHOWN_CHANGES) as change (change.name)}
-								{@const diff = change.now_cents - change.before_cents}
+							{#each allChanges ? data.changes : data.changes.slice(0, WIDE_CHANGES) as change, i (change.name)}
 								{@const per = change.per === 'lb' ? '/lb' : ''}
+								{@const line = changeLine(change, per)}
 								{@const back = `from=${encodeURIComponent(change.name)}`}
-								<li>
+								<li class:extra={!allChanges && i >= SHOWN_CHANGES}>
 									<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
 										<span class="row-title">{change.name}</span>
 										<span class="row-value">{money(change.now_cents)}{per}</span>
-										<span class="row-sub move" class:up={diff > 0} class:down={diff < 0}>
-											<Trend up={diff > 0} />{money(change.before_cents)} at {storeName(change.before_store) ?? 'last time'} → {money(change.now_cents)} at {storeName(change.store) ?? 'an unknown store'} · {shortDay(change.bought_on)} · {diff > 0 ? 'up' : 'down'} {step(Math.abs(diff))}
+										<span class="row-sub move" class:up={line.tone === 'up'} class:down={line.tone === 'down'}>
+											<Trend up={line.tone === 'up'} />{line.text}
 										</span>
 									</button>
 									{#if opened === change.name}
-										<!-- the two purchases behind the change, each opening the receipt line it came from -->
-										<div class="both" transition:slide={{ duration: still ? 0 : 200 }}>
-											<a href="/receipts/{change.now_receipt}?{back}#line-{change.now_item}">
-												<span>{shortDay(change.bought_on)} · {storeName(change.store) ?? 'Unknown store'}</span>
-												<span class="paid">{money(change.now_cents)}{per}</span>
-											</a>
-											<a href="/receipts/{change.before_receipt}?{back}#line-{change.before_item}">
-												<span>{shortDay(change.before_on)} · {storeName(change.before_store) ?? 'Unknown store'}</span>
-												<span class="paid">{money(change.before_cents)}{per}</span>
-											</a>
-											<a class="history" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
+										<!-- the last few purchases by date, lowest green and highest red, each opening its receipt line -->
+										<div class="history" transition:slide={{ duration: still ? 0 : 200 }}>
+											{#each change.history as paid (paid.item)}
+												{@const tone = toneOf(change.history, paid.cents)}
+												<a href="/receipts/{paid.receipt}?{back}#line-{paid.item}">
+													<span class="when">{shortDay(paid.on)}</span>
+													<span class="where">{storeName(paid.store) ?? 'Unknown store'}</span>
+													<span class="paid" class:up={tone === 'up'} class:down={tone === 'down'}>{money(paid.cents)}{per}</span>
+												</a>
+											{/each}
+											<a class="all" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
 										</div>
 									{/if}
 								</li>
@@ -301,7 +322,9 @@
 		padding: 2px;
 	}
 
+	/* a 44px reach for the thumb without a bigger look */
 	.order button {
+		position: relative;
 		border-radius: 7px;
 		padding: 0.25rem 0.7rem;
 		font-size: 0.8125rem;
@@ -310,6 +333,12 @@
 		transition:
 			background-color var(--quick) var(--ease),
 			box-shadow var(--quick) var(--ease);
+	}
+
+	.order button::after {
+		content: '';
+		position: absolute;
+		inset: -8px 0;
 	}
 
 	.order button[aria-pressed='true'] {
@@ -349,9 +378,18 @@
 		flex-direction: column;
 		justify-content: flex-end;
 		align-items: center;
+		position: relative;
 		width: calc(100% + 0.3rem);
 		height: 5.75rem;
 		border-bottom: 1px solid rgb(60 60 67 / 0.18);
+	}
+
+	/* the average runs across every column as one dashed line */
+	.avg {
+		position: absolute;
+		inset: auto 0 calc(4.5rem * var(--size));
+		border-top: 1.5px dashed rgb(60 60 67 / 0.4);
+		pointer-events: none;
 	}
 
 	.bar {
@@ -380,8 +418,9 @@
 		transition-duration: var(--quick);
 	}
 
+	/* the period in the big number stands out in ink; green and red stay for cheaper and more */
 	.bars .on .bar {
-		background: var(--color-accent);
+		background: var(--color-ink);
 	}
 
 	/* every amount is readable without a tap; the highlighted one is bold */
@@ -415,8 +454,11 @@
 		color: var(--color-muted);
 	}
 
-	/* eight dates don't fit under eight thin bars: every other one; the heading names a picked week */
-	.weeks li:nth-child(odd) .tick {
+	.weeks .tick {
+		font-size: 0.6875rem;
+	}
+
+	.tick.hide {
 		visibility: hidden;
 	}
 
@@ -453,10 +495,51 @@
 		color: var(--color-muted);
 	}
 
-	.spent {
+	.headline {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem 0.75rem;
 		margin-top: 0.35rem;
+	}
+
+	.delta {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		border-radius: 999px;
+		padding: 0.25rem 0.65rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+	}
+
+	.delta.up {
+		background: color-mix(in srgb, var(--color-up) 10%, transparent);
+		color: var(--color-up);
+	}
+
+	.delta.down {
+		background: color-mix(in srgb, var(--color-cheaper) 10%, transparent);
+		color: var(--color-cheaper);
+	}
+
+	.legend {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin-top: 0.7rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.legend span {
+		width: 1.1rem;
+		border-top: 1.5px dashed rgb(60 60 67 / 0.4);
+	}
+
+	.spent {
 		font-family: var(--font-display);
-		font-size: clamp(2.5rem, 4vw, 3.25rem);
+		font-size: 3rem;
 		font-weight: 700;
 		letter-spacing: -0.03em;
 		line-height: 1;
@@ -468,28 +551,59 @@
 		color: var(--color-muted);
 	}
 
-	.both {
-		display: grid;
-		margin: -0.25rem 1rem 0;
-		padding-bottom: 0.6rem;
+	.extra {
+		display: none;
 	}
 
-	.both a {
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		min-height: 2.75rem;
+	@media (min-width: 1024px) {
+		.extra {
+			display: block;
+		}
+	}
+
+	.history {
+		display: grid;
+		margin: -0.25rem 1rem 0;
+		padding-bottom: 0.5rem;
+	}
+
+	.history a {
+		display: grid;
+		grid-template-columns: 3.25rem minmax(0, 1fr) auto;
 		align-items: center;
+		gap: 0.75rem;
+		min-height: 2.75rem;
 		border-top: 1px solid rgb(60 60 67 / 0.1);
 		font-size: 0.875rem;
 		color: var(--color-ink);
 	}
 
-	.both .paid {
+	.history .when {
+		font-variant-numeric: tabular-nums;
+		color: var(--color-muted);
+	}
+
+	.history .where {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.history .paid {
 		font-variant-numeric: tabular-nums;
 	}
 
-	.both .history {
+	.history .paid.down {
+		font-weight: 600;
+		color: var(--color-cheaper);
+	}
+
+	.history .paid.up {
+		color: var(--color-up);
+	}
+
+	.history .all {
+		display: flex;
 		color: var(--color-accent);
 	}
 

@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { PageServerLoad } from './$types';
+import type { Paid } from '../../price-change';
 
 type Change = {
 	name: string;
@@ -16,6 +17,7 @@ type Change = {
 	now_item: string;
 	before_receipt: string;
 	before_item: string;
+	history: Paid[];
 };
 type One<T> = T | T[] | null;
 

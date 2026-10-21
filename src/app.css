@@ -209,8 +209,17 @@ body {
 
 .list-label-row a,
 .list-label-row button {
+	position: relative;
 	font-size: 0.9375rem;
 	color: var(--color-accent);
+}
+
+/* small header links still get a 44px reach */
+.list-label-row a::after,
+.list-label-row button::after {
+	content: '';
+	position: absolute;
+	inset: -11px -8px;
 }
 
 .group {
