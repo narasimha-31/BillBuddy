@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { clearToasts } from '../toasts.svelte';
+	import { page } from '$app/state';
 
 	let { firstName }: { firstName: string | null } = $props();
 
@@ -15,7 +16,8 @@
 <svelte:window onclick={closeOutside} />
 
 <div class="account">
-	{#if firstName}<span class="hello">Hi {firstName}</span>{/if}
+	<!-- Home already greets in its title -->
+	{#if firstName && page.url.pathname !== '/home'}<span class="hello">Hi {firstName}</span>{/if}
 	<details bind:this={menu}>
 		<summary aria-label="Account menu">
 			<span class="initial">{initial}</span>

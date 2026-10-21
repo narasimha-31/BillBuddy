@@ -33,7 +33,8 @@
 	// spending nothing is not a saving, so an empty period gets no comparison
 	const delta = $derived(before && focus.cents ? focus.cents - before.cents : null);
 	const filled = $derived(bars.filter((b) => b.cents > 0));
-	const average = $derived(filled.length > 1 ? Math.round(filled.reduce((sum, b) => sum + b.cents, 0) / filled.length) : null);
+	// with two periods or fewer the line only repeats the bar tops
+	const average = $derived(filled.length > 2 ? Math.round(filled.reduce((sum, b) => sum + b.cents, 0) / filled.length) : null);
 	const title = $derived(current ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
 	const versus = $derived(current ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
 	const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
@@ -105,7 +106,7 @@
 						<button type="button" aria-pressed={by === 'month'} onclick={() => show('month')}>Months</button>
 					</div>
 				</div>
-				<div class="headline">
+				<div class="headline" aria-live="polite">
 					<p class="spent">{money(focus.cents)}</p>
 					{#if delta}
 						<!-- spending more is the red direction here -->
@@ -136,13 +137,13 @@
 									{#if bar.cents}<span class="cap">{dollars(bar.cents)}</span>{/if}
 									<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
 								</span>
-								<!-- eight dates don't fit under eight thin bars: empty weeks drop every other date -->
-								<span class="tick" class:hide={by === 'week' && !bar.cents && i !== at && i % 2 === 0}>{bar.label}</span>
+								<!-- only weeks with spending, the highlighted one and both ends are dated, so eight thin bars never crowd -->
+								<span class="tick" class:hide={by === 'week' && !bar.cents && i !== at && i !== 0 && i !== bars.length - 1}>{bar.label}</span>
 							</button>
 						</li>
 					{/each}
 				</ul>
-				{#if average}<p class="legend"><span aria-hidden="true"></span>Average {by === 'month' ? 'month' : 'week'} with receipts · {dollars(average)}</p>{/if}
+				{#if average}<p class="legend"><span aria-hidden="true"></span>Average of {by === 'month' ? 'months' : 'weeks'} you shopped · {dollars(average)}</p>{/if}
 				{#if data.spend.undated}
 					<p class="undated">{plural(data.spend.undated, 'receipt')} with no date {data.spend.undated === 1 ? 'is' : 'are'} left out</p>
 				{/if}
@@ -407,7 +408,7 @@
 	.avg {
 		position: absolute;
 		inset: auto 0 calc(4.5rem * var(--size));
-		border-top: 1.5px dashed rgb(60 60 67 / 0.4);
+		border-top: 1.5px dashed rgb(60 60 67 / 0.6);
 		pointer-events: none;
 	}
 
@@ -442,6 +443,12 @@
 		background: var(--color-ink);
 	}
 
+	/* a picked empty period has no bar, so its baseline darkens instead */
+	.bars .on .col {
+		border-bottom-color: var(--color-ink);
+		box-shadow: 0 1px 0 var(--color-ink);
+	}
+
 	/* every amount is readable without a tap; the highlighted one is bold */
 	.cap {
 		margin-bottom: 0.25rem;
@@ -471,10 +478,6 @@
 		font-size: 0.75rem;
 		font-variant-numeric: tabular-nums;
 		color: var(--color-muted);
-	}
-
-	.weeks .tick {
-		font-size: 0.6875rem;
 	}
 
 	.tick.hide {
@@ -553,7 +556,7 @@
 
 	.legend span {
 		width: 1.1rem;
-		border-top: 1.5px dashed rgb(60 60 67 / 0.4);
+		border-top: 1.5px dashed rgb(60 60 67 / 0.6);
 	}
 
 	.spent {
