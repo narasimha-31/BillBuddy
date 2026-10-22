@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { clearToasts } from '../toasts.svelte';
-	import { page } from '$app/state';
 
 	let { firstName }: { firstName: string | null } = $props();
 
@@ -16,8 +15,6 @@
 <svelte:window onclick={closeOutside} />
 
 <div class="account">
-	<!-- Home already greets in its title; the space stays so the tabs never shift between pages -->
-	{#if firstName}<span class="hello" class:quiet={page.url.pathname === '/home'}>Hi {firstName}</span>{/if}
 	<details bind:this={menu}>
 		<summary aria-label="Account menu">
 			<span class="initial">{initial}</span>
@@ -39,18 +36,6 @@
 		font-size: 0.9rem;
 	}
 
-	.hello {
-		color: var(--color-ink);
-		white-space: nowrap;
-	}
-
-	/* the nav needs the room on phones; the initial still says whose account it is */
-	@media (max-width: 480px) {
-		.hello {
-			display: none;
-		}
-	}
-
 	details {
 		position: relative;
 	}
@@ -59,10 +44,6 @@
 		position: relative;
 		list-style: none;
 		border-radius: 999px;
-	}
-
-	.quiet {
-		visibility: hidden;
 	}
 
 	summary::after {
