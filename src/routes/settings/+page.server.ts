@@ -77,6 +77,14 @@ export const actions: Actions = {
 		return { display: chosen };
 	},
 
+	tour_again: async ({ locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+		const { error } = await locals.supabase.from('user_settings').upsert({ user_id: user.id, tour_seen: false, updated_at: new Date().toISOString() });
+		if (error) throw error;
+		redirect(303, '/home');
+	},
+
 	delete_account: async ({ request, locals, cookies }) => {
 		const user = await locals.getUser();
 		if (!user) return fail(401, { problem: 'signed out' });

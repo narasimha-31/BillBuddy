@@ -1,7 +1,7 @@
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { readingPaused } from '../../receipt-reader.server';
 import type { Paid } from '../../price-change';
 
@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const now = new Date();
 	// six whole months back covers both the month bars and the eight week bars
 	const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1)).toISOString().slice(0, 10);
-	const [recent, spend, undated, unread, changes, uploaded] = await Promise.all([
+	const [recent, spend, undated, unread, changes, uploaded, settings] = await Promise.all([
 		locals.supabase
 			.from('receipts')
 			.select('id, purchased_on, total_cents, channel, stores(name)')
@@ -46,9 +46,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).eq('status', 'saved').is('purchased_on', null),
 		locals.supabase.from('receipts').select('id, status, problem, processing_at').in('status', ['pending', 'processing', 'failed']),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
-		locals.supabase.rpc('my_upload_window')
+		locals.supabase.rpc('my_upload_window'),
+		locals.supabase.from('user_settings').select('tour_seen').maybeSingle()
 	]);
-	for (const answer of [recent, spend, undated, unread, changes, uploaded]) if (answer.error) throw answer.error;
+	for (const answer of [recent, spend, undated, unread, changes, uploaded, settings]) if (answer.error) throw answer.error;
 	// a read cut off mid-way frees up after two minutes, the same window the database uses
 	const stuck = (r: { status: string; problem: string | null; processing_at: string | null }) =>
 		r.status === 'pending' || (r.status === 'failed' && r.problem === 'error') || (r.status === 'processing' && (!r.processing_at || Date.now() - Date.parse(r.processing_at) > 120_000));
@@ -60,6 +61,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
 		paused: await paused,
+		tour: !settings.data?.tour_seen,
 		month: {
 			start: monthStart,
 			spentCents: monthRows.reduce((sum, r) => sum + (r.total_cents ?? 0), 0),
@@ -71,4 +73,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		changes: (changes.data ?? []) as Change[],
 		recent: (recent.data ?? []).map(({ stores, ...r }) => ({ ...r, store: storeOf(stores as One<{ name: string }>) }))
 	};
+};
+
+export const actions: Actions = {
+	// finished or skipped, the tour stays away on every device
+	tour_seen: async ({ locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401);
+		const { error } = await locals.supabase.from('user_settings').upsert({ user_id: user.id, tour_seen: true, updated_at: new Date().toISOString() });
+		if (error) throw error;
+	}
 };

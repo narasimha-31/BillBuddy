@@ -3,10 +3,12 @@
 	import AppShell from '../AppShell.svelte';
 	import Trend from '../Trend.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
+	import Tour from '../Tour.svelte';
 	import { spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
 	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
 	import { toast } from '../../toasts.svelte';
@@ -76,6 +78,24 @@
 		].filter((g) => g.rows.length)
 	);
 	const still = $derived(prefersReducedMotion.current);
+
+	// the first visit gets a short tour; finished or skipped, it is saved on the account
+	const TOUR = [
+		{ target: '.add', title: 'Add a receipt', text: 'Snap it, or drop a photo or PDF. Every line is read in about ten seconds.', icon: 'M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z' },
+		{ target: '.month', title: 'What you spent', text: 'Your total by week or month. Tap a bar to see those receipts.', icon: 'M5 20V11M10 20V5M15 20v-7M20 20V8M3 20h18' },
+		{ target: '.changes', title: 'Your prices', text: 'What went up, and where the same thing costs less. Tap one for every time you bought it.', icon: 'M7 7h.01M3 12V3h9l9 9-9 9z' },
+		{ target: 'nav[aria-label="Main"] a[href="/prices"]', title: 'Look anything up', text: 'Prices shows the last price of everything you buy, at every store, on a map.', icon: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3' }
+	];
+	let touring = $state(false);
+	onMount(() => {
+		if (!data.tour) return;
+		const start = setTimeout(() => (touring = true), 700);
+		return () => clearTimeout(start);
+	});
+	function endTour() {
+		touring = false;
+		fetch('/home?/tour_seen', { method: 'POST', body: new FormData(), headers: { 'x-sveltekit-action': 'true' } });
+	}
 </script>
 
 <svelte:head>
@@ -224,6 +244,8 @@
 				{/if}
 			</section>
 		</div>
+
+		{#if touring}<Tour stops={TOUR} onclose={endTour} />{/if}
 
 		<!-- on a phone Settings is otherwise only behind the avatar -->
 		<ul class="group settings">

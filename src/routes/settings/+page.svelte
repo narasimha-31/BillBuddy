@@ -97,6 +97,14 @@
 
 		<h2 class="list-label">Display</h2>
 		<DisplayChoices display={data.display} />
+
+		<ul class="group tour-again">
+			<li>
+				<form method="POST" action="?/tour_again">
+					<button class="row">Show the tour of Home again</button>
+				</form>
+			</li>
+		</ul>
 		</div>
 
 		<div class="column">
@@ -237,6 +245,10 @@
 
 	.delete-account {
 		margin-top: 1.75rem;
+	}
+
+	.tour-again {
+		margin-top: 1rem;
 	}
 
 	.delete-account summary {
