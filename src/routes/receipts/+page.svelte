@@ -144,7 +144,7 @@
 			<h1 class="large-title">Receipts</h1>
 
 			<div class="upload surface">
-				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} onreading={busy} />
+				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} onreading={busy} />
 			</div>
 			<p class="privacy">Card details are never saved and photos are deleted once read. <a href="/privacy">Privacy</a></p>
 

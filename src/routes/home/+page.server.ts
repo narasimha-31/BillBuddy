@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { PageServerLoad } from './$types';
+import { readingPaused } from '../../receipt-reader.server';
 import type { Paid } from '../../price-change';
 
 type Change = {
@@ -26,6 +27,7 @@ const storeOf = (stores: One<{ name: string }>) => (Array.isArray(stores) ? stor
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
+	const paused = readingPaused();
 
 	const today = new Date().toISOString().slice(0, 10);
 	const monthStart = `${today.slice(0, 7)}-01`;
@@ -57,6 +59,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
+		paused: await paused,
 		month: {
 			start: monthStart,
 			spentCents: monthRows.reduce((sum, r) => sum + (r.total_cents ?? 0), 0),

@@ -2,6 +2,7 @@ import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { renderSVG } from 'uqr';
 import { createPhoneLink } from '../../phone-link.server';
 import { processReceipt } from '../../process-receipt.server';
+import { readingPaused } from '../../receipt-reader.server';
 import { DAILY_RECEIPTS, savePhoto, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
@@ -9,6 +10,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
+	const paused = readingPaused();
 
 	const [list, uploaded] = await Promise.all([
 		locals.supabase
@@ -29,6 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
 		dailyLimit: DAILY_RECEIPTS,
+		paused: await paused,
 		receipts: list.data.map(({ stores, to_check, items, ...receipt }) => ({
 			...receipt,
 			toCheck: (to_check as { count: number }[])[0]?.count ?? 0,

@@ -8,8 +8,9 @@
 	let {
 		uploads,
 		dailyLimit,
+		paused = false,
 		onreading
-	}: { uploads: { used: number; freesAt: string | null }; dailyLimit: number; onreading?: (id: string, busy: boolean) => void } = $props();
+	}: { uploads: { used: number; freesAt: string | null }; dailyLimit: number; paused?: boolean; onreading?: (id: string, busy: boolean) => void } = $props();
 
 	// the time is shown in the browser's own timezone, so it is only written once the page is running there
 	let opensAt = $state('');
@@ -151,6 +152,9 @@
 			e.currentTarget.value = '';
 		}}
 	/>
+	{#if paused}
+		<p class="paused" role="status">Reading is paused for a few minutes. Photos you add are kept to read later.</p>
+	{/if}
 	<p class="limits">
 		{uploads.used} of {dailyLimit} receipts in the last 24 hours.
 		{opensAt ? `The next one opens ${opensAt}.` : 'Photos and PDFs up to 5 MB.'}
@@ -376,6 +380,15 @@
 		font-size: 0.9375rem;
 		font-weight: 500;
 		color: #fff;
+	}
+
+	.paused {
+		margin-top: 0.6rem;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--color-up) 8%, transparent);
+		padding: 0.5rem 0.75rem;
+		font-size: 0.875rem;
+		color: var(--color-ink);
 	}
 
 	.limits {

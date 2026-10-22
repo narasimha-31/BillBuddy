@@ -74,6 +74,9 @@ export function base64(bytes: Uint8Array) {
 
 export type VisionRole = 'vision' | 'visionBackup';
 
+// both readers failed in the last few minutes, so a new photo would only wait
+export const readingPaused = async () => (await Promise.all((['vision', 'visionBackup'] as const).map((role) => recentlyFailed(role)))).every(Boolean);
+
 // Qwen reads receipts for under half a cent; when it is down or slow the backup gets one try.
 // A model that just failed is skipped, and when every model just failed (Token Factory itself is
 // down) the read stops at once without calling anyone: the receipt waits and nothing loops.

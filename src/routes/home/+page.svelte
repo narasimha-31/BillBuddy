@@ -95,7 +95,7 @@
 
 		<div class="board">
 			<section class="add surface" aria-label="Add a receipt">
-				<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} />
+				<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
 			</section>
 
 			<section class="month surface" aria-labelledby="month-title">
