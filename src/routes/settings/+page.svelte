@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Settings · BillBuddy</title>
+	<title>Settings · Pricetrail</title>
 </svelte:head>
 
 <AppShell firstName={data.firstName}>
@@ -25,7 +25,7 @@
 		<div class="column">
 		<!-- a switch applies the moment it flips, as in iOS; without JavaScript the Save button does it -->
 		<form method="POST" action="?/save" use:enhance={() => async ({ update }) => update({ reset: false })}>
-			<h2 class="list-label">What BillBuddy keeps</h2>
+			<h2 class="list-label">What Pricetrail keeps</h2>
 			<ul class="group">
 				<li>
 					<label class="row">

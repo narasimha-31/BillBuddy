@@ -10,7 +10,7 @@ const admin = createClient(url, process.env.SUPABASE_SECRET_KEY!, noSession);
 const userIds: string[] = [];
 
 async function signedInUser(label: string): Promise<SupabaseClient> {
-	const email = `rls-${label}-${crypto.randomUUID()}@billbuddy.test`;
+	const email = `rls-${label}-${crypto.randomUUID()}@pricetrail.test`;
 	const created = await admin.auth.admin.createUser({ email, email_confirm: true });
 	if (created.error) throw created.error;
 	userIds.push(created.data.user.id);

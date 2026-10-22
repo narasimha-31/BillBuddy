@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-	<title>Add receipts · BillBuddy</title>
+	<title>Add receipts · Pricetrail</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

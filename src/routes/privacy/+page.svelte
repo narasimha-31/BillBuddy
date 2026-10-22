@@ -26,7 +26,7 @@
 </script>
 
 <svelte:head>
-	<title>Privacy · BillBuddy</title>
+	<title>Privacy · Pricetrail</title>
 </svelte:head>
 
 <div class="screen">

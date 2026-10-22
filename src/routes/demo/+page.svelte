@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Demo · BillBuddy</title>
+	<title>Demo · Pricetrail</title>
 </svelte:head>
 
 <div class="app">
@@ -142,7 +142,7 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="hint">Open one to see what was printed and the name BillBuddy gave it.</p>
+				<p class="hint">Open one to see what was printed and the name Pricetrail gave it.</p>
 			</section>
 		</div>
 	</main>

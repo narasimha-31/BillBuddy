@@ -99,7 +99,7 @@
 </script>
 
 <svelte:head>
-	<title>Home · BillBuddy</title>
+	<title>Home · Pricetrail</title>
 </svelte:head>
 
 <AppShell fit firstName={data.firstName}>

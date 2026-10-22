@@ -93,7 +93,7 @@ describe('applyNames', () => {
 	});
 
 	it('hides the text of lines that are not groceries', () => {
-		const named = applyNames(['BILLBUDDY SUCKS'], new Map(), answer([{ index: 0, name: 'BillBuddy sucks', brand: null, category: 'Other', flag: 'not_grocery' }]));
+		const named = applyNames(['PRICETRAIL SUCKS'], new Map(), answer([{ index: 0, name: 'Pricetrail sucks', brand: null, category: 'Other', flag: 'not_grocery' }]));
 		expect(named[0]).toEqual({ name: 'Not a grocery item', brand: null, category: 'Other', ...noSize, flag: 'not_grocery', from: 'ai' });
 	});
 

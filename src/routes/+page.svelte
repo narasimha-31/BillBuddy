@@ -61,8 +61,8 @@
 </script>
 
 <svelte:head>
-	<title>BillBuddy · Know what you paid last time</title>
-	<meta name="description" content="Snap any grocery receipt. BillBuddy remembers every price, at every store you shop." />
+	<title>Pricetrail · Know what you paid last time</title>
+	<meta name="description" content="Snap any grocery receipt. Pricetrail remembers every price, at every store you shop." />
 </svelte:head>
 
 <header class="bar">
@@ -78,7 +78,7 @@
 <main>
 	<section class="hero">
 		<h1>Know what you paid <span class="hl">last time.</span></h1>
-		<p class="lead">Snap any grocery receipt. BillBuddy remembers every price, at every store you shop.</p>
+		<p class="lead">Snap any grocery receipt. Pricetrail remembers every price, at every store you shop.</p>
 		{#if data.signInFailed}<p class="failed" role="alert">Sign-in didn’t go through. Try again.</p>{/if}
 		<div class="actions">
 			<GoogleButton />
