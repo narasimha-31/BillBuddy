@@ -2,18 +2,16 @@ import { fail, redirect } from '@sveltejs/kit';
 import { confirmsDelete, deleteAccount, removePhotos } from '../../delete-account.server';
 import { DISPLAY_COLUMNS, DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow, readDisplay, toRow } from '../../display';
 import { firstNameOf } from '../../session.server';
-import { mapState, myBranches, myStores, turnMapOff, turnMapOn } from '../../store-map.server';
+import { mapState, turnMapOff, turnMapOn } from '../../store-map.server';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const [settings, map, stores, branches] = await Promise.all([
+	const [settings, map] = await Promise.all([
 		locals.supabase.from('user_settings').select(`keep_photos, ${DISPLAY_COLUMNS}`).maybeSingle(),
-		mapState(locals.supabase),
-		myStores(locals.supabase),
-		myBranches(locals.supabase)
+		mapState(locals.supabase)
 	]);
 	if (settings.error) throw settings.error;
 
@@ -21,9 +19,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		firstName: firstNameOf(user),
 		email: user.email ?? null,
 		map,
-		stores: [...stores]
-			.sort((a, b) => b.visits - a.visits)
-			.map((store) => ({ ...store, branches: branches.filter((b) => b.storeId === store.id).length, guessed: branches.some((b) => b.storeId === store.id && b.guess) })),
 		keepPhotos: settings.data?.keep_photos ?? false,
 		display: fromRow(settings.data)
 	};

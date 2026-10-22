@@ -11,7 +11,6 @@
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
 	import ThemePicker from './ThemePicker.svelte';
-	import DisplayPanel from './DisplayPanel.svelte';
 	import Toaster from './Toaster.svelte';
 	import Wordmark from './Wordmark.svelte';
 
@@ -73,7 +72,6 @@
 				{/each}
 			</nav>
 			<div class="end">
-				<DisplayPanel />
 				<ThemePicker />
 				<AccountMenu {firstName} />
 			</div>

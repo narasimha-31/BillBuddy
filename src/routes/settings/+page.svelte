@@ -3,7 +3,6 @@
 	import AppShell from '../AppShell.svelte';
 	import DisplayChoices from '../DisplayChoices.svelte';
 	import MapUnlock from '../MapUnlock.svelte';
-	import { storeName } from '../../format';
 	import { clearToasts } from '../../toasts.svelte';
 
 	let { data, form } = $props();
@@ -79,21 +78,6 @@
 				<li class="inset"><MapUnlock button="Turn on the store map" /></li>
 			{/if}
 		</ul>
-
-		{#if data.map.on && data.stores.length}
-			<h2 class="list-label">Your stores</h2>
-			<ul class="group">
-				{#each data.stores as store (store.id)}
-					<li class="row">
-						<span class="row-title">{storeName(store.name)}</span>
-						<span class="row-sub">
-							{store.visits} {store.visits === 1 ? 'receipt' : 'receipts'} ·
-							{#if store.branches === 0}not on the map yet{:else if store.branches === 1}1 branch{:else}{store.branches} branches{/if}{store.guessed ? ' · some are guesses' : ''}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{/if}
 
 		<h2 class="list-label">Display</h2>
 		<DisplayChoices display={data.display} />
