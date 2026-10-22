@@ -24,8 +24,10 @@
 		const next = chosen;
 		// light to dark and back fades instead of flashing the whole screen at once
 		const swap = () => applyDisplay(next, document.documentElement);
-		if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(swap);
-		else swap();
+		if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return swap();
+		// marked so the fade is a plain one, not the page-to-page slide
+		document.documentElement.classList.add('look-swap');
+		document.startViewTransition(swap).finished.finally(() => document.documentElement.classList.remove('look-swap'));
 		requestAnimationFrame(() => form.requestSubmit());
 	}
 

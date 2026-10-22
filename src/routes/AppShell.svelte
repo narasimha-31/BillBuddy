@@ -1,13 +1,6 @@
-<script lang="ts" module>
-	// set by the page being left, read by the page arriving: only a tap between pages eases the new
-	// one in, never a first load or a refresh
-	let arrivedByTap = false;
-</script>
-
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
-	import { beforeNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
 	import ThemePicker from './ThemePicker.svelte';
@@ -28,11 +21,6 @@
 	const path = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	const selected = $derived(links.findIndex((link) => under(path, link.href)));
 
-	const entering = arrivedByTap;
-	arrivedByTap = false;
-	beforeNavigate(({ to }) => {
-		arrivedByTap = to?.route.id !== page.route.id;
-	});
 
 	// the pill starts where it belongs, and only slides once the page is on screen
 	let ready = $state(false);
@@ -77,7 +65,7 @@
 		</div>
 	</header>
 
-	<div class="page" class:entering>
+	<div class="page">
 		{@render children()}
 	</div>
 	<Toaster />
@@ -113,23 +101,8 @@
 	}
 
 	/* arriving by a tab: the page comes into focus rather than appearing, in under a quarter second */
-	.page.entering {
-		animation: page-in 240ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
-	}
-
-	@keyframes page-in {
-		from {
-			opacity: 0;
-			transform: translateY(6px);
-			filter: blur(3px);
-		}
-	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.page.entering {
-			animation: none;
-		}
-
 		nav.ready .pill,
 		nav a {
 			transition: none;
