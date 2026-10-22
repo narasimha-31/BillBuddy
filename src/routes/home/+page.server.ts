@@ -4,6 +4,7 @@ import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
 import { readingPaused } from '../../receipt-reader.server';
 import type { Paid } from '../../price-change';
+import { byAisle } from '../../spend';
 
 type Change = {
 	name: string;
@@ -42,7 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.order('purchased_on', { ascending: false, nullsFirst: false })
 			.order('created_at', { ascending: false })
 			.limit(5),
-		locals.supabase.from('receipts').select('id, purchased_on, total_cents, store_id').eq('status', 'saved').gte('purchased_on', since),
+		locals.supabase.from('receipts').select('id, purchased_on, total_cents, store_id, receipt_items(category, total_cents)').eq('status', 'saved').eq('receipt_items.kind', 'item').gte('purchased_on', since),
 		locals.supabase.from('receipts').select('id', { count: 'exact', head: true }).eq('status', 'saved').is('purchased_on', null),
 		locals.supabase.from('receipts').select('id, status, problem, processing_at').in('status', ['pending', 'processing', 'failed']),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
@@ -54,7 +55,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const stuck = (r: { status: string; problem: string | null; processing_at: string | null }) =>
 		r.status === 'pending' || (r.status === 'failed' && r.problem === 'error') || (r.status === 'processing' && (!r.processing_at || Date.now() - Date.parse(r.processing_at) > 120_000));
 
-	const spendRows = (spend.data ?? []) as { id: string; purchased_on: string; total_cents: number | null; store_id: string | null }[];
+	const spendRows = (spend.data ?? []) as { id: string; purchased_on: string; total_cents: number | null; store_id: string | null; receipt_items: { category: string | null; total_cents: number }[] }[];
 	const monthRows = spendRows.filter((r) => r.purchased_on >= monthStart);
 	return {
 		firstName: firstNameOf(user),
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			stores: new Set(monthRows.map((r) => r.store_id).filter(Boolean)).size
 		},
 		unread: (unread.data ?? []).filter(stuck).map((r) => r.id),
-		spend: { today, rows: spendRows.map(({ id, purchased_on, total_cents }) => ({ id, purchased_on, total_cents })), undated: undated.count ?? 0 },
+		spend: { today, rows: spendRows.map(({ id, purchased_on, total_cents, receipt_items }) => ({ id, purchased_on, total_cents, aisles: byAisle(receipt_items) })), undated: undated.count ?? 0 },
 		changes: (changes.data ?? []) as Change[],
 		recent: (recent.data ?? []).map(({ stores, ...r }) => ({ ...r, store: storeOf(stores as One<{ name: string }>) }))
 	};

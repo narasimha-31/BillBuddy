@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { spendBars } from './spend';
+import { aisleSpend, byAisle, spendBars } from './spend';
 
 const rows = [
 	{ id: 'a', purchased_on: '2026-10-18', total_cents: 500 },
@@ -28,5 +28,21 @@ describe('spendBars', () => {
 
 	it('crosses a year in months', () => {
 		expect(spendBars([], 'month', '2027-02-10')[0]).toMatchObject({ from: '2026-09-01', label: 'Sep' });
+	});
+});
+
+describe('aisleSpend', () => {
+	it('sums the picked receipts by aisle, biggest first, and drops aisles that net to nothing', () => {
+		const rows = [
+			{ id: 'a', purchased_on: '2026-10-18', total_cents: 900, aisles: byAisle([{ category: 'Produce', total_cents: 300 }, { category: null, total_cents: 100 }, { category: 'Dairy & eggs', total_cents: 400 }]) },
+			{ id: 'b', purchased_on: '2026-10-19', total_cents: 600, aisles: { Produce: 250, Frozen: 0 } },
+			{ id: 'c', purchased_on: '2026-09-01', total_cents: 100, aisles: { Bakery: 999 } }
+		];
+		expect(aisleSpend(rows, ['a', 'b'])).toEqual([
+			{ aisle: 'Produce', cents: 550 },
+			{ aisle: 'Dairy & eggs', cents: 400 },
+			{ aisle: 'Other', cents: 100 }
+		]);
+		expect(aisleSpend(rows, [])).toEqual([]);
 	});
 });

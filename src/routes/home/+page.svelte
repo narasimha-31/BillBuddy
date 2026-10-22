@@ -4,7 +4,7 @@
 	import Trend from '../Trend.svelte';
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import Tour from '../Tour.svelte';
-	import { spendBars, type Bar } from '../../spend';
+	import { aisleSpend, spendBars, type Bar } from '../../spend';
 	import { invalidateAll } from '$app/navigation';
 	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
@@ -40,6 +40,13 @@
 	const title = $derived(current ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
 	const versus = $derived(current ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
 	const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
+	// the top four aisles of the period in the big number; the rest share one row
+	const aisles = $derived.by(() => {
+		const all = aisleSpend(data.spend.rows, focus.ids);
+		if (all.length <= 4) return all;
+		const rest = all.slice(3);
+		return [...all.slice(0, 3), { aisle: `${rest.length} more aisles`, cents: rest.reduce((sum, a) => sum + a.cents, 0) }];
+	});
 	const show = (next: 'week' | 'month') => {
 		by = next;
 		picked = null;
@@ -164,6 +171,18 @@
 					{/each}
 				</ul>
 				{#if average}<p class="legend"><span aria-hidden="true"></span>Average of {by === 'month' ? 'months' : 'weeks'} you shopped · {dollars(average)}</p>{/if}
+				{#if aisles.length}
+					<p class="aisles-label" id="aisles-label">By aisle, before tax</p>
+					<ul class="aisles" aria-labelledby="aisles-label">
+						{#each aisles as { aisle, cents } (aisle)}
+							<li>
+								<span class="aisle-name">{aisle}</span>
+								<span class="aisle-bar" style:--size={cents / Math.max(...aisles.map((a) => a.cents))} aria-hidden="true"></span>
+								<span class="aisle-cents">{dollars(cents)}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if data.spend.undated}
 					<p class="undated">{plural(data.spend.undated, 'receipt')} with no date {data.spend.undated === 1 ? 'is' : 'are'} left out</p>
 				{/if}
@@ -509,6 +528,44 @@
 	.on .tick {
 		font-weight: 600;
 		color: var(--color-ink);
+	}
+
+	.aisles {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.3rem 0.6rem;
+		margin-top: 0.4rem;
+		font-size: 0.8125rem;
+	}
+
+	.aisles-label {
+		margin-top: 0.9rem;
+		font-size: 0.75rem;
+		color: var(--color-muted);
+	}
+
+	.aisles li {
+		display: contents;
+	}
+
+	.aisle-name {
+		color: var(--color-ink);
+		white-space: nowrap;
+	}
+
+	.aisle-bar {
+		height: 6px;
+		width: calc(100% * var(--size));
+		min-width: 2px;
+		border-radius: 3px;
+		background: rgb(118 118 128 / 0.24);
+		transition: width var(--slow) var(--ease);
+	}
+
+	.aisle-cents {
+		font-variant-numeric: tabular-nums;
+		color: var(--color-muted);
 	}
 
 	.undated {
