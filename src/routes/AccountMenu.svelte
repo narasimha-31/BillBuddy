@@ -20,6 +20,7 @@
 			<span class="initial">{initial}</span>
 		</summary>
 		<div class="menu">
+			<a href="/list">My list</a>
 			<a href="/settings">Settings</a>
 			<form method="POST" action="/?/signout" onsubmit={clearToasts}>
 				<button>Sign out</button>
