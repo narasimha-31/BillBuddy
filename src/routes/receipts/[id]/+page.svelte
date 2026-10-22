@@ -541,6 +541,7 @@
 	}
 
 	.actions :global(.quiet) {
+		min-height: 2.75rem;
 		font-size: 0.9375rem;
 		color: var(--color-up);
 	}

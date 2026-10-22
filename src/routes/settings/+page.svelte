@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import AppShell from '../AppShell.svelte';
 	import DisplayChoices from '../DisplayChoices.svelte';
 	import MapUnlock from '../MapUnlock.svelte';
@@ -11,6 +12,17 @@
 	let keepPhotos = $derived(data.keepPhotos);
 	let typed = $state('');
 	let changingZip = $state(false);
+
+	// Safari fires change and then submit on Enter; the same amount goes out once
+	let sentBudget: FormDataEntryValue | null = null;
+	const saveBudget: SubmitFunction = ({ formData, cancel }) => {
+		if (formData.get('budget') === sentBudget) return cancel();
+		sentBudget = formData.get('budget');
+		return async ({ update, result }) => {
+			if (result.type !== 'success') sentBudget = null;
+			await update({ reset: false });
+		};
+	};
 </script>
 
 <svelte:head>
@@ -23,7 +35,7 @@
 
 		<div class="columns">
 		<div class="column">
-		<form method="POST" action="?/budget" use:enhance={() => async ({ update }) => update({ reset: false })}>
+		<form method="POST" action="?/budget" use:enhance={saveBudget}>
 			<h2 class="list-label">Budget</h2>
 			<ul class="group">
 				<li>

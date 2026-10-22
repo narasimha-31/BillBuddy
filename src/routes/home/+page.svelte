@@ -419,7 +419,15 @@
 	}
 
 	.note a {
+		position: relative;
 		color: var(--color-accent);
+	}
+
+	/* a 44px reach for the thumb without a bigger look */
+	.note a::after {
+		content: '';
+		position: absolute;
+		inset: -12px -8px;
 	}
 
 	.bars {

@@ -421,12 +421,20 @@
 
 	.clear {
 		display: grid;
+		position: relative;
 		flex: none;
 		place-items: center;
 		width: 1.25rem;
 		height: 1.25rem;
 		border-radius: 999px;
 		background: rgb(118 118 128 / 0.45);
+	}
+
+	/* a 44px reach for the thumb without a bigger look */
+	.clear::after {
+		content: '';
+		position: absolute;
+		inset: -12px;
 	}
 
 	.clear svg {

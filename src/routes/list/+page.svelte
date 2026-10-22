@@ -11,6 +11,13 @@
 	// the store that has the most of the list, at the lowest total
 	const best = $derived(data.stores[0]?.store ?? null);
 	const unit = (per: string | null) => (per === 'lb' ? '/lb' : '');
+	// Safari's suggestion list takes the Enter that matches it, so the form is sent here instead
+	let sent = false;
+	const enterSends = (e: KeyboardEvent) => {
+		if (e.key !== 'Enter') return;
+		sent = false;
+		setTimeout(() => !sent && field?.form?.requestSubmit());
+	};
 	const keepFocus = () => async ({ update }: { update: (o?: { reset?: boolean }) => Promise<void> }) => {
 		await update();
 		field?.focus();
@@ -25,8 +32,8 @@
 	<main>
 		<h1 class="large-title">My list</h1>
 
-		<form class="add" method="POST" action="?/add" use:enhance={keepFocus}>
-			<input name="name" aria-label="Add an item" bind:this={field} list="bought" placeholder="Add an item, like milk" autocomplete="off" maxlength="60" required />
+		<form class="add" method="POST" action="?/add" use:enhance={keepFocus} onsubmit={() => (sent = true)}>
+			<input name="name" aria-label="Add an item" bind:this={field} onkeydown={enterSends} list="bought" placeholder="Add an item, like milk" autocomplete="off" maxlength="60" required />
 			<datalist id="bought">
 				{#each data.names as name (name)}<option value={name}></option>{/each}
 			</datalist>
