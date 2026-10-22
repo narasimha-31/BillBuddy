@@ -27,9 +27,7 @@
 	const path = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	const selected = $derived(links.findIndex((link) => under(path, link.href)));
 
-	// The real page moves, never a frozen picture of it, so the tab pill keeps sliding throughout:
-	// the page being left dims the moment a tab is tapped, and the next one rises in when it lands.
-	const leaving = $derived(!!navigating.to && navigating.to.route.id !== page.route.id);
+	// the old page stays put until the next one has its data, which then rises in
 	const entering = arrivedByTap;
 	arrivedByTap = false;
 	beforeNavigate(({ to }) => {
@@ -78,7 +76,7 @@
 		</div>
 	</header>
 
-	<div class="page" class:leaving class:entering>
+	<div class="page" class:entering>
 		{@render children()}
 	</div>
 	<Toaster />
@@ -113,29 +111,19 @@
 		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
 	}
 
-	.page {
-		transition: opacity 120ms cubic-bezier(0.4, 0, 1, 1);
-	}
-
-	.page.leaving {
-		opacity: 0.35;
-	}
-
 	.page.entering {
-		animation: page-in 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation: page-in 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 	}
 
 	@keyframes page-in {
 		from {
-			opacity: 0.35;
-			transform: translateY(8px);
+			opacity: 0.6;
+			transform: translateY(6px);
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.page,
 		.page.entering {
-			transition: none;
 			animation: none;
 		}
 
