@@ -19,7 +19,15 @@
 	const steps = [
 		{ title: 'Snap the receipt.', text: 'Take a photo at the checkout or at home. It’s read in about ten seconds.' },
 		{ title: 'Every line, in plain words.', text: 'Store shorthand becomes the name you’d say out loud, with the price printed next to it.' },
-		{ title: 'Then see where it’s cheaper.', text: 'Every store you shop, side by side, with the nearest one and the one you use most.' }
+		{ title: 'Then see where it’s cheaper.', text: 'Every store you shop, side by side, with the nearest one and the one you use most.' },
+		{ title: 'Find it on the map.', text: 'Your stores on one map, each with what you paid there. Off until you turn it on.' }
+	];
+
+	// three of the sample stores as price tags on the street drawing; the cheapest is first
+	const pins = [
+		{ ...chicken[0], x: 66, y: 30 },
+		{ ...chicken[1], x: 27, y: 55 },
+		{ ...chicken[2], x: 74, y: 70 }
 	];
 
 	let active = $state(0);
@@ -86,7 +94,7 @@
 				<p class="sum"><span>Total</span><span>{money(linesCents / 100)}</span></p>
 			</div>
 		</div>
-	{:else}
+	{:else if step === 2}
 		<div class="app">
 			<p class="back">Prices</p>
 			<p class="title">Chicken breast</p>
@@ -108,8 +116,24 @@
 				<p>than at Walmart, your usual store.</p>
 			</div>
 		</div>
+	{:else}
+		<div class="app mapped">
+			<p class="back">Prices</p>
+			<p class="title">Chicken breast</p>
+			<div class="streets">
+				<img src="/images/street-map.webp" alt="" loading="lazy" />
+				<span class="you" style:left="44%" style:top="64%"></span>
+				{#each pins as pin, i (pin.store)}
+					<span class="tag-pin" class:best={i === 0} style:left="{pin.x}%" style:top="{pin.y}%">{money(pin.price)}</span>
+				{/each}
+			</div>
+			<div class="note">
+				<p class="save">{chicken[0].store} · 1.2 mi</p>
+				<p>Cheapest near you, {money(chicken[0].price)} a lb.</p>
+			</div>
+		</div>
 	{/if}
-	<div class="tabs" aria-hidden="true"><span>Home</span><span class:on={step < 2}>Receipts</span><span class:on={step === 2}>Prices</span></div>
+	<div class="tabs" aria-hidden="true"><span>Home</span><span class:on={step < 2}>Receipts</span><span class:on={step >= 2}>Prices</span></div>
 {/snippet}
 
 <section class="tour" aria-label="How BillBuddy works">
@@ -671,10 +695,95 @@
 		color: var(--color-accent);
 	}
 
+	.mapped {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.streets {
+		position: relative;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+		margin-top: 8px;
+		border-radius: 16px;
+		background: #ecebe6;
+	}
+
+	.streets img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.you {
+		position: absolute;
+		width: 12px;
+		height: 12px;
+		margin: -6px 0 0 -6px;
+		border: 2.5px solid #fff;
+		border-radius: 999px;
+		background: #0a84ff;
+		box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+	}
+
+	/* a price tag standing on its point, as on the real map */
+	.tag-pin {
+		position: absolute;
+		translate: -50% calc(-100% - 6px);
+		border-radius: 999px;
+		background: #fff;
+		padding: 3px 8px;
+		font-size: 12px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-ink);
+		box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+		transform-origin: 50% 100%;
+		transition:
+			scale 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 350ms,
+			background-color 300ms ease-out 350ms,
+			color 300ms ease-out 350ms;
+	}
+
+	.tag-pin::after {
+		content: '';
+		position: absolute;
+		top: 100%;
+		left: 50%;
+		margin-left: -5px;
+		border: 5px solid transparent;
+		border-top-color: #fff;
+		transition: border-top-color 300ms ease-out 350ms;
+	}
+
+	/* when the map step arrives, the cheapest tag grows and turns green */
+	.on .tag-pin.best {
+		z-index: 1;
+		scale: 1.18;
+		background: var(--color-cheaper);
+		color: #fff;
+	}
+
+	.on .tag-pin.best::after {
+		border-top-color: var(--color-cheaper);
+	}
+
+	.mapped .note {
+		margin-bottom: 4px;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.beam,
 		.spinner {
 			animation: none;
+		}
+
+		.tag-pin,
+		.tag-pin::after {
+			transition: none;
 		}
 	}
 </style>
