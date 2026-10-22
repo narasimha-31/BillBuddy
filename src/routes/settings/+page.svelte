@@ -115,8 +115,10 @@
 			</li>
 		</ul>
 
-		<h2 class="list-label">Delete account</h2>
-		<form class="danger surface" method="POST" action="?/delete_account" use:enhance>
+		<!-- the one step that can't be undone stays folded until asked for -->
+		<details class="delete-account group" open={!!form?.problem}>
+			<summary class="row">Delete account…</summary>
+		<form class="danger" method="POST" action="?/delete_account" use:enhance>
 			<p>
 				Deletes every receipt, price and photo, then your account. This can't be undone. Type <strong>DELETE</strong> to
 				confirm.
@@ -127,6 +129,7 @@
 			</div>
 			{#if form?.problem}<p class="problem" role="alert">{form.problem}</p>{/if}
 		</form>
+		</details>
 		</div>
 		</div>
 	</main>
@@ -136,6 +139,12 @@
 	/* the ZIP row: its value, then the action that changes it */
 	.zip-row {
 		grid-template-columns: minmax(0, 1fr) auto auto;
+	}
+
+	/* one line: the label, the ZIP and Change share a baseline */
+	.zip-row .row-value,
+	.zip-row .row-link {
+		grid-row: 1;
 	}
 
 	.row-link {
@@ -219,6 +228,29 @@
 		width: 100%;
 		text-align: left;
 		color: var(--color-accent);
+	}
+
+	/* an action, not a page: no chevron */
+	.action::after {
+		content: none;
+	}
+
+	.delete-account {
+		margin-top: 1.75rem;
+	}
+
+	.delete-account summary {
+		list-style: none;
+		color: var(--color-danger);
+		cursor: pointer;
+	}
+
+	.delete-account summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.delete-account[open] summary {
+		border-bottom: 1px solid rgb(60 60 67 / 0.14);
 	}
 
 	@media (hover: hover) {
