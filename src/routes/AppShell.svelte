@@ -37,7 +37,24 @@
 	// the pill starts where it belongs, and only slides once the page is on screen
 	let ready = $state(false);
 	onMount(() => requestAnimationFrame(() => (ready = true)));
+
+	// with a mouse, buttons and rows carry a light that follows the pointer (drawn in app.css)
+	const LIT = '.pill-button, .small-button, .drop, a.row, button.row, .tile';
+	let frame = 0;
+	function light(event: PointerEvent) {
+		if (event.pointerType !== 'mouse') return;
+		const target = (event.target as Element).closest<HTMLElement>(LIT);
+		if (!target) return;
+		cancelAnimationFrame(frame);
+		frame = requestAnimationFrame(() => {
+			const box = target.getBoundingClientRect();
+			target.style.setProperty('--x', `${event.clientX - box.left}px`);
+			target.style.setProperty('--y', `${event.clientY - box.top}px`);
+		});
+	}
 </script>
+
+<svelte:window onpointermove={light} />
 
 <div class="app" class:fit>
 	<header class="top">
