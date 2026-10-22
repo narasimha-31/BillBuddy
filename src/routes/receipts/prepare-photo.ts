@@ -47,7 +47,8 @@ export async function preparePdf(file: File): Promise<{ jpeg: Blob; hash: string
 	// PDF.js takes over the buffer it is given, so it gets a copy and these bytes stay readable
 	const pdfjs = await import('pdfjs-dist');
 	pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
-	const doc = await pdfjs.getDocument({ data: bytes.slice(), enableXfa: false }).promise;
+	const task = pdfjs.getDocument({ data: bytes.slice(), enableXfa: false });
+	const doc = await task.promise;
 	try {
 		const late = pdfProblem(bytes, doc.numPages);
 		if (late) throw new PdfRefused(late);
@@ -73,7 +74,7 @@ export async function preparePdf(file: File): Promise<{ jpeg: Blob; hash: string
 		}
 		return { jpeg: await encode(canvas), hash };
 	} finally {
-		await doc.destroy();
+		await task.destroy();
 	}
 }
 
