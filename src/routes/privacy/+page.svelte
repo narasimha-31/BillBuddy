@@ -32,8 +32,13 @@
 <div class="screen">
 	<header class="top">
 		<div class="site-top">
-			<Wordmark />
-			<a href="/demo" class="demo">Try the demo</a>
+			{#if data.signedIn}
+				<Wordmark href="/home" />
+				<a href="/home" class="demo">Home</a>
+			{:else}
+				<Wordmark />
+				<a href="/demo" class="demo">Try the demo</a>
+			{/if}
 		</div>
 	</header>
 
