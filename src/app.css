@@ -36,10 +36,10 @@
 
 	--color-glow: transparent;
 
-	/* the system face: SF Pro on Apple devices, Segoe on Windows, no download */
-	--font-sans: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	/* Geist, served from our own site; the system face stands in while it loads */
+	--font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	--font-mono: var(--font-sans);
-	--font-display: system-ui, -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--font-display: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* the scrollbar's room is always kept, so short and long pages centre on the same line */
