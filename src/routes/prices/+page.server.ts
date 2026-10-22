@@ -20,12 +20,8 @@ const LINE_FIELDS = 'id, receipt_id, name, raw_text, brand, category, quantity, 
 // name, and lines with no product yet that carry the name themselves. Two indexed queries, run
 // together, instead of one filter string that would have to escape any name.
 async function linesOf(supabase: SupabaseClient, name: string) {
-	const product = await supabase.from('products').select('id').eq('name', name).maybeSingle();
-	if (product.error) throw product.error;
 	const [joined, loose] = await Promise.all([
-		product.data
-			? supabase.from('receipt_items').select(LINE_FIELDS).eq('kind', 'item').eq('product_id', product.data.id).order('id', { ascending: false }).limit(MOST_LINES)
-			: Promise.resolve({ data: [], error: null }),
+		supabase.from('receipt_items').select(`${LINE_FIELDS}, products!product_id!inner()`).eq('kind', 'item').eq('products.name', name).order('id', { ascending: false }).limit(MOST_LINES),
 		supabase.from('receipt_items').select(LINE_FIELDS).eq('kind', 'item').eq('name', name).is('product_id', null).order('id', { ascending: false }).limit(MOST_LINES)
 	]);
 	if (joined.error) throw joined.error;
@@ -37,6 +33,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
+	const asked = url.searchParams.get('item');
+	// an asked item's lines load alongside the list; a bad name just finds none
+	const askedLines = asked ? linesOf(locals.supabase, asked) : null;
+	askedLines?.catch(() => {});
 	const [listed, stores, branches, map] = await Promise.all([locals.supabase.rpc('my_products'), myStores(locals.supabase), myBranches(locals.supabase), mapState(locals.supabase)]);
 	if (listed.error) throw listed.error;
 	const products = (listed.data as Product[]).map((p) => ({ name: p.name, times: Number(p.times), category: p.category, maybeSame: p.maybe_same }));
@@ -44,13 +44,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// every branch, nearest the ZIP first, only once the shopper has turned the map on
 	const places = map.you ? placed(branches, map.you) : [];
 
-	const asked = url.searchParams.get('item');
 	const chosen = products.find((p) => p.name === asked) ?? products[0] ?? null;
 	const selected = chosen?.name ?? null;
 	if (!selected) return { firstName: firstNameOf(user), products, places, stores: stores.map(({ id, name }) => ({ id, name })), map: { on: map.on, zip: map.zip, you: map.you }, usual, selected, aisle: null, categories: [...CATEGORIES], maybeSame: null, history: null };
 
 	// every line of the product counts under its one shared name, whatever each receipt called it
-	const lines = (await linesOf(locals.supabase, selected)).map((line) => ({ ...line, name: selected }));
+	const lines = (await (selected === asked && askedLines ? askedLines : linesOf(locals.supabase, selected))).map((line) => ({ ...line, name: selected }));
 	return {
 		firstName: firstNameOf(user),
 		products,
