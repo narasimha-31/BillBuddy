@@ -26,10 +26,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.getUser = () => currentUser(event.locals.supabase);
 
-	// the shopper's text size and colours are on the very first frame, so nothing jumps after load
-	const display = htmlAttributes(readDisplay(event.cookies.get(DISPLAY_COOKIE)));
+	// the shopper's look is on the very first frame, so nothing jumps after load; read once the page's
+	// loads have run, since the root layout may have found a newer look saved on the account
+	let display: string | undefined;
 	return resolve(event, {
-		transformPageChunk: ({ html }) => (display ? html.replace('<html lang="en">', `<html lang="en" ${display}>`) : html),
+		transformPageChunk: ({ html }) => {
+			display ??= htmlAttributes(event.locals.display ?? readDisplay(event.cookies.get(DISPLAY_COOKIE)));
+			return display ? html.replace('<html lang="en">', `<html lang="en" ${display}>`) : html;
+		},
 		filterSerializedResponseHeaders: (name) =>
 			name === 'content-range' || name === 'x-supabase-api-version'
 	});
