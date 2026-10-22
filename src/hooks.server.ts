@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 import { DISPLAY_COOKIE, htmlAttributes, readDisplay } from './display';
-import { errorCode, logError } from './error-log.server';
+import { errorCode, logError, errorMessage } from './error-log.server';
 import { currentUser } from './session.server';
 
 if (!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(PUBLIC_SUPABASE_URL)) {
@@ -46,7 +46,7 @@ export const handleError: HandleServerError = async ({ error, event, status }) =
 		id,
 		route: event.route.id,
 		status,
-		message: error instanceof Error ? error.message : String(error),
+		message: errorMessage(error),
 		code: errorCode(error),
 		userId: userId ?? null
 	});

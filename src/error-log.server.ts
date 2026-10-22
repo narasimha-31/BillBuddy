@@ -10,6 +10,12 @@ export function errorCode(error: unknown): string | null {
 	return null;
 }
 
+// a database error is a plain object, not an Error, but it still carries a message
+export function errorMessage(error: unknown): string {
+	const message = (error as { message?: unknown } | null)?.message;
+	return typeof message === 'string' ? message : String(error);
+}
+
 // best effort: a failure here must never turn one error into two
 export async function logError(entry: ErrorEntry) {
 	const { error } = await admin.from('error_log').insert({
