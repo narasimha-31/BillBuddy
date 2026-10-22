@@ -157,7 +157,8 @@ export const actions: Actions = {
 		const update = form.has('purchased_on') ? { status: 'saved', purchased_on: purchasedOn } : { status: 'saved' };
 		const { error } = await locals.supabase.from('receipts').update(update).eq('id', params.id);
 		if (error) throw error;
-		redirect(303, '/receipts');
+		// back to the receipt, now in its read view, so the saved names are right there
+		redirect(303, `/receipts/${params.id}`);
 	},
 
 	// "Which one?": this receipt only moves to the branch picked, or to an address typed for it

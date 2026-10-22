@@ -6,7 +6,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { streetOf, townOf } from '../../../branches';
 	import { shortMiles } from '../../../distance';
-	import { money, storeName } from '../../../format';
+	import { longDay, money, storeName } from '../../../format';
 	import AisleIcon from '../../AisleIcon.svelte';
 	import AppShell from '../../AppShell.svelte';
 	import ConfirmButton from '../../ConfirmButton.svelte';
@@ -59,6 +59,15 @@
 	// opened from an item's price history: back goes to that item, and its line is lit up
 	const from = $derived(page.url.searchParams.get('from'));
 	const subtotalPlusTax = $derived((r.subtotal_cents ?? 0) + (r.tax_cents ?? 0));
+	// a saved receipt reads like a receipt; one that still needs a look opens ready to change
+	// set again whenever another receipt opens in this same page
+	let editing = $derived(r.status === 'review' || toCheck.length > 0);
+	let sheetForm = $state<HTMLFormElement>();
+	function stopEditing() {
+		sheetForm?.reset();
+		picked = {};
+		editing = false;
+	}
 </script>
 
 <svelte:head>
@@ -137,10 +146,14 @@
 					<p class="address">{r.store_address}</p>
 				{/if}
 				<p class="meta">
-					<label>
-						<span class="visually-hidden">Date bought</span>
-						<input class="date" type="date" name="purchased_on" form="confirm" value={r.purchased_on ?? ''} max={new Date().toISOString().slice(0, 10)} />
-					</label>
+					{#if editing}
+						<label>
+							<span class="visually-hidden">Date bought</span>
+							<input class="date" type="date" name="purchased_on" form="confirm" value={r.purchased_on ?? ''} max={new Date().toISOString().slice(0, 10)} />
+						</label>
+					{:else}
+						{longDay(r.purchased_on)}
+					{/if}
 					{channels[r.channel ?? ''] ? ` · ${channels[r.channel ?? '']}` : ''}
 				</p>
 				{#if r.total_cents !== null}<p class="total">{money(r.total_cents)}</p>{/if}
@@ -183,7 +196,12 @@
 				{#if form?.problem}<p class="error" role="alert">{form.problem}</p>{/if}
 
 				<div class="actions">
-					<button form="confirm" class="pill-button">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
+					{#if editing}
+						<button form="confirm" class="pill-button">{r.status === 'review' ? 'Looks right' : 'Save changes'}</button>
+						{#if r.status !== 'review'}<button type="button" class="cancel" onclick={stopEditing}>Cancel</button>{/if}
+					{:else}
+						<button type="button" class="pill-button edit" onclick={() => (editing = true)}>Edit</button>
+					{/if}
 					<form method="POST" action="?/delete">
 						<ConfirmButton class="quiet" question="Delete this receipt?" detail="Its prices go too. This can't be undone." yes="Delete">Delete receipt</ConfirmButton>
 					</form>
@@ -191,7 +209,7 @@
 			</section>
 
 			<div class="sheet">
-				<form method="POST" action="?/confirm" id="confirm" class="receipt surface">
+				<form method="POST" action="?/confirm" id="confirm" class="receipt surface" bind:this={sheetForm}>
 					{#if toCheck.length}
 						<h2>Check these names</h2>
 						<p class="hint">BillBuddy guessed these. Fix any that are wrong and it remembers next time.</p>
@@ -199,8 +217,8 @@
 							{#each toCheck as item (item.id)}{@render line(item)}{/each}
 						</ul>
 						<h2 class="rest">The rest of the receipt</h2>
-					{:else}
-						<p class="hint">Tap a name or aisle to change it. BillBuddy uses your names from then on.</p>
+					{:else if editing}
+						<p class="hint">Change any name or aisle. BillBuddy uses your names from then on.</p>
 					{/if}
 					<ul class="lines">
 						{#each rest as item (item.id)}{@render line(item)}{/each}
@@ -216,23 +234,31 @@
 									</div>
 								{:else}
 									<div class="line-row">
-										<input
-											name="name_{item.id}"
-											value={item.name ?? ''}
-											placeholder={item.raw_text}
-											aria-label="Name for {item.raw_text}"
-											maxlength="120"
-										/>
+										{#if editing}
+											<input
+												name="name_{item.id}"
+												value={item.name ?? ''}
+												placeholder={item.raw_text}
+												aria-label="Name for {item.raw_text}"
+												maxlength="120"
+											/>
+										{:else}
+											<span class="name">{item.name ?? item.raw_text}</span>
+										{/if}
 										<span class="price">{money(item.total_cents)}</span>
 									</div>
 									<div class="line-row small">
 										<span class="aisle">
 											<AisleIcon aisle={picked[item.id] ?? item.category} />
-											<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}" onchange={(e) => (picked[item.id] = e.currentTarget.value)}>
-												{#each data.categories as category (category)}
-													<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
-												{/each}
-											</select>
+											{#if editing}
+												<select name="category_{item.id}" aria-label="Aisle for {item.raw_text}" onchange={(e) => (picked[item.id] = e.currentTarget.value)}>
+													{#each data.categories as category (category)}
+														<option value={category} selected={(item.category ?? 'Other') === category}>{category}</option>
+													{/each}
+												</select>
+											{:else}
+												<span class="aisle-name">{item.category ?? 'Other'}</span>
+											{/if}
 										</span>
 										<span class="amount">
 											{#if item.unit === 'lb' && item.unit_price_cents !== null}
@@ -517,6 +543,26 @@
 	.actions :global(.quiet) {
 		font-size: 0.9375rem;
 		color: var(--color-up);
+	}
+
+	/* Cancel sits beside Save; Delete keeps the far end */
+	.cancel {
+		min-height: 2.75rem;
+		margin-right: auto;
+		font-size: 0.9375rem;
+		color: var(--color-muted);
+	}
+
+	.name {
+		flex: 1;
+		min-width: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.aisle-name {
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 
 	.actions :global(.quiet:focus-visible) {
