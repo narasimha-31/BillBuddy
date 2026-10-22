@@ -183,7 +183,7 @@
 		margin: auto;
 		border: 0;
 		border-radius: 20px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0;
 		color: var(--color-ink);
 		box-shadow:
@@ -196,7 +196,7 @@
 	}
 
 	.store-sheet::backdrop {
-		background: rgb(0 0 0 / 0.28);
+		background: color-mix(in srgb, var(--color-shade) 28%, transparent);
 		animation: fade-in 200ms var(--ease);
 	}
 
@@ -310,7 +310,7 @@
 		display: grid;
 		gap: 0.2rem;
 		padding: 0.7rem 0;
-		border-top: 1px solid rgb(60 60 67 / 0.12);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 	}
 
 	.branches li:first-child {
@@ -379,7 +379,7 @@
 
 	/* 16px text: iOS Safari zooms the page on any smaller field */
 	.where input {
-		border: 1px solid rgb(60 60 67 / 0.18);
+		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 		border-radius: 10px;
 		padding: 0.55rem 0.75rem;
 		font-size: 1rem;

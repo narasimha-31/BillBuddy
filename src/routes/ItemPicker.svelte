@@ -201,7 +201,7 @@
 		gap: 0.35rem;
 		min-height: 6.25rem;
 		border-radius: 14px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.75rem 0.85rem;
 		text-align: left;
 		color: var(--color-ink);
@@ -285,7 +285,7 @@
 
 	.chip {
 		border-radius: 999px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.45rem 0.9rem;
 		font-size: 0.9375rem;
 		color: var(--color-ink);
@@ -325,11 +325,11 @@
 	.aisle-list {
 		overflow: hidden;
 		border-radius: 14px;
-		background: #fff;
+		background: var(--color-surface);
 	}
 
 	details + details {
-		box-shadow: inset 0 1px 0 rgb(60 60 67 / 0.12);
+		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-sep) 12%, transparent);
 	}
 
 	summary {
@@ -387,7 +387,7 @@
 	}
 
 	summary:active {
-		background: rgb(0 0 0 / 0.04);
+		background: color-mix(in srgb, var(--color-shade) 4%, transparent);
 		transition-duration: 0s;
 	}
 

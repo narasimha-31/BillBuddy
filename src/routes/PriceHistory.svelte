@@ -146,7 +146,7 @@
 <style>
 	.card {
 		border-radius: 18px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 1.4rem 1.5rem;
 		color: var(--color-ink);
 	}
@@ -156,7 +156,7 @@
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1rem;
-		border-bottom: 1px solid rgb(60 60 67 / 0.12);
+		border-bottom: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 		padding-bottom: 0.9rem;
 	}
 
@@ -230,7 +230,7 @@
 	.where a {
 		color: inherit;
 		text-decoration: underline;
-		text-decoration-color: rgb(60 60 67 / 0.3);
+		text-decoration-color: color-mix(in srgb, var(--color-sep) 30%, transparent);
 		text-underline-offset: 3px;
 		transition: text-decoration-color var(--quick) var(--ease);
 	}
@@ -240,7 +240,7 @@
 	}
 
 	.part {
-		border-top: 1px solid rgb(60 60 67 / 0.12);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 		padding: 1.1rem 0 0.25rem;
 	}
 
@@ -279,7 +279,7 @@
 	}
 
 	.order button[aria-pressed='true'] {
-		background: #fff;
+		background: var(--color-surface);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);
@@ -315,12 +315,12 @@
 
 	.only button[aria-pressed='true'] {
 		background: var(--color-ink);
-		color: #fff;
+		color: var(--color-on-ink);
 	}
 
 	.only button[aria-pressed='true'] .fact {
-		background: rgb(255 255 255 / 0.2);
-		color: #fff;
+		background: color-mix(in srgb, var(--color-on-ink) 20%, transparent);
+		color: var(--color-on-ink);
 	}
 
 	.order button:active,

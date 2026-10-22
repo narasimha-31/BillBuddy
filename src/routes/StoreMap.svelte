@@ -199,7 +199,7 @@
 		transform: translateX(-50%);
 		display: block;
 		border-radius: 999px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.22rem 0.55rem;
 		font: 600 0.8125rem/1.2 var(--font-sans);
 		font-variant-numeric: tabular-nums;
@@ -242,7 +242,7 @@
 		height: 12px;
 		padding: 0;
 		border: 2.5px solid #fff;
-		background: rgb(60 60 67 / 0.55);
+		background: color-mix(in srgb, var(--color-sep) 55%, transparent);
 	}
 
 	.store-map :global(.price-pin.dot::after) {
@@ -262,7 +262,7 @@
 	}
 
 	.store-map :global(.price-pin.guess) {
-		outline: 2px dashed rgb(60 60 67 / 0.6);
+		outline: 2px dashed color-mix(in srgb, var(--color-sep) 60%, transparent);
 		outline-offset: 2.5px;
 	}
 
@@ -276,7 +276,7 @@
 
 	.store-map :global(.price-pin.on) {
 		background: var(--color-ink);
-		color: #fff;
+		color: var(--color-on-ink);
 	}
 
 	.store-map :global(.leaflet-marker-icon:focus-visible .price-pin) {

@@ -323,7 +323,7 @@
 	.same {
 		margin-bottom: 1rem;
 		border-radius: 18px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 1rem 1.1rem 1.1rem;
 		box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 	}

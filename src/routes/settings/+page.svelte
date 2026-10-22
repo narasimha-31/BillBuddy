@@ -250,12 +250,12 @@
 	}
 
 	.delete-account[open] summary {
-		border-bottom: 1px solid rgb(60 60 67 / 0.14);
+		border-bottom: 1px solid color-mix(in srgb, var(--color-sep) 14%, transparent);
 	}
 
 	@media (hover: hover) {
 		.action:hover {
-			background: rgb(0 0 0 / 0.025);
+			background: color-mix(in srgb, var(--color-shade) 2.5%, transparent);
 		}
 	}
 

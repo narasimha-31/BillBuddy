@@ -362,7 +362,7 @@
 
 	.branch-chips button[aria-pressed='true'] {
 		background: var(--color-ink);
-		color: #fff;
+		color: var(--color-on-ink);
 	}
 
 	.branch-chips button:active {
@@ -600,7 +600,7 @@
 
 	.month-chips a[aria-current='true'] {
 		background: var(--color-ink);
-		color: #fff;
+		color: var(--color-on-ink);
 	}
 
 	@media (pointer: coarse) {
@@ -624,7 +624,7 @@
 		flex: none;
 		width: 8.5rem;
 		border-radius: 12px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.4rem;
 		box-shadow: 0 0 0 1px var(--color-line);
 	}

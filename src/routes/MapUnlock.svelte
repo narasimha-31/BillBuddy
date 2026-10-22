@@ -54,9 +54,9 @@
 	/* 16px text: iOS Safari zooms the page on any smaller field */
 	.zip input {
 		width: 100%;
-		border: 1px solid rgb(60 60 67 / 0.18);
+		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 		border-radius: 10px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.55rem 0.75rem;
 		font-size: 1rem;
 		font-variant-numeric: tabular-nums;

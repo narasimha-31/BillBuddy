@@ -15,6 +15,10 @@
 	--color-danger: #b42318;
 	--color-raised: #f5f5f7;
 	--color-on-ink: #fbfbfd;
+	/* cards, separators and press shades, so the dark look can swap them in one place */
+	--color-surface: #fff;
+	--color-sep: rgb(60 60 67);
+	--color-shade: rgb(0 0 0);
 
 	--color-receipt: #fdfdfd;
 	--color-receipt-ink: #1d1d1f;
@@ -225,7 +229,7 @@ body {
 .group {
 	overflow: hidden;
 	border-radius: 14px;
-	background: #fff;
+	background: var(--color-surface);
 }
 
 .group > li {
@@ -239,7 +243,7 @@ body {
 	top: 0;
 	right: 0;
 	left: 1rem;
-	border-top: 1px solid rgb(60 60 67 / 0.14);
+	border-top: 1px solid color-mix(in srgb, var(--color-sep) 14%, transparent);
 }
 
 .row {
@@ -265,14 +269,14 @@ button.row {
 @media (hover: hover) {
 	a.row:hover,
 	button.row:hover {
-		background: rgb(0 0 0 / 0.025);
+		background: color-mix(in srgb, var(--color-shade) 2.5%, transparent);
 	}
 }
 
 /* the press shade lands at once under the finger and fades on release, as in iOS lists */
 a.row:active,
 button.row:active {
-	background: rgb(0 0 0 / 0.05);
+	background: color-mix(in srgb, var(--color-shade) 5%, transparent);
 	transition-duration: 0s;
 }
 
@@ -295,8 +299,8 @@ button.row::after {
 	grid-row: 1 / span 2;
 	width: 0.45rem;
 	height: 0.45rem;
-	border-top: 2px solid rgb(60 60 67 / 0.3);
-	border-right: 2px solid rgb(60 60 67 / 0.3);
+	border-top: 2px solid color-mix(in srgb, var(--color-sep) 30%, transparent);
+	border-right: 2px solid color-mix(in srgb, var(--color-sep) 30%, transparent);
 	transform: rotate(45deg);
 }
 
@@ -361,11 +365,11 @@ button.row[aria-expanded='true']::after {
 
 	.scroll-area::-webkit-scrollbar-thumb {
 		border-radius: 4px;
-		background: rgb(0 0 0 / 0.2);
+		background: color-mix(in srgb, var(--color-shade) 20%, transparent);
 	}
 
 	.scroll-area::-webkit-scrollbar-thumb:hover {
-		background: rgb(0 0 0 / 0.32);
+		background: color-mix(in srgb, var(--color-shade) 32%, transparent);
 	}
 
 	@supports not selector(::-webkit-scrollbar) {
@@ -378,7 +382,7 @@ button.row[aria-expanded='true']::after {
 
 .surface {
 	border-radius: 18px;
-	background: #fff;
+	background: var(--color-surface);
 }
 
 .pill-button {
@@ -430,7 +434,7 @@ button.row[aria-expanded='true']::after {
 	width: 27px;
 	height: 27px;
 	border-radius: 999px;
-	background: #fff;
+	background: var(--color-surface);
 	box-shadow:
 		0 3px 8px rgb(0 0 0 / 0.15),
 		0 3px 1px rgb(0 0 0 / 0.06);

@@ -328,7 +328,7 @@
 		text-align: left;
 		color: var(--color-muted);
 		text-decoration: underline;
-		text-decoration-color: rgb(60 60 67 / 0.25);
+		text-decoration-color: color-mix(in srgb, var(--color-sep) 25%, transparent);
 		text-underline-offset: 3px;
 	}
 
@@ -363,7 +363,7 @@
 	}
 
 	.which li + li {
-		border-top: 1px solid rgb(60 60 67 / 0.1);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 10%, transparent);
 	}
 
 	.option {
@@ -381,7 +381,7 @@
 	}
 
 	.option:active {
-		background: rgb(0 0 0 / 0.05);
+		background: color-mix(in srgb, var(--color-shade) 5%, transparent);
 		transition-duration: 0s;
 	}
 
@@ -409,9 +409,9 @@
 	.typed input {
 		flex: 1;
 		min-width: 0;
-		border: 1px solid rgb(60 60 67 / 0.18);
+		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 		border-radius: 10px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.5rem 0.7rem;
 		font-size: 1rem;
 	}
@@ -581,7 +581,7 @@
 	}
 
 	.lines li {
-		border-top: 1px solid rgb(60 60 67 / 0.12);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 		padding: 0.7rem 0;
 	}
 
@@ -715,7 +715,7 @@
 	select:focus {
 		outline: none;
 		border-color: var(--color-accent);
-		background: #fff;
+		background: var(--color-surface);
 	}
 
 	.price,
@@ -751,7 +751,7 @@
 		grid-template-columns: 1fr auto;
 		gap: 0.3rem 1rem;
 		margin-top: 0.75rem;
-		border-top: 1px solid rgb(60 60 67 / 0.12);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 		padding-top: 0.75rem;
 		font-size: 0.9375rem;
 	}

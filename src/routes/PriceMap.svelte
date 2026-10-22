@@ -327,7 +327,7 @@
 		}
 
 		.answer + .answer {
-			border-top: 1px solid rgb(60 60 67 / 0.12);
+			border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
 		}
 
 		.main {
@@ -432,7 +432,7 @@
 		gap: 0.35rem;
 		margin: 0.75rem;
 		border-radius: 14px;
-		background: rgb(255 255 255 / 0.94);
+		background: color-mix(in srgb, var(--color-surface) 94%, transparent);
 		box-shadow:
 			0 10px 30px -10px rgb(0 0 0 / 0.25),
 			0 0 0 0.5px rgb(0 0 0 / 0.06);
@@ -481,9 +481,9 @@
 
 	.pretend input {
 		width: 100%;
-		border: 1px solid rgb(60 60 67 / 0.18);
+		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 		border-radius: 10px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 0.55rem 0.75rem;
 		font-size: 1rem;
 		letter-spacing: 0.08em;

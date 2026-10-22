@@ -362,7 +362,7 @@
 	}
 
 	.order button[aria-pressed='true'] {
-		background: #fff;
+		background: var(--color-surface);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);
@@ -401,14 +401,14 @@
 		position: relative;
 		width: calc(100% + 0.3rem);
 		height: 5.75rem;
-		border-bottom: 1px solid rgb(60 60 67 / 0.18);
+		border-bottom: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 	}
 
 	/* the average runs across every column as one dashed line */
 	.avg {
 		position: absolute;
 		inset: auto 0 calc(4.5rem * var(--size));
-		border-top: 1.5px dashed rgb(60 60 67 / 0.6);
+		border-top: 1.5px dashed color-mix(in srgb, var(--color-sep) 60%, transparent);
 		pointer-events: none;
 	}
 
@@ -556,7 +556,7 @@
 
 	.legend span {
 		width: 1.1rem;
-		border-top: 1.5px dashed rgb(60 60 67 / 0.6);
+		border-top: 1.5px dashed color-mix(in srgb, var(--color-sep) 60%, transparent);
 	}
 
 	.spent {
@@ -602,7 +602,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		min-height: 2.75rem;
-		border-top: 1px solid rgb(60 60 67 / 0.1);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 10%, transparent);
 		font-size: 0.875rem;
 		color: var(--color-ink);
 	}

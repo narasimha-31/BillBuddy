@@ -160,7 +160,7 @@
 		left: var(--pad);
 		width: calc((100% - 2 * var(--pad)) / 3);
 		border-radius: 8px;
-		background: #fff;
+		background: var(--color-surface);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);
@@ -228,7 +228,7 @@
 			z-index: 20;
 			margin: 0;
 			border-radius: 999px;
-			background: color-mix(in srgb, #fff 78%, transparent);
+			background: color-mix(in srgb, var(--color-surface) 78%, transparent);
 			backdrop-filter: saturate(1.8) blur(22px);
 			box-shadow:
 				0 10px 30px -8px rgb(0 0 0 / 0.22),

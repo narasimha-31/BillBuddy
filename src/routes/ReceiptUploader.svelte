@@ -224,7 +224,7 @@
 		align-items: center;
 		gap: 0.6rem;
 		width: 100%;
-		border: 1.5px dashed rgb(60 60 67 / 0.22);
+		border: 1.5px dashed color-mix(in srgb, var(--color-sep) 22%, transparent);
 		border-radius: 14px;
 		background: var(--color-raised);
 		padding: 2rem 1.5rem;
@@ -488,7 +488,7 @@
 	}
 
 	.printout header {
-		border-bottom: 1px solid rgb(60 60 67 / 0.14);
+		border-bottom: 1px solid color-mix(in srgb, var(--color-sep) 14%, transparent);
 		padding-bottom: 0.6rem;
 		font-weight: 600;
 	}
@@ -517,7 +517,7 @@
 
 	.printout footer {
 		flex-wrap: wrap;
-		border-top: 1px solid rgb(60 60 67 / 0.14);
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 14%, transparent);
 		padding-top: 0.6rem;
 		font-weight: 600;
 	}

@@ -31,7 +31,7 @@
 		margin: auto;
 		border: 0;
 		border-radius: 16px;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 1.25rem 1.25rem 1rem;
 		color: var(--color-ink);
 		text-align: center;
@@ -43,7 +43,7 @@
 	}
 
 	.confirm::backdrop {
-		background: rgb(0 0 0 / 0.3);
+		background: color-mix(in srgb, var(--color-shade) 30%, transparent);
 	}
 
 	@keyframes pop {
