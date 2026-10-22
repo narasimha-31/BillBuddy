@@ -10,6 +10,7 @@
 	let chosen = $state<Display | null>(null);
 	let saved: Display | null = null;
 	let problem = $state('');
+	let fade: ViewTransition | null = null;
 
 	// the page already carries the saved look, so opening needs no request
 	function opened() {
@@ -24,10 +25,13 @@
 		const next = chosen;
 		// light to dark and back fades instead of flashing the whole screen at once
 		const swap = () => applyDisplay(next, document.documentElement);
-		if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return swap();
-		// marked so the fade is a plain one, not the page-to-page slide
-		document.documentElement.classList.add('look-swap');
-		document.startViewTransition(swap).finished.finally(() => document.documentElement.classList.remove('look-swap'));
+		if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) swap();
+		else {
+			// marked so the fade is a plain one, not the page-to-page slide; only the latest fade unmarks it
+			document.documentElement.classList.add('look-swap');
+			const mine = (fade = document.startViewTransition(swap));
+			mine.finished.finally(() => fade === mine && document.documentElement.classList.remove('look-swap'));
+		}
 		requestAnimationFrame(() => form.requestSubmit());
 	}
 

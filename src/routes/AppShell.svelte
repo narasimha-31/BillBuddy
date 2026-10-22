@@ -21,7 +21,6 @@
 	const path = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	const selected = $derived(links.findIndex((link) => under(path, link.href)));
 
-
 	// the pill starts where it belongs, and only slides once the page is on screen
 	let ready = $state(false);
 	onMount(() => requestAnimationFrame(() => (ready = true)));
@@ -99,8 +98,6 @@
 		backdrop-filter: saturate(1.8) blur(20px);
 		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
 	}
-
-	/* arriving by a tab: the page comes into focus rather than appearing, in under a quarter second */
 
 	@media (prefers-reduced-motion: reduce) {
 		nav.ready .pill,
