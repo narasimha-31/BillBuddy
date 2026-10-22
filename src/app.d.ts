@@ -1,4 +1,5 @@
-import type { SupabaseClient, User } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { User } from './session.server';
 import type { Display } from './display';
 
 declare global {

@@ -1,10 +1,13 @@
 import {
+	AuthInvalidJwtError,
 	isAuthApiError,
 	isAuthPKCECodeVerifierMissingError,
 	isAuthSessionMissingError,
 	type SupabaseClient,
-	type User
+	type UserMetadata
 } from '@supabase/supabase-js';
+
+export type User = { id: string; email: string | null; user_metadata: UserMetadata };
 
 // Bad, expired, forged or replayed credentials mean "not signed in".
 // Anything else (Supabase down, network failure) is a real error and is thrown.
@@ -12,16 +15,23 @@ function isRejectedCredential(error: unknown) {
 	return (
 		isAuthSessionMissingError(error) ||
 		isAuthPKCECodeVerifierMissingError(error) ||
+		error instanceof AuthInvalidJwtError ||
 		(isAuthApiError(error) && error.status >= 400 && error.status < 500)
 	);
 }
 
-// getUser checks the token with Supabase; getSession only trusts the cookie
+// getClaims checks the token's signature against the project's public keys, so a page load needs no
+// round trip to Supabase; getSession alone would trust the cookie.
+// shortcut: a token signed out on another device stays valid until it expires (an hour at most)
 export async function currentUser(supabase: SupabaseClient): Promise<User | null> {
-	const { data, error } = await supabase.auth.getUser();
-	if (!error) return data.user;
-	if (isRejectedCredential(error)) return null;
-	throw error;
+	const { data, error } = await supabase.auth.getClaims();
+	if (error) {
+		if (isRejectedCredential(error)) return null;
+		throw error;
+	}
+	if (!data) return null;
+	const { sub, email, user_metadata } = data.claims;
+	return { id: sub, email: email ?? null, user_metadata: user_metadata ?? {} };
 }
 
 export async function signInWithCode(supabase: SupabaseClient, code: string): Promise<boolean> {

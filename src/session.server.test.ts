@@ -1,27 +1,36 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	AuthApiError,
+	AuthInvalidJwtError,
 	AuthPKCECodeVerifierMissingError,
 	AuthRetryableFetchError,
 	AuthSessionMissingError,
-	type SupabaseClient,
-	type User
+	type SupabaseClient
 } from '@supabase/supabase-js';
-import { currentUser, firstNameOf, signInWithCode } from './session.server';
+import { currentUser, firstNameOf, signInWithCode, type User } from './session.server';
 
 function clientReturning(result: { user: unknown; error: unknown }) {
 	return {
 		auth: {
-			getUser: async () => ({ data: { user: result.user }, error: result.error }),
+			getClaims: async () => ({ data: result.user ? { claims: result.user } : null, error: result.error }),
 			exchangeCodeForSession: async () => ({ data: {}, error: result.error })
 		}
 	} as unknown as SupabaseClient;
 }
 
 describe('currentUser', () => {
-	it('returns the user for a valid session', async () => {
-		const user = { id: 'u1' };
-		expect(await currentUser(clientReturning({ user, error: null }))).toBe(user);
+	it('returns the user from a valid token', async () => {
+		const claims = { sub: 'u1', email: 'a@b.test', user_metadata: { full_name: 'Sam Lee' } };
+		expect(await currentUser(clientReturning({ user: claims, error: null }))).toEqual({ id: 'u1', email: 'a@b.test', user_metadata: { full_name: 'Sam Lee' } });
+	});
+
+	it('treats no session as signed out', async () => {
+		expect(await currentUser(clientReturning({ user: null, error: null }))).toBeNull();
+	});
+
+	it('treats a token with a bad signature as signed out', async () => {
+		const client = clientReturning({ user: null, error: new AuthInvalidJwtError('Invalid JWT signature') });
+		expect(await currentUser(client)).toBeNull();
 	});
 
 	it('treats a missing session as signed out', async () => {
