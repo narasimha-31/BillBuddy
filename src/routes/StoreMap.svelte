@@ -140,7 +140,7 @@
 		z-index: 0;
 		width: 100%;
 		height: 100%;
-		background: #f2f2f4;
+		background: light-dark(#f2f2f4, #15161a);
 	}
 
 	/* the streets go quiet so the prices carry the colour */

@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, fromRow } from '../display';
+import { DISPLAY_COLUMNS, DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, fromRow } from '../display';
 import { signInWithCode } from '../session.server';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ url, locals, cookies }) => {
 		const ok = await signInWithCode(locals.supabase, code);
 		// a new device picks up the display the shopper chose on another
 		if (ok) {
-			const { data } = await locals.supabase.from('user_settings').select('text_size, more_contrast, palette').maybeSingle();
+			const { data } = await locals.supabase.from('user_settings').select(DISPLAY_COLUMNS).maybeSingle();
 			cookies.set(DISPLAY_COOKIE, displayCookie(fromRow(data)), DISPLAY_COOKIE_OPTIONS);
 		}
 		redirect(303, ok ? '/home' : '/?signin=failed');

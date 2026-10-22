@@ -2,29 +2,60 @@
 // server can draw the first frame right without asking the database on every page.
 export const TEXT_SIZES = ['standard', 'large', 'larger'] as const;
 export const PALETTES = ['standard', 'colorblind'] as const;
+export const MODES = ['light', 'dark', 'auto'] as const;
+export const THEMES = ['green', 'ocean', 'sunset', 'grape'] as const;
 
-export type Display = { text: (typeof TEXT_SIZES)[number]; contrast: boolean; palette: (typeof PALETTES)[number] };
+export type Display = {
+	text: (typeof TEXT_SIZES)[number];
+	contrast: boolean;
+	palette: (typeof PALETTES)[number];
+	mode: (typeof MODES)[number];
+	theme: (typeof THEMES)[number];
+};
 
 export const DISPLAY_COOKIE = 'display';
-export const STANDARD: Display = { text: 'standard', contrast: false, palette: 'standard' };
+export const STANDARD: Display = { text: 'standard', contrast: false, palette: 'standard', mode: 'light', theme: 'green' };
 
 const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T): T => (list.includes(value as T) ? (value as T) : fallback);
 
-// "large.more.colorblind": short, and anything unexpected falls back to the standard look
-export const displayCookie = (d: Display) => `${d.text}.${d.contrast ? 'more' : 'normal'}.${d.palette}`;
+// "large.more.colorblind.dark.ocean": short, and anything unexpected falls back to the standard look
+export const displayCookie = (d: Display) => `${d.text}.${d.contrast ? 'more' : 'normal'}.${d.palette}.${d.mode}.${d.theme}`;
 
 export function readDisplay(cookie: string | undefined): Display {
-	const [text, contrast, palette] = (cookie ?? '').split('.');
-	return { text: pick(TEXT_SIZES, text, 'standard'), contrast: contrast === 'more', palette: pick(PALETTES, palette, 'standard') };
+	const [text, contrast, palette, mode, theme] = (cookie ?? '').split('.');
+	return {
+		text: pick(TEXT_SIZES, text, 'standard'),
+		contrast: contrast === 'more',
+		palette: pick(PALETTES, palette, 'standard'),
+		mode: pick(MODES, mode, 'light'),
+		theme: pick(THEMES, theme, 'green')
+	};
 }
 
-export function fromRow(row: { text_size?: unknown; more_contrast?: unknown; palette?: unknown } | null): Display {
-	return { text: pick(TEXT_SIZES, row?.text_size, 'standard'), contrast: row?.more_contrast === true, palette: pick(PALETTES, row?.palette, 'standard') };
+type Row = { text_size?: unknown; more_contrast?: unknown; palette?: unknown; color_mode?: unknown; theme?: unknown };
+
+export function fromRow(row: Row | null): Display {
+	return {
+		text: pick(TEXT_SIZES, row?.text_size, 'standard'),
+		contrast: row?.more_contrast === true,
+		palette: pick(PALETTES, row?.palette, 'standard'),
+		mode: pick(MODES, row?.color_mode, 'light'),
+		theme: pick(THEMES, row?.theme, 'green')
+	};
 }
+
+export const DISPLAY_COLUMNS = 'text_size, more_contrast, palette, color_mode, theme';
+export const toRow = (d: Display) => ({ text_size: d.text, more_contrast: d.contrast, palette: d.palette, color_mode: d.mode, theme: d.theme });
 
 // attributes for <html>; the standard look adds none
 export function htmlAttributes(d: Display) {
-	return [d.text !== 'standard' && `data-text="${d.text}"`, d.contrast && 'data-contrast="more"', d.palette !== 'standard' && `data-palette="${d.palette}"`]
+	return [
+		d.text !== 'standard' && `data-text="${d.text}"`,
+		d.contrast && 'data-contrast="more"',
+		d.palette !== 'standard' && `data-palette="${d.palette}"`,
+		d.mode !== 'light' && `data-mode="${d.mode}"`,
+		d.theme !== 'green' && `data-theme="${d.theme}"`
+	]
 		.filter(Boolean)
 		.join(' ');
 }
@@ -39,12 +70,29 @@ export function applyDisplay(d: Display, root: HTMLElement) {
 	set('data-text', d.text === 'standard' ? null : d.text);
 	set('data-contrast', d.contrast ? 'more' : null);
 	set('data-palette', d.palette === 'standard' ? null : d.palette);
+	set('data-mode', d.mode === 'light' ? null : d.mode);
+	set('data-theme', d.theme === 'green' ? null : d.theme);
 }
 
-export function displayFromForm(form: FormData): Display {
-	return { text: pick(TEXT_SIZES, form.get('text_size'), 'standard'), contrast: form.get('more_contrast') === 'on', palette: form.get('colorblind') === 'on' ? 'colorblind' : 'standard' };
+// Two forms post here: the text and colour choices, and the look picker. Each sends only its own
+// fields, so whatever a form leaves out keeps its current value.
+export function displayFromForm(form: FormData, current: Display): Display {
+	const choices = form.has('text_size');
+	return {
+		text: choices ? pick(TEXT_SIZES, form.get('text_size'), 'standard') : current.text,
+		contrast: choices ? form.get('more_contrast') === 'on' : current.contrast,
+		palette: choices ? (form.get('colorblind') === 'on' ? 'colorblind' : 'standard') : current.palette,
+		mode: form.has('mode') ? pick(MODES, form.get('mode'), 'light') : current.mode,
+		theme: form.has('theme') ? pick(THEMES, form.get('theme'), 'green') : current.theme
+	};
 }
 
 export function displayOf(root: HTMLElement): Display {
-	return { text: pick(TEXT_SIZES, root.dataset.text, 'standard'), contrast: root.dataset.contrast === 'more', palette: pick(PALETTES, root.dataset.palette, 'standard') };
+	return {
+		text: pick(TEXT_SIZES, root.dataset.text, 'standard'),
+		contrast: root.dataset.contrast === 'more',
+		palette: pick(PALETTES, root.dataset.palette, 'standard'),
+		mode: pick(MODES, root.dataset.mode, 'light'),
+		theme: pick(THEMES, root.dataset.theme, 'green')
+	};
 }

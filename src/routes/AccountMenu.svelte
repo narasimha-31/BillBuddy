@@ -69,7 +69,7 @@
 		border-radius: 999px;
 		background: var(--color-brand);
 		font-weight: 600;
-		color: var(--color-on-ink);
+		color: #fff;
 	}
 
 	.menu {

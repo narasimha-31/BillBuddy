@@ -10,7 +10,7 @@
 
 	// a choice shows at once and saves behind it; if the save fails the page goes back to what was saved
 	function save(form: HTMLFormElement) {
-		chosen = displayFromForm(new FormData(form));
+		chosen = displayFromForm(new FormData(form), chosen);
 		applyDisplay(chosen, document.documentElement);
 		form.requestSubmit();
 	}
@@ -102,7 +102,7 @@
 	}
 
 	.segmented label.on {
-		background: var(--color-surface);
+		background: var(--color-selected);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);

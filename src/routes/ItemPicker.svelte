@@ -232,7 +232,7 @@
 	}
 
 	.tile.selected {
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 		color: #fff;
 		box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--color-accent) 60%, transparent);
 	}
@@ -309,7 +309,7 @@
 	}
 
 	.chip.selected {
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 		color: #fff;
 	}
 
@@ -413,7 +413,7 @@
 	}
 
 	details .chip.selected {
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 	}
 
 	/* touch screens keep :hover on the last tapped spot, so hover styles are for mice only */

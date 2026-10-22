@@ -307,7 +307,7 @@
 			width: 100%;
 			margin-bottom: 0.6rem;
 			border-radius: 999px;
-			background: var(--color-accent);
+			background: var(--color-accent-fill);
 			padding: 0.85rem 1.25rem;
 			font-size: 1.0625rem;
 			font-weight: 600;
@@ -375,7 +375,7 @@
 
 	.pill {
 		border-radius: 999px;
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 		padding: 0.6rem 1.25rem;
 		font-size: 0.9375rem;
 		font-weight: 500;

@@ -362,7 +362,7 @@
 	}
 
 	.order button[aria-pressed='true'] {
-		background: var(--color-surface);
+		background: var(--color-selected);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);

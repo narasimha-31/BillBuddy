@@ -356,7 +356,7 @@
 	}
 
 	.yes {
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 		color: #fff;
 	}
 

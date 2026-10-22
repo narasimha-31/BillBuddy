@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { confirmsDelete, deleteAccount, removePhotos } from '../../delete-account.server';
-import { DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow } from '../../display';
+import { DISPLAY_COLUMNS, DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow, readDisplay, toRow } from '../../display';
 import { firstNameOf } from '../../session.server';
 import { mapState, myBranches, myStores, turnMapOff, turnMapOn } from '../../store-map.server';
 import type { Actions, PageServerLoad } from './$types';
@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!user) redirect(303, '/');
 
 	const [settings, map, stores, branches] = await Promise.all([
-		locals.supabase.from('user_settings').select('keep_photos, text_size, more_contrast, palette').maybeSingle(),
+		locals.supabase.from('user_settings').select(`keep_photos, ${DISPLAY_COLUMNS}`).maybeSingle(),
 		mapState(locals.supabase),
 		myStores(locals.supabase),
 		myBranches(locals.supabase)
@@ -70,14 +70,8 @@ export const actions: Actions = {
 		const user = await locals.getUser();
 		if (!user) return fail(401, { problem: 'signed out' });
 
-		const chosen = displayFromForm(await request.formData());
-		const saved = await locals.supabase.from('user_settings').upsert({
-			user_id: user.id,
-			text_size: chosen.text,
-			more_contrast: chosen.contrast,
-			palette: chosen.palette,
-			updated_at: new Date().toISOString()
-		});
+		const chosen = displayFromForm(await request.formData(), readDisplay(cookies.get(DISPLAY_COOKIE)));
+		const saved = await locals.supabase.from('user_settings').upsert({ user_id: user.id, ...toRow(chosen), updated_at: new Date().toISOString() });
 		if (saved.error) throw saved.error;
 		cookies.set(DISPLAY_COOKIE, displayCookie(chosen), DISPLAY_COOKIE_OPTIONS);
 		return { display: chosen };

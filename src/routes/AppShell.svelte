@@ -10,6 +10,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
+	import ThemePicker from './ThemePicker.svelte';
 	import DisplayPanel from './DisplayPanel.svelte';
 	import Toaster from './Toaster.svelte';
 	import Wordmark from './Wordmark.svelte';
@@ -53,6 +54,7 @@
 			</nav>
 			<div class="end">
 				<DisplayPanel />
+				<ThemePicker />
 				<AccountMenu {firstName} />
 			</div>
 		</div>
@@ -73,9 +75,15 @@
 	}
 
 	/* signed-in pages sit on Apple's grouped grey, so white lists and cards read as surfaces */
+	/* the theme's three lights sit still behind the page while it scrolls */
 	.app {
 		min-height: 100dvh;
-		background: var(--color-raised);
+		background:
+			radial-gradient(ellipse 70% 55% at 0% 0%, var(--glow-a), transparent 70%),
+			radial-gradient(ellipse 60% 50% at 100% 15%, var(--glow-b), transparent 70%),
+			radial-gradient(ellipse 80% 55% at 45% 105%, var(--glow-c), transparent 70%),
+			var(--color-raised);
+		background-attachment: fixed;
 	}
 
 	.top {
@@ -160,7 +168,7 @@
 		left: var(--pad);
 		width: calc((100% - 2 * var(--pad)) / 3);
 		border-radius: 8px;
-		background: var(--color-surface);
+		background: var(--color-selected);
 		box-shadow:
 			0 3px 8px rgb(0 0 0 / 0.12),
 			0 3px 1px rgb(0 0 0 / 0.04);
