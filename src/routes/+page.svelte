@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { animate, inView } from 'motion';
+	import { inView } from 'motion';
 	import NumberFlow from '@number-flow/svelte';
 	import GoogleButton from './GoogleButton.svelte';
 	import PhoneTour from './PhoneTour.svelte';
 	import SiteFooter from './SiteFooter.svelte';
 	import Wordmark from './Wordmark.svelte';
-	import { cartTotals, comparisons, priceOf } from './store-prices';
+	import { cartTotals, priceOf } from './store-prices';
 
 	let { data } = $props();
 
@@ -19,21 +19,11 @@
 	];
 	const gap = slips[1].cents - slips[0].cents;
 
-	const chicken = comparisons().find((c) => c.key === 'chicken')!.prices;
-	const eggs = comparisons().find((c) => c.key === 'eggs')!.prices;
 
 	const carts = cartTotals();
 	const weekly = carts.at(-1)!.cents - carts[0].cents;
 	const yearlyDollars = Math.round((weekly * 52) / 100);
 
-	// what a Walmart receipt printed, and what BillBuddy understood
-	const walmart = (product: Parameters<typeof priceOf>[1]) => priceOf('Walmart', product)!;
-	const lines = [
-		{ printed: 'GV LG EGGS 12CT', name: 'Large eggs, 12 ct', detail: 'Great Value', cents: Math.round(walmart('eggs') * 100) },
-		{ printed: 'BANANAS', name: 'Bananas', detail: `2.10 lb at $${walmart('bananas').toFixed(2)}`, cents: Math.round(2.1 * walmart('bananas') * 100) },
-		{ printed: 'GV WHL MLK GAL', name: 'Whole milk, 1 gal', detail: 'Great Value', cents: Math.round(walmart('milk') * 100) },
-		{ printed: 'FRSH CHKN BRST BNLS', name: 'Chicken breast', detail: `1.62 lb at $${walmart('chicken').toFixed(2)}`, cents: Math.round(1.62 * walmart('chicken') * 100) }
-	];
 
 	// the real numbers show by default; they only start from zero once the page can roll them in
 	let gapShown = $state(gap);
@@ -45,7 +35,6 @@
 	let live = $state(false);
 	let gapMark = $state<HTMLElement>();
 	let cartList: HTMLElement;
-	let promiseList: HTMLElement;
 
 	onMount(() => {
 		live = true;
@@ -60,18 +49,9 @@
 			cartShown = carts.map((c) => c.cents);
 		}, { amount: 0.5 });
 
-		// the promises arrive one after another, each settling on a spring
-		const items = promiseList.querySelectorAll('li');
-		items.forEach((li) => ((li as HTMLElement).style.opacity = '0'));
-		const stopPromises = inView(promiseList, () => {
-			items.forEach((li, i) =>
-				animate(li, { opacity: [0, 1], transform: ['translateY(24px)', 'none'] }, { type: 'spring', bounce: 0, duration: 0.9, delay: i * 0.18 })
-			);
-		}, { amount: 0.4 });
 		return () => {
 			stopGap();
 			stopCart();
-			stopPromises();
 		};
 	});
 
@@ -97,7 +77,7 @@
 
 <main>
 	<section class="hero">
-		<h1>Know what you paid last time.</h1>
+		<h1>Know what you paid <span class="hl">last time.</span></h1>
 		<p class="lead">Snap any grocery receipt. BillBuddy remembers every price, at every store you shop.</p>
 		{#if data.signInFailed}<p class="failed" role="alert">Sign-in didn’t go through. Try again.</p>{/if}
 		<div class="actions">
@@ -118,7 +98,7 @@
 	</section>
 
 	<section class="problem">
-		<h2>Same chicken. {money.format(dollars(gap))} apart.</h2>
+		<h2>Same chicken. <span class="dear">{money.format(dollars(gap))} apart.</span></h2>
 		<p class="sub">
 			Three pounds of boneless chicken breast: {money.format(dollars(slips[0].cents))} at Wegmans, {money.format(
 				dollars(slips[1].cents)
@@ -152,73 +132,10 @@
 		</div>
 	</section>
 
-	<section class="snap">
-		<div class="copy">
-			<h2>Crumpled. Faded. Abbreviated. Read anyway.</h2>
-			<p>
-				BillBuddy reads every line of a real receipt, turns store shorthand into plain names, and checks every total
-				with simple math. It never guesses a price.
-			</p>
-		</div>
-		<div class="stage">
-			<img
-				class="pile"
-				src="/images/receipts-flat-2048.webp"
-				srcset="/images/receipts-flat-1024.webp 1024w, /images/receipts-flat-2048.webp 2048w"
-				sizes="(min-width: 1000px) 640px, 92vw"
-				width="2048"
-				height="1152"
-				alt="Four long crumpled grocery receipts on a grey table"
-				loading="lazy"
-			/>
-			<div class="readout">
-				<p class="store">Walmart · Oct 9</p>
-				<ul>
-					{#each lines as line (line.printed)}
-						<li>
-							<span class="printed">{line.printed}</span>
-							<span class="name">{line.name}</span>
-							<span class="price">{money.format(dollars(line.cents))}</span>
-							<span class="detail">{line.detail}</span>
-						</li>
-					{/each}
-				</ul>
-			</div>
-		</div>
-	</section>
-
 	<PhoneTour />
 
-	<section class="stores">
-		<h2>Every store. One price.</h2>
-		<p class="sub">
-			Each store prints chicken its own way. BillBuddy lines them up as one product, so the cheaper store is plain to
-			see.
-		</p>
-		<div class="card">
-			<div class="card-head">
-				<span>Chicken breast</span>
-				<span class="unit">per lb · {PACK_LB} lb pack</span>
-			</div>
-			<ul>
-				{#each chicken as row, i (row.store)}
-					<li class:best={i === 0}>
-						<span>{row.store}</span>
-						{#if i === 0}<span class="tag">Cheapest</span>{/if}
-						<span class="per">{money.format(row.price)}</span>
-						<span class="money">{money.format(dollars(Math.round(row.price * PACK_LB * 100)))}</span>
-					</li>
-				{/each}
-			</ul>
-		</div>
-		<p class="fact">
-			Eggs are the extreme: {money.format(eggs[0].price)} a dozen at <span class="whole">{eggs[0].store}</span>,
-			{money.format(eggs.at(-1)!.price)} at <span class="whole">{eggs.at(-1)!.store}</span>. Almost double.
-		</p>
-	</section>
-
 	<section class="cart">
-		<h2>Same cart. {money.format(dollars(weekly))} a week apart.</h2>
+		<h2>Same cart. <span class="dear">{money.format(dollars(weekly))} a week apart.</span></h2>
 		<p class="sub">Milk, eggs, chicken, ground beef, peanut butter, pasta and bananas. One of each, at four big chains.</p>
 		<ul class="totals" bind:this={cartList}>
 			{#each carts as cart, i (cart.store)}
@@ -231,7 +148,7 @@
 				</li>
 			{/each}
 		</ul>
-		<p class="year">Buy that every week and the gap is about ${yearlyDollars} a year.</p>
+		<p class="year">Buy that every week and the gap is about <strong>${yearlyDollars} a year</strong>.</p>
 		<div class="ask">
 			<p>See which store is cheaper for you.</p>
 			<GoogleButton />
@@ -240,14 +157,16 @@
 
 	<section class="private">
 		<h2>Private by design.</h2>
-		<ul bind:this={promiseList}>
-			{#each promises as promise (promise)}<li>{promise}</li>{/each}
+		<ul>
+			{#each promises as promise (promise)}
+				<li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>{promise}</li>
+			{/each}
 		</ul>
 		<a class="fine" href="/privacy">How we handle your receipts</a>
 	</section>
 
 	<section class="close">
-		<h2>Start with your last receipt.</h2>
+		<h2>Start with your <span class="hl">last receipt.</span></h2>
 		<div class="actions">
 			<GoogleButton />
 			<a class="quiet" href="/demo">Try the demo</a>
@@ -388,11 +307,6 @@
 				animation-range: entry 0% cover 45%;
 			}
 
-			.readout {
-				animation: rise linear both;
-				animation-timeline: view();
-				animation-range: entry 10% cover 50%;
-			}
 		}
 	}
 
@@ -410,13 +324,6 @@
 		}
 	}
 
-	.snap {
-		display: grid;
-		gap: 2.5rem;
-		margin-top: clamp(6rem, 16vh, 10rem);
-	}
-
-	.copy p,
 	.sub {
 		margin-top: 1.25rem;
 		max-width: 32rem;
@@ -425,137 +332,7 @@
 		color: var(--color-muted);
 	}
 
-	.stage {
-		position: relative;
-	}
-
-	.pile {
-		width: 100%;
-		height: auto;
-		border-radius: 28px;
-	}
-
-	.readout {
-		position: relative;
-		margin: -5rem 1rem 0 auto;
-		max-width: 26rem;
-		border-radius: 22px;
-		background: #fff;
-		padding: 1.25rem 1.4rem;
-		box-shadow: 0 24px 50px -20px rgb(0 0 0 / 0.28);
-	}
-
-	.store {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-muted);
-	}
-
-	.readout li {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 0 1rem;
-		border-top: 1px solid var(--color-receipt-line);
-		padding: 0.65rem 0;
-	}
-
-	.readout li:first-child {
-		margin-top: 0.6rem;
-	}
-
-	.printed {
-		grid-column: 1 / -1;
-		font-size: 0.75rem;
-		letter-spacing: 0.02em;
-		color: var(--color-muted);
-	}
-
-	.name {
-		font-weight: 600;
-	}
-
-	.detail {
-		font-size: 0.875rem;
-		color: var(--color-muted);
-	}
-
-	.price {
-		grid-row: 2 / span 2;
-		grid-column: 2;
-		align-self: center;
-		font-weight: 600;
-	}
-
 	@media (min-width: 1000px) {
-		.snap {
-			grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-			align-items: center;
-			gap: 4rem;
-		}
-
-		.copy {
-			position: sticky;
-			top: 30vh;
-			align-self: start;
-		}
-	}
-
-	.stores {
-		margin-top: clamp(6rem, 16vh, 10rem);
-		max-width: none;
-		background: var(--color-raised);
-		padding: clamp(4.5rem, 12vh, 7.5rem) 1.25rem;
-		text-align: center;
-	}
-
-	.stores .sub {
-		margin-inline: auto;
-	}
-
-	.card {
-		margin: 3rem auto 0;
-		max-width: 30rem;
-		border-radius: 24px;
-		background: #fff;
-		padding: 1.5rem 1.6rem 1.25rem;
-		text-align: left;
-		box-shadow: 0 24px 50px -28px rgb(0 0 0 / 0.25);
-	}
-
-	.card-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		font-size: 1.375rem;
-		font-weight: 650;
-		letter-spacing: -0.02em;
-	}
-
-	.unit {
-		font-size: 0.875rem;
-		font-weight: 400;
-		letter-spacing: 0;
-		color: var(--color-muted);
-	}
-
-	.card li {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		border-top: 1px solid var(--color-receipt-line);
-		padding: 0.95rem 0;
-		font-size: 1.0625rem;
-	}
-
-	.card li:first-child {
-		margin-top: 0.75rem;
-	}
-
-	.per {
-		margin-left: auto;
-		min-width: 3.5rem;
-		text-align: right;
-		color: var(--color-muted);
 	}
 
 	.money {
@@ -563,19 +340,6 @@
 		text-align: right;
 		font-size: 1.25rem;
 		font-weight: 600;
-	}
-
-	.fact {
-		margin: 2rem auto 0;
-		max-width: 30rem;
-		font-size: 1.1875rem;
-		line-height: 1.5;
-		color: var(--color-ink);
-		text-wrap: balance;
-	}
-
-	.whole {
-		white-space: nowrap;
 	}
 
 	/* the problem: the same chicken on two receipts that never meet */
@@ -758,9 +522,6 @@
 			grid-row: 2;
 		}
 
-		.card li {
-			flex-wrap: wrap;
-		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -797,17 +558,52 @@
 
 	.private ul {
 		display: grid;
-		gap: 1rem;
-		margin-top: 2.5rem;
+		gap: 1.1rem 2.5rem;
+		max-width: 52rem;
+		margin-top: 2.25rem;
+	}
+
+	@media (min-width: 760px) {
+		.private ul {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 
 	.private li {
-		font-family: var(--font-display);
-		font-size: clamp(1.6rem, 3.4vw, 2.75rem);
-		font-weight: 600;
-		letter-spacing: -0.03em;
-		line-height: 1.15;
+		display: grid;
+		grid-template-columns: 1.6rem minmax(0, 1fr);
+		gap: 0.6rem;
+		align-items: start;
+		border-top: 1px solid var(--color-line);
+		padding-top: 1.1rem;
+		font-size: 1.125rem;
+		font-weight: 500;
+		line-height: 1.45;
 		color: var(--color-ink);
+	}
+
+	.private li svg {
+		width: 1.4rem;
+		height: 1.4rem;
+		fill: none;
+		stroke: var(--color-accent);
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	/* the words that carry each point: what you save in green, what it costs you in red */
+	.hl,
+	.year strong {
+		color: var(--color-accent);
+	}
+
+	.dear {
+		color: var(--color-up);
+	}
+
+	.year strong {
+		font-weight: 650;
 	}
 
 	.fine {

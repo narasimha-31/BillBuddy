@@ -284,11 +284,12 @@
 			z-index: 20;
 			margin: 0;
 			border-radius: 999px;
-			background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+			/* its own colour and a fine edge, so it stands off the cards behind it in either look */
+			background: color-mix(in srgb, var(--color-bar) 90%, transparent);
 			backdrop-filter: saturate(1.8) blur(22px);
 			box-shadow:
-				0 10px 30px -8px rgb(0 0 0 / 0.22),
-				0 0 0 0.5px rgb(0 0 0 / 0.08);
+				0 10px 30px -8px rgb(0 0 0 / 0.35),
+				0 0 0 1px color-mix(in srgb, var(--color-sep) 16%, transparent);
 		}
 
 		.pill {

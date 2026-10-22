@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { applyDisplay, displayOf, MODES, THEMES, type Display } from '../display';
 
-	const MODE_NAMES: Record<Display['mode'], string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
+	const MODE_NAMES: Record<Display['mode'], string> = { light: 'Light', dark: 'Dark', auto: 'System' };
 	const THEME_NAMES: Record<Display['theme'], string> = { green: 'Green', ocean: 'Ocean', sunset: 'Sunset', grape: 'Grape' };
 
 	let panel: HTMLDetailsElement;
