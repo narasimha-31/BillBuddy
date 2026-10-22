@@ -19,8 +19,13 @@
 	// the look changes at once and saves behind it; a failed save puts the saved look back
 	function pick(change: Partial<Display>) {
 		if (!chosen) return;
-		chosen = { ...chosen, ...change };
-		applyDisplay(chosen, document.documentElement);
+		// from the page as it is now, so a text or colour choice made meanwhile is kept
+		chosen = { ...displayOf(document.documentElement), ...change };
+		const next = chosen;
+		// light to dark and back fades instead of flashing the whole screen at once
+		const swap = () => applyDisplay(next, document.documentElement);
+		if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(swap);
+		else swap();
 		requestAnimationFrame(() => form.requestSubmit());
 	}
 

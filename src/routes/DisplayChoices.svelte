@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { applyDisplay, displayFromForm, TEXT_SIZES, type Display } from '../display';
+	import { applyDisplay, displayFromForm, displayOf, TEXT_SIZES, type Display } from '../display';
 
 	let { display }: { display: Display } = $props();
 
 	const LABELS: Record<Display['text'], string> = { standard: 'Standard', large: 'Large', larger: 'Larger' };
 	let chosen = $derived(display);
 	let problem = $state('');
+	let before: Display | null = null;
 
-	// a choice shows at once and saves behind it; if the save fails the page goes back to what was saved
+	// A choice shows at once and saves behind it; if the save fails the page goes back to how it was.
+	// It starts from the page as it is now, so a look picked meanwhile in the header is kept.
 	function save(form: HTMLFormElement) {
-		chosen = displayFromForm(new FormData(form), chosen);
+		before = displayOf(document.documentElement);
+		chosen = displayFromForm(new FormData(form), before);
 		applyDisplay(chosen, document.documentElement);
 		form.requestSubmit();
 	}
@@ -23,7 +26,7 @@
 	use:enhance={() =>
 		async ({ result }) => {
 			problem = result.type === 'success' ? '' : 'That choice did not save. Try again.';
-			if (result.type !== 'success') applyDisplay(display, document.documentElement);
+			if (result.type !== 'success' && before) applyDisplay((chosen = before), document.documentElement);
 		}}
 >
 	<ul class="group">
@@ -43,13 +46,6 @@
 				<span class="row-title">More contrast</span>
 				<input class="switch" type="checkbox" role="switch" name="more_contrast" checked={chosen.contrast} onchange={(e) => save(e.currentTarget.form!)} />
 				<span class="row-sub">Darker grey text and stronger lines.</span>
-			</label>
-		</li>
-		<li>
-			<label class="row">
-				<span class="row-title">Colour-blind friendly colours</span>
-				<input class="switch" type="checkbox" role="switch" name="colorblind" checked={chosen.palette === 'colorblind'} onchange={(e) => save(e.currentTarget.form!)} />
-				<span class="row-sub">Blue for cheaper and orange for up, in place of green and red.</span>
 			</label>
 		</li>
 	</ul>
