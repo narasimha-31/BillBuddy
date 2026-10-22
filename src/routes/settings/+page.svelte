@@ -23,6 +23,24 @@
 
 		<div class="columns">
 		<div class="column">
+		<form method="POST" action="?/budget" use:enhance={() => async ({ update }) => update({ reset: false })}>
+			<h2 class="list-label">Budget</h2>
+			<ul class="group">
+				<li>
+					<label class="row">
+						<span class="row-title">Monthly groceries</span>
+						<span class="budget">
+							<span aria-hidden="true">$</span>
+							<input name="budget" inputmode="decimal" autocomplete="off" placeholder="None" maxlength="10" value={data.budgetCents ? data.budgetCents / 100 : ''} onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+						</span>
+						<span class="row-sub">Home shows what is left this month. Leave it empty for no budget.</span>
+					</label>
+				</li>
+			</ul>
+			{#if form?.budgetProblem}<p class="problem budget-problem" role="alert">{form.budgetProblem}</p>{/if}
+			<noscript><button class="pill-button save">Save</button></noscript>
+		</form>
+
 		<!-- a switch applies the moment it flips, as in iOS; without JavaScript the Save button does it -->
 		<form method="POST" action="?/save" use:enhance={() => async ({ update }) => update({ reset: false })}>
 			<h2 class="list-label">What Pricetrail keeps</h2>
@@ -161,6 +179,38 @@
 
 	.inset {
 		padding: 0.25rem 1rem 1rem;
+	}
+
+	.budget {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.15rem;
+		color: var(--color-muted);
+	}
+
+	/* 16px text: iOS Safari zooms the page on any smaller field */
+	.budget input {
+		width: 6rem;
+		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
+		border-radius: 10px;
+		background: var(--color-surface);
+		padding: 0.4rem 0.6rem;
+		font-size: 1rem;
+		font-variant-numeric: tabular-nums;
+		text-align: right;
+		color: var(--color-ink);
+	}
+
+	.budget input:focus {
+		border-color: var(--color-accent);
+		outline: none;
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+	}
+
+	.budget-problem {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.8125rem;
+		color: var(--color-up);
 	}
 
 	main {

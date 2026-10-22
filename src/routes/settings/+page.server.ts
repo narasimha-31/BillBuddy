@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { budgetFromForm } from '../../budget';
 import { confirmsDelete, deleteAccount, removePhotos } from '../../delete-account.server';
 import { DISPLAY_COLUMNS, DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie, displayFromForm, fromRow, readDisplay, toRow } from '../../display';
 import { firstNameOf } from '../../session.server';
@@ -10,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!user) redirect(303, '/');
 
 	const [settings, map] = await Promise.all([
-		locals.supabase.from('user_settings').select(`keep_photos, ${DISPLAY_COLUMNS}`).maybeSingle(),
+		locals.supabase.from('user_settings').select(`keep_photos, monthly_budget_cents, ${DISPLAY_COLUMNS}`).maybeSingle(),
 		mapState(locals.supabase)
 	]);
 	if (settings.error) throw settings.error;
@@ -20,6 +21,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		email: user.email ?? null,
 		map,
 		keepPhotos: settings.data?.keep_photos ?? false,
+		budgetCents: (settings.data?.monthly_budget_cents as number | null) ?? null,
 		display: fromRow(settings.data)
 	};
 };
@@ -42,6 +44,16 @@ export const actions: Actions = {
 			const cleared = await locals.supabase.from('receipts').update({ image_path: null }).not('status', 'in', '(pending,processing)').not('image_path', 'is', null);
 			if (cleared.error) throw cleared.error;
 		}
+	},
+
+	budget: async ({ request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+		const cents = budgetFromForm((await request.formData()).get('budget'));
+		if (cents === undefined) return fail(400, { budgetProblem: 'Type an amount in dollars, like 400.' });
+		const saved = await locals.supabase.from('user_settings').upsert({ user_id: user.id, monthly_budget_cents: cents, updated_at: new Date().toISOString() });
+		if (saved.error) throw saved.error;
+		return { budget: cents };
 	},
 
 	// The store map: on needs a ZIP code, and looks up the stores that have no place yet; off deletes

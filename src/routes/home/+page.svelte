@@ -5,6 +5,7 @@
 	import ReceiptUploader from '../ReceiptUploader.svelte';
 	import Tour from '../Tour.svelte';
 	import { aisleSpend, spendBars, type Bar } from '../../spend';
+	import { budgetLine } from '../../budget';
 	import { invalidateAll } from '$app/navigation';
 	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
@@ -40,6 +41,8 @@
 	const title = $derived(current ? (by === 'month' ? `Spent in ${monthName}` : 'Spent this week') : periodName(focus));
 	const versus = $derived(current ? (by === 'month' ? 'last month' : 'last week') : by === 'month' ? 'the month before' : 'the week before');
 	const dollars = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
+	// only this month has a budget to stand against
+	const budget = $derived(data.budgetCents && by === 'month' && current ? budgetLine(data.budgetCents, data.month.spentCents) : null);
 	// the top four aisles of the period in the big number; the rest share one row
 	const aisles = $derived.by(() => {
 		const all = aisleSpend(data.spend.rows, focus.ids);
@@ -149,6 +152,12 @@
 						Nothing dated {current ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
 					{/if}
 				</p>
+				{#if budget}
+					<p class="budget" class:over={budget.over}>
+						<span class="meter" style:--size={Math.min(1, data.month.spentCents / data.budgetCents!)} aria-hidden="true"></span>
+						{budget.text}
+					</p>
+				{/if}
 				<ul class="bars" class:weeks={by === 'week'}>
 					{#each bars as bar, i (bar.from)}
 						<li>
@@ -528,6 +537,28 @@
 	.on .tick {
 		font-weight: 600;
 		color: var(--color-ink);
+	}
+
+	.budget {
+		display: grid;
+		gap: 0.35rem;
+		margin-top: 0.75rem;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.budget.over {
+		color: var(--color-up);
+	}
+
+	.meter {
+		height: 6px;
+		border-radius: 3px;
+		background: linear-gradient(to right, var(--color-ink) calc(100% * var(--size)), rgb(118 118 128 / 0.16) 0);
+	}
+
+	.budget.over .meter {
+		background: var(--color-up);
 	}
 
 	.aisles {

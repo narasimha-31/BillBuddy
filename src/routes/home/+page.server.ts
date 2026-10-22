@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.supabase.from('receipts').select('id, status, problem, processing_at').in('status', ['pending', 'processing', 'failed']),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
 		locals.supabase.rpc('my_upload_window'),
-		locals.supabase.from('user_settings').select('tour_seen').maybeSingle()
+		locals.supabase.from('user_settings').select('tour_seen, monthly_budget_cents').maybeSingle()
 	]);
 	for (const answer of [recent, spend, undated, unread, changes, uploaded, settings]) if (answer.error) throw answer.error;
 	// a read cut off mid-way frees up after two minutes, the same window the database uses
@@ -63,6 +63,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		dailyLimit: DAILY_RECEIPTS,
 		paused: await paused,
 		tour: !settings.data?.tour_seen,
+		budgetCents: (settings.data?.monthly_budget_cents as number | null) ?? null,
 		month: {
 			start: monthStart,
 			spentCents: monthRows.reduce((sum, r) => sum + (r.total_cents ?? 0), 0),
