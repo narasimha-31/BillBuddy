@@ -17,8 +17,8 @@
 			'When a line like "CF ORGT SAUCE" is hard to read, the web search sees that line and "Walmart". Never you, your address or your city.'
 		],
 		[
-			'Store addresses only if you turn them on.',
-			'Then the address printed on the receipt goes to the US Census map lookup to place the store, and nothing about you does. Where you are, for the nearest store, is worked out on your own device and never sent.'
+			'Store map: off until you turn it on.',
+			'Then we keep your ZIP code, never your address. To find a store’s branches, OpenStreetMap gets the store’s name and an area about 35 miles across, not your ZIP. A store address on a receipt, or one you type, goes to the US Census map lookup. Map pictures come through our server, so the map site never sees you. Directions open Google Maps only when you tap them.'
 		],
 		['Cookies only keep you signed in.', 'No tracking or ad cookies, which is why there is no cookie banner.'],
 		['Only you can see your receipts.', 'Locked to your account in the database itself. Delete your account in Settings and every receipt goes with it.']

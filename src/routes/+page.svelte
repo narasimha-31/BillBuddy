@@ -39,7 +39,7 @@
 	let gapShown = $state(gap);
 	let cartShown = $state(carts.map((c) => c.cents));
 
-	const promises = ['Your card number is never kept.', 'The photo is deleted once it’s read.', 'Nothing is sold or shared. Ever.'];
+	const promises = ['Your card number is never kept.', 'The photo is deleted once it’s read.', 'Nothing is sold or shared. Ever.', 'Store map: off until you turn it on. ZIP code only, never your address.'];
 
 	// Number Flow renders differently on the server, so the plain price is drawn until the page is live
 	let live = $state(false);
