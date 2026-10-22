@@ -4,31 +4,33 @@
    and savings, red only for a price that went up. Text pairs are WCAG AA. */
 @theme {
 	/* each colour is a light and a dark value; the signed-in app picks one with color-scheme */
-	--color-bg: light-dark(#fbfbfd, #050607);
-	--color-ink: light-dark(#1d1d1f, #f2f2f7);
-	--color-muted: light-dark(#6e6e73, #9a9aa2);
-	--color-line: light-dark(#d2d2d7, #3a3a3e);
-	--color-accent: light-dark(#1f7a4d, #3ddc84);
+	--color-bg: #fbfbfd;
+	--color-ink: #1d1d1f;
+	--color-muted: #6e6e73;
+	--color-line: #d2d2d7;
+	--color-accent: #1f7a4d;
 	/* behind white text: the same mid tone in both looks */
 	--color-accent-fill: #1f7a4d;
 	--color-brand: #1f7a4d;
-	--color-up: light-dark(#b42318, #ff7a6e);
-	--color-cheaper: light-dark(#1f7a4d, #3ddc84);
-	/* destructive actions stay red whatever the palette: they are a warning, not a price */
-	--color-danger: light-dark(#b42318, #ff7a6e);
-	--color-raised: light-dark(#f5f5f7, #0c0d10);
-	--color-on-ink: light-dark(#fbfbfd, #0b0b0c);
+	--color-up: #b42318;
+	--color-cheaper: #1f7a4d;
+	/* destructive actions stay red: they are a warning, not a price */
+	--color-danger: #b42318;
+	--color-raised: #f5f5f7;
+	--color-on-ink: #fbfbfd;
 	/* cards, separators and press shades, so the dark look can swap them in one place */
-	--color-surface: light-dark(#fff, #16171b);
+	--color-surface: #fff;
 	/* the chosen segment of a switch, lifted off its track */
-	--color-selected: light-dark(#fff, #3a3b41);
-	--color-sep: light-dark(rgb(60 60 67), rgb(235 235 245));
-	--color-shade: light-dark(rgb(0 0 0), rgb(255 255 255));
+	--color-selected: #fff;
+	/* behind map tiles while they load */
+	--color-map: #f2f2f4;
+	--color-sep: rgb(60 60 67);
+	--color-shade: rgb(0 0 0);
 
-	--color-receipt: light-dark(#fdfdfd, #16171b);
-	--color-receipt-ink: light-dark(#1d1d1f, #f2f2f7);
-	--color-receipt-muted: light-dark(#6e6e73, #9a9aa2);
-	--color-receipt-line: light-dark(#e5e5ea, #2c2d31);
+	--color-receipt: #fdfdfd;
+	--color-receipt-ink: #1d1d1f;
+	--color-receipt-muted: #6e6e73;
+	--color-receipt-line: #e5e5ea;
 	--color-receipt-up: var(--color-up);
 	--color-receipt-down: var(--color-cheaper);
 
@@ -66,25 +68,20 @@ html[data-text='larger'] {
 }
 
 /* more contrast: darker secondary text and lines; also on when the device asks for it */
-html[data-contrast='more'] {
-	--color-muted: light-dark(#3a3a3c, #d1d1d6);
-	--color-line: light-dark(#8e8e93, #8e8e93);
-	--color-receipt-muted: light-dark(#3a3a3c, #d1d1d6);
+html[data-contrast='more'],
+html[data-contrast='more'] .app {
+	--color-muted: #3a3a3c;
+	--color-line: #8e8e93;
+	--color-receipt-muted: #3a3a3c;
 }
 
 @media (prefers-contrast: more) {
-	:root {
-		--color-muted: light-dark(#3a3a3c, #d1d1d6);
+	:root,
+	:root .app {
+		--color-muted: #3a3a3c;
 		--color-line: #8e8e93;
-		--color-receipt-muted: light-dark(#3a3a3c, #d1d1d6);
+		--color-receipt-muted: #3a3a3c;
 	}
-}
-
-/* Okabe-Ito blue and vermilion, darkened to pass WCAG AA as text: told apart with every common
-   kind of colour blindness, where green and red are not */
-html[data-palette='colorblind'] {
-	--color-cheaper: light-dark(#0b63b6, #64b5ff);
-	--color-up: light-dark(#a64400, #ffa05c);
 }
 
 /* Look: light by default, dark, or the device's choice. Only the signed-in app follows it; the
@@ -93,13 +90,27 @@ html[data-palette='colorblind'] {
 	color-scheme: light;
 	/* set again here: colour inherited from <body> was already worked out in the light look */
 	color: var(--color-ink);
+	/* the app's light look is softened: no pure white page or cards to glare, and grey text a step
+	   darker so it still reads easily on the dimmer grey */
+	--color-raised: #e9ebee;
+	--color-bg: #f1f2f4;
+	--color-accent: #1a6b43;
+	--color-surface: #f8f9fa;
+	--color-muted: #5f6066;
+	--color-receipt: #f8f9fa;
+	--color-receipt-muted: #5f6066;
+	/* colours made from other colours are set again here, so they follow the look the app is in */
+	--color-receipt-up: var(--color-up);
+	--color-receipt-down: var(--color-cheaper);
 }
 
 html[data-mode='dark'] .app {
+	--color-map: #15161a;
 	color-scheme: dark;
 }
 
 html[data-mode='auto'] .app {
+		--color-map: #15161a;
 	color-scheme: light dark;
 }
 
@@ -116,36 +127,36 @@ html[data-mode='dark']:has(.app) {
 /* Four themes. Each sets the action colour and three soft lights behind the page; prices keep
    their own green and red so cheaper and up always mean the same. */
 .app {
-	--glow-a: light-dark(rgb(31 122 77 / 0.13), rgb(30 170 105 / 0.3));
-	--glow-b: light-dark(rgb(20 140 150 / 0.1), rgb(20 150 170 / 0.24));
-	--glow-c: light-dark(rgb(150 200 60 / 0.08), rgb(120 200 60 / 0.14));
+	--glow-a: rgb(31 122 77 / 0.13);
+	--glow-b: rgb(20 140 150 / 0.1);
+	--glow-c: rgb(150 200 60 / 0.08);
 }
 
 html[data-theme='ocean'] .app {
-	--color-accent: light-dark(#0a64a4, #5ac8fa);
+	--color-accent: #0a64a4;
 	--color-accent-fill: #0a64a4;
 	--color-brand: #0a64a4;
-	--glow-a: light-dark(rgb(10 100 164 / 0.14), rgb(10 120 220 / 0.34));
-	--glow-b: light-dark(rgb(0 170 200 / 0.11), rgb(0 200 230 / 0.22));
-	--glow-c: light-dark(rgb(90 90 220 / 0.08), rgb(80 80 230 / 0.2));
+	--glow-a: rgb(10 100 164 / 0.14);
+	--glow-b: rgb(0 170 200 / 0.11);
+	--glow-c: rgb(90 90 220 / 0.08);
 }
 
 html[data-theme='sunset'] .app {
-	--color-accent: light-dark(#b4460f, #ffa05c);
+	--color-accent: #b4460f;
 	--color-accent-fill: #c2410c;
 	--color-brand: #c2410c;
-	--glow-a: light-dark(rgb(240 120 40 / 0.14), rgb(250 110 30 / 0.3));
-	--glow-b: light-dark(rgb(230 60 110 / 0.1), rgb(235 50 110 / 0.24));
-	--glow-c: light-dark(rgb(250 190 60 / 0.1), rgb(250 170 40 / 0.16));
+	--glow-a: rgb(240 120 40 / 0.14);
+	--glow-b: rgb(230 60 110 / 0.1);
+	--glow-c: rgb(250 190 60 / 0.1);
 }
 
 html[data-theme='grape'] .app {
-	--color-accent: light-dark(#6a3fc8, #c3a3ff);
+	--color-accent: #6a3fc8;
 	--color-accent-fill: #6a3fc8;
 	--color-brand: #6a3fc8;
-	--glow-a: light-dark(rgb(110 60 210 / 0.13), rgb(120 70 240 / 0.34));
-	--glow-b: light-dark(rgb(210 60 160 / 0.09), rgb(220 60 170 / 0.22));
-	--glow-c: light-dark(rgb(60 110 230 / 0.08), rgb(50 110 240 / 0.18));
+	--glow-a: rgb(110 60 210 / 0.13);
+	--glow-b: rgb(210 60 160 / 0.09);
+	--glow-c: rgb(60 110 230 / 0.08);
 }
 
 /* Tailwind 4 resets buttons to the arrow cursor; everything clickable should show the hand */
@@ -635,4 +646,111 @@ html[data-mode='dark'] .app .leaflet-tile-pane {
 .app select option {
 	background-color: var(--color-surface);
 	color: var(--color-ink);
+}
+
+
+/* The dark look as plain overrides, so it works on every browser, old Safari too. Auto takes
+   the same values when the device is set to dark. */
+html[data-mode='dark'] .app {
+	--color-bg: #050607;
+	--color-ink: #f2f2f7;
+	--color-muted: #9a9aa2;
+	--color-line: #3a3a3e;
+	--color-accent: #3ddc84;
+	--color-up: #ff7a6e;
+	--color-cheaper: #3ddc84;
+	--color-danger: #ff7a6e;
+	--color-raised: #0c0d10;
+	--color-on-ink: #0b0b0c;
+	--color-surface: #16171b;
+	--color-selected: #3a3b41;
+	--color-sep: rgb(235 235 245);
+	--color-shade: rgb(255 255 255);
+	--color-receipt: #16171b;
+	--color-receipt-ink: #f2f2f7;
+	--color-receipt-muted: #9a9aa2;
+	--color-receipt-line: #2c2d31;
+	--glow-a: rgb(30 170 105 / 0.3);
+	--glow-b: rgb(20 150 170 / 0.24);
+	--glow-c: rgb(120 200 60 / 0.14);
+}
+
+html[data-contrast='more'][data-mode='dark'] .app {
+	--color-muted: #d1d1d6;
+	--color-line: #8e8e93;
+	--color-receipt-muted: #d1d1d6;
+}
+
+html[data-theme='ocean'][data-mode='dark'] .app {
+	--color-accent: #5ac8fa;
+	--glow-a: rgb(10 120 220 / 0.34);
+	--glow-b: rgb(0 200 230 / 0.22);
+	--glow-c: rgb(80 80 230 / 0.2);
+}
+
+html[data-theme='sunset'][data-mode='dark'] .app {
+	--color-accent: #ffa05c;
+	--glow-a: rgb(250 110 30 / 0.3);
+	--glow-b: rgb(235 50 110 / 0.24);
+	--glow-c: rgb(250 170 40 / 0.16);
+}
+
+html[data-theme='grape'][data-mode='dark'] .app {
+	--color-accent: #c3a3ff;
+	--glow-a: rgb(120 70 240 / 0.34);
+	--glow-b: rgb(220 60 170 / 0.22);
+	--glow-c: rgb(50 110 240 / 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+	html[data-mode='auto'] .app {
+		--color-bg: #050607;
+		--color-ink: #f2f2f7;
+		--color-muted: #9a9aa2;
+		--color-line: #3a3a3e;
+		--color-accent: #3ddc84;
+		--color-up: #ff7a6e;
+		--color-cheaper: #3ddc84;
+		--color-danger: #ff7a6e;
+		--color-raised: #0c0d10;
+		--color-on-ink: #0b0b0c;
+		--color-surface: #16171b;
+		--color-selected: #3a3b41;
+		--color-sep: rgb(235 235 245);
+		--color-shade: rgb(255 255 255);
+		--color-receipt: #16171b;
+		--color-receipt-ink: #f2f2f7;
+		--color-receipt-muted: #9a9aa2;
+		--color-receipt-line: #2c2d31;
+		--glow-a: rgb(30 170 105 / 0.3);
+		--glow-b: rgb(20 150 170 / 0.24);
+		--glow-c: rgb(120 200 60 / 0.14);
+	}
+
+	html[data-contrast='more'][data-mode='auto'] .app {
+		--color-muted: #d1d1d6;
+		--color-line: #8e8e93;
+		--color-receipt-muted: #d1d1d6;
+	}
+
+	html[data-theme='ocean'][data-mode='auto'] .app {
+		--color-accent: #5ac8fa;
+		--glow-a: rgb(10 120 220 / 0.34);
+		--glow-b: rgb(0 200 230 / 0.22);
+		--glow-c: rgb(80 80 230 / 0.2);
+	}
+
+	html[data-theme='sunset'][data-mode='auto'] .app {
+		--color-accent: #ffa05c;
+		--glow-a: rgb(250 110 30 / 0.3);
+		--glow-b: rgb(235 50 110 / 0.24);
+		--glow-c: rgb(250 170 40 / 0.16);
+	}
+
+	html[data-theme='grape'][data-mode='auto'] .app {
+		--color-accent: #c3a3ff;
+		--glow-a: rgb(120 70 240 / 0.34);
+		--glow-b: rgb(220 60 170 / 0.22);
+		--glow-c: rgb(50 110 240 / 0.18);
+	}
 }

@@ -413,7 +413,7 @@
 		position: relative;
 		overflow: hidden;
 		border-radius: 14px;
-		background: light-dark(#f2f2f4, #15161a);
+		background: var(--color-map);
 		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
 	}
 

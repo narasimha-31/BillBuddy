@@ -171,8 +171,9 @@
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		margin: 0 auto;
-		border-radius: 10px;
-		background: rgb(118 118 128 / 0.12);
+		border-radius: 11px;
+		background: color-mix(in srgb, var(--color-sep) 7%, transparent);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-sep) 9%, transparent);
 		padding: var(--pad);
 	}
 
@@ -184,12 +185,27 @@
 		bottom: var(--pad);
 		left: var(--pad);
 		width: calc((100% - 2 * var(--pad)) / 3);
-		border-radius: 8px;
+		border-radius: 9px;
 		background: var(--color-selected);
 		box-shadow:
-			0 3px 8px rgb(0 0 0 / 0.12),
-			0 3px 1px rgb(0 0 0 / 0.04);
+			inset 0 1px 0 rgb(255 255 255 / 0.12),
+			0 0 0 1px color-mix(in srgb, var(--color-sep) 8%, transparent),
+			0 2px 6px rgb(0 0 0 / 0.14);
 		transform: translateX(calc(var(--selected) * 100%));
+	}
+
+	/* a thin line in the theme's colour under the chosen tab, lit like an indicator, riding with the pill */
+	.pill::after {
+		content: '';
+		position: absolute;
+		bottom: 3px;
+		left: 50%;
+		width: 1.1rem;
+		height: 2px;
+		border-radius: 2px;
+		background: var(--color-accent);
+		box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 70%, transparent);
+		translate: -50% 0;
 	}
 
 	nav.ready .pill {
@@ -202,14 +218,18 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 8px;
-		padding: 0.35rem 1.1rem;
+		padding: 0.3rem 1.1rem 0.55rem;
 		font-size: 0.9375rem;
 		font-weight: 500;
-		color: var(--color-ink);
+		color: var(--color-muted);
 		-webkit-tap-highlight-color: transparent;
 		transition:
 			color 160ms,
 			transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	nav a.on {
+		color: var(--color-ink);
 	}
 
 	/* pressed: a small give under the finger, at once, then it springs back */
@@ -264,6 +284,10 @@
 			border-radius: 999px;
 			background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 			box-shadow: none;
+		}
+
+		.pill::after {
+			content: none;
 		}
 
 		nav a {
