@@ -146,7 +146,6 @@
 			<div class="upload surface">
 				<ReceiptUploader bind:this={uploader} uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} onreading={busy} />
 			</div>
-			<p class="privacy">Card details are never saved and photos are deleted once read. <a href="/privacy">Privacy</a></p>
 
 			{#if saved.length > 1}
 				<div class="find">
@@ -557,16 +556,6 @@
 
 	.phone-row .link {
 		margin-top: 0;
-	}
-
-	.privacy {
-		margin: 0.5rem 1rem 0;
-		font-size: 0.8125rem;
-		color: var(--color-muted);
-	}
-
-	.privacy a {
-		color: var(--color-accent);
 	}
 
 	/* months that have receipts; a row that scrolls sideways on a phone */
