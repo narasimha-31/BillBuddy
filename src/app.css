@@ -755,47 +755,6 @@ html[data-theme='grape'][data-mode='dark'] .app {
 	}
 }
 
-/* Between pages: the old page eases out, the new one settles in a few pixels from below, and the
-   header and tab bar hold still (they are their own layers). Started from +layout.svelte. */
-.app > .top {
-	view-transition-name: top-bar;
-}
-
-.app nav[aria-label='Main'] {
-	view-transition-name: tabs;
-}
-
-::view-transition-group(top-bar),
-::view-transition-group(tabs),
-::view-transition-old(top-bar),
-::view-transition-new(top-bar),
-::view-transition-old(tabs),
-::view-transition-new(tabs) {
-	animation: none;
-}
-
-::view-transition-old(root) {
-	animation: page-out 140ms cubic-bezier(0.4, 0, 1, 1) both;
-}
-
-::view-transition-new(root) {
-	animation: page-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
-}
-
-@keyframes page-out {
-	to {
-		opacity: 0;
-		transform: translateY(-4px);
-	}
-}
-
-@keyframes page-in {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-}
-
 /* changing the look: one calm crossfade of the whole screen */
 html.look-swap::view-transition-old(root) {
 	animation: look-out 320ms ease both;

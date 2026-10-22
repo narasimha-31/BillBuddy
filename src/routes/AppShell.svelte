@@ -1,5 +1,12 @@
+<script lang="ts" module>
+	// set by the page being left, read by the page arriving: only a tap between pages eases the new
+	// one in, never a first load or a refresh
+	let arrivedByTap = false;
+</script>
+
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { navigating, page } from '$app/state';
 	import AccountMenu from './AccountMenu.svelte';
@@ -20,6 +27,15 @@
 	// already the selected one, instead of nothing changing until the server answers.
 	const path = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	const selected = $derived(links.findIndex((link) => under(path, link.href)));
+
+	// The real page moves, never a frozen picture of it, so the tab pill keeps sliding throughout:
+	// the page being left dims the moment a tab is tapped, and the next one rises in when it lands.
+	const leaving = $derived(!!navigating.to && navigating.to.route.id !== page.route.id);
+	const entering = arrivedByTap;
+	arrivedByTap = false;
+	beforeNavigate(({ to }) => {
+		arrivedByTap = !!to && to.route.id !== page.route.id;
+	});
 
 	// the pill starts where it belongs, and only slides once the page is on screen
 	let ready = $state(false);
@@ -64,7 +80,7 @@
 		</div>
 	</header>
 
-	<div class="page">
+	<div class="page" class:leaving class:entering>
 		{@render children()}
 	</div>
 	<Toaster />
@@ -99,7 +115,32 @@
 		box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
 	}
 
+	.page {
+		transition: opacity 120ms cubic-bezier(0.4, 0, 1, 1);
+	}
+
+	.page.leaving {
+		opacity: 0.35;
+	}
+
+	.page.entering {
+		animation: page-in 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	}
+
+	@keyframes page-in {
+		from {
+			opacity: 0.35;
+			transform: translateY(8px);
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
+		.page,
+		.page.entering {
+			transition: none;
+			animation: none;
+		}
+
 		nav.ready .pill,
 		nav a {
 			transition: none;
