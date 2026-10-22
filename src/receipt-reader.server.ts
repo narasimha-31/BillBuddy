@@ -32,9 +32,10 @@ const schema = {
 		},
 		subtotal: nullable('number'),
 		tax: nullable('number'),
-		total: nullable('number')
+		total: nullable('number'),
+		items_printed: { ...nullable('number'), description: 'the item count printed on the receipt ("ITEMS PURCHASED: 14", "# ITEMS SOLD 25"), or null' }
 	},
-	required: ['kind', 'handwritten', 'store', 'store_address', 'date_printed', 'channel', 'lines', 'subtotal', 'tax', 'total'],
+	required: ['kind', 'handwritten', 'store', 'store_address', 'date_printed', 'channel', 'lines', 'subtotal', 'tax', 'total', 'items_printed'],
 	additionalProperties: false
 };
 

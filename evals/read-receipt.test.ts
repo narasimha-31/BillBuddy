@@ -91,6 +91,7 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		const r = await read('evals/real/heb.jpg');
 		const ramen = r.ok && r.lines.find((l) => l.raw.toUpperCase().includes('RAMEN'));
 		expect(ramen).toMatchObject({ quantity: 2, unitPriceCents: 48, totalCents: 96 });
+		expect(r).toMatchObject({ counts_match: true });
 	});
 
 	// the same product from three stores must come back with one name, so it groups into one product

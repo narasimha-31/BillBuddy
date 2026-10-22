@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReading, dropNonItems, readDate, realignDetails, reconcile, storeAddress, type Reading } from './receipt-check';
+import { checkReading, countsMatch, dropNonItems, readDate, realignDetails, reconcile, storeAddress, type Reading } from './receipt-check';
 
 const line = (raw: string, total: number | null, extra: Partial<Reading['lines'][number]> = {}) => ({
 	raw,
@@ -354,5 +354,20 @@ describe('dropNonItems', () => {
 	it('keeps groceries whose names only start like a total or a rate', () => {
 		const lines = [line('TOTAL CEREAL 12OZ', 4.29), line('TAXI CAB TOY', 2.99), line('2 LB CARROTS', 1.49), line('8 @ 4/0.99', 1.98)];
 		expect(dropNonItems(lines).map((l) => l.raw)).toEqual(['TOTAL CEREAL 12OZ', 'TAXI CAB TOY', '2 LB CARROTS']);
+	});
+});
+
+describe('countsMatch', () => {
+	const item = (quantity: number, unit = 'ea') => ({ quantity, unit, kind: 'item' as const });
+	it('counts a multi-pack by its count and a weighed item as one', () => {
+		const lines = [item(1), item(2), item(1.62, 'lb'), { quantity: 1, unit: 'ea', kind: 'discount' as const }];
+		expect(countsMatch(lines, 4)).toBe(true);
+		expect(countsMatch([item(1), item(1), item(1.62, 'lb')], 4)).toBe(false);
+	});
+
+	it('says nothing when no count is printed or it is not a whole number', () => {
+		expect(countsMatch([item(1)], null)).toBeNull();
+		expect(countsMatch([item(1)], 0)).toBeNull();
+		expect(countsMatch([item(1)], 2.5)).toBeNull();
 	});
 });

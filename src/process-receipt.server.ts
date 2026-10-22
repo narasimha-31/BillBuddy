@@ -80,7 +80,14 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		// free checks before any tokens are spent
 		if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff || sizeProblem(bytes)) return await fail('bad_photo');
 
-		const checked = checkReading(await readReceipt(bytes, userId));
+		let checked = checkReading(await readReceipt(bytes, userId));
+		// the printed item count says a count was missed: the backup model reads it once more, and wins only if its count fits
+		if (checked.ok && checked.counts_match === false) {
+			const second = await readReceipt(bytes, userId, ['visionBackup'])
+				.then((reading) => checkReading(reading))
+				.catch(() => null);
+			if (second?.ok && second.counts_match) checked = second;
+		}
 		if (!checked.ok) return await fail(checked.reason);
 
 		const { data: settings } = await supabase

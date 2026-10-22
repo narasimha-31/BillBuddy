@@ -12,6 +12,8 @@ export type Reading = {
 	subtotal: number | null;
 	tax: number | null;
 	total: number | null;
+	// "ITEMS PURCHASED: 14", copied as printed
+	items_printed?: number | null;
 };
 
 export type CheckedLine = {
@@ -41,6 +43,8 @@ export type Checked =
 			totalCents: number | null;
 			lines_match_subtotal: boolean;
 			totals_match: boolean | null;
+			// the printed item count against our counts; null when the receipt prints none
+			counts_match: boolean | null;
 			needs_review: boolean;
 	  };
 
@@ -212,6 +216,13 @@ function wholeCount(totalCents: number, priceCents: number) {
 	return count >= 1 && count < 100 && Math.abs(count * priceCents - totalCents) <= 1 ? count : null;
 }
 
+// a weighed item is one item on the till's count, whatever it weighs
+export function countsMatch(lines: Pick<CheckedLine, 'quantity' | 'unit' | 'kind'>[], printed: number | null | undefined) {
+	if (!printed || printed <= 0 || !Number.isInteger(printed)) return null;
+	const counted = lines.filter((l) => l.kind === 'item').reduce((sum, l) => sum + (['lb', 'kg', 'oz', 'g'].includes(l.unit) ? 1 : Math.round(l.quantity)), 0);
+	return counted === printed;
+}
+
 export function checkReading(reading: Reading, today = new Date()): Checked {
 	if (reading.kind === 'not_a_receipt') return { ok: false, reason: 'not_a_receipt' };
 	if (reading.handwritten) return { ok: false, reason: 'handwritten' };
@@ -275,6 +286,7 @@ export function checkReading(reading: Reading, today = new Date()): Checked {
 		totalCents,
 		lines_match_subtotal,
 		totals_match,
+		counts_match: countsMatch(lines, reading.items_printed),
 		needs_review: !lines_match_subtotal || totals_match === false || lines.some((l) => l.issue !== null)
 	};
 }
