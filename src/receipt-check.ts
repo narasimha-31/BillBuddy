@@ -168,10 +168,12 @@ export function realignDetails(lines: ReadLine[]): ReadLine[] {
 // weight or multi-buy rate printed on its own line. Whole-line matches only, so "TOTAL CEREAL"
 // and "TAXI CAB TOY" stay items.
 const TOTALS_LINE = /^(sub\s*-?\s*total|total|total\s+tax|sales\s+tax|tax(\s+\d+)?(\s+[\d.]+\s*%)?|balance(\s+due)?|amount\s+due)\s*:?\s*$/i;
-const RATE_LINE = /^(\d+(?:\.\d+)?)\s*(lb|lbs|kg|oz|g|ea)?\s*@\s*(?:(\d+)\s*\/\s*)?\$?(\d+(?:\.\d+)?)\s*(\/\s*(lb|kg|oz|g|ea))?\s*$/i;
+// "2 Ea. @ 1/ 0.48 F" too: a dot after the unit and a tax letter at the end
+const RATE_LINE = /^(\d+(?:\.\d+)?)\s*(lb|lbs|kg|oz|g|ea)?\.?\s*@\s*(?:(\d+)\s*\/\s*)?\$?(\d+(?:\.\d+)?)\s*(\/\s*(lb|kg|oz|g|ea))?(?:\s+[a-z])?\s*$/i;
 
 // A rate line's numbers go to the neighbour (above or below) whose amount they explain and that
-// has no rate of its own; then the rate line itself is dropped.
+// has no rate of its own; then the rate line itself is dropped. Some stores print the amount on the
+// rate line and none on the item, so an item without an amount takes the rate line's.
 export function dropNonItems(lines: ReadLine[]): ReadLine[] {
 	const result = lines.map((l) => ({ ...l }));
 	const drop = new Set<number>();
@@ -193,6 +195,11 @@ export function dropNonItems(lines: ReadLine[]): ReadLine[] {
 			const total = cents(other.total);
 			if (total !== null && Math.abs(total - amount) <= 2) {
 				Object.assign(other, found);
+				break;
+			}
+			const own = cents(line.total);
+			if (total === null && own !== null && Math.abs(own - amount) <= 2) {
+				Object.assign(other, found, { total: line.total });
 				break;
 			}
 		}

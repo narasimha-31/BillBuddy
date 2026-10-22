@@ -336,6 +336,14 @@ describe('dropNonItems', () => {
 		]);
 	});
 
+	it('moves a quantity line that carries the amount onto the item above it', () => {
+		const lines = [line('MARUCHAN RAMEN CHILI FLAV', null), line('2 Ea. @ 1/ 0.48 F', 0.96), line('HEB SI RS CHICKEN BROTH', 1.98)];
+		const kept = dropNonItems(lines);
+		expect(kept.map((l) => l.raw)).toEqual(['MARUCHAN RAMEN CHILI FLAV', 'HEB SI RS CHICKEN BROTH']);
+		expect(kept[0]).toMatchObject({ quantity: 2, unit: 'ea', unit_price: 0.48, total: 0.96 });
+		expect(kept[1]).toMatchObject({ quantity: null, total: 1.98 });
+	});
+
 	it('takes the totals block out of the items', () => {
 		const lines = [line('GG WHOLE MILK 1G', 3.69), line('SUBTOTAL', 18.16), line('TAX', 0), line('TOTAL', 18.16), line('TAX 1 8.25 %', 0), line('BALANCE DUE', 18.16)];
 		expect(dropNonItems(lines).map((l) => l.raw)).toEqual(['GG WHOLE MILK 1G']);

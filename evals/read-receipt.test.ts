@@ -16,7 +16,7 @@ const today = new Date('2026-10-11T12:00:00Z');
 const roles = process.env.EVAL_VISION ? [process.env.EVAL_VISION as VisionRole] : undefined;
 
 async function read(name: string): Promise<Checked> {
-	const bytes = new Uint8Array(readFileSync(`evals/images/${name}.jpg`));
+	const bytes = new Uint8Array(readFileSync(name.includes('/') ? name : `evals/images/${name}.jpg`));
 	const result = checkReading(await readReceipt(bytes, null, roles), today);
 	console.log(`\n${name}:`, JSON.stringify(result));
 	return result;
@@ -85,6 +85,12 @@ describe('reading receipts', { timeout: 90_000 }, () => {
 		const named = await names(r);
 		const shampoo = named.find((n) => n.raw === 'HNS 2ND1 ITCHY')!;
 		expect(shampoo).toMatchObject({ flag: 'ok', category: 'Personal care' });
+	});
+
+	it('reads a quantity line that carries the amount as the item above it', async () => {
+		const r = await read('evals/real/heb.jpg');
+		const ramen = r.ok && r.lines.find((l) => l.raw.toUpperCase().includes('RAMEN'));
+		expect(ramen).toMatchObject({ quantity: 2, unitPriceCents: 48, totalCents: 96 });
 	});
 
 	// the same product from three stores must come back with one name, so it groups into one product
