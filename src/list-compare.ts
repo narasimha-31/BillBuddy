@@ -1,6 +1,6 @@
 export type ListPrice = { name: string; store: string; per: string; cents: number; bought_on: string | null };
 
-export type ListItem = { name: string; per: string | null; prices: { store: string; cents: number }[]; lowest: number | null };
+export type ListItem = { name: string; per: string | null; prices: { store: string; cents: number }[]; lowest: number | null; lastOn: string | null };
 export type StoreTotal = { store: string; cents: number; has: number; cheapest: number; missing: string[] };
 
 const key = (name: string) => name.trim().toLowerCase();
@@ -11,12 +11,13 @@ const key = (name: string) => name.trim().toLowerCase();
 export function compareStores(list: string[], rows: ListPrice[]) {
 	const items: ListItem[] = list.map((name) => {
 		let mine = rows.filter((row) => key(row.name) === key(name));
+		const lastOn = mine.reduce<string | null>((last, row) => (row.bought_on && (!last || row.bought_on > last) ? row.bought_on : last), null);
 		// compare like with like when a store sold it by the pound and another by the piece
 		const pounds = mine.filter((row) => row.per === 'lb').length;
 		const per = mine.length ? (pounds * 2 > mine.length ? 'lb' : 'ea') : null;
 		mine = mine.filter((row) => row.per === per);
 		const prices = mine.map(({ store, cents }) => ({ store, cents })).sort((a, b) => a.cents - b.cents);
-		return { name, per, prices, lowest: prices[0]?.cents ?? null };
+		return { name, per, prices, lowest: prices[0]?.cents ?? null, lastOn };
 	});
 
 	const priced = items.filter((item) => item.prices.length);
@@ -40,6 +41,18 @@ export function compareStores(list: string[], rows: ListPrice[]) {
 	const split = priced.reduce((sum, item) => sum + (item.lowest ?? 0), 0);
 	const splitStores = new Set(priced.map((item) => item.prices[0].store)).size;
 	return { items, stores, split: { cents: split, stores: splitStores }, unpriced: items.filter((item) => !item.prices.length).map((item) => item.name) };
+}
+
+// a list's own name, tidied; null when empty or too long
+export function listTitle(typed: unknown): string | null {
+	const name = String(typed ?? '').replace(/\s+/g, ' ').trim();
+	return name && name.length <= 30 ? name : null;
+}
+
+// what this month's receipts spent on the things on a list
+export function spentOn(list: string[], lines: { name: string; cents: number }[]) {
+	const wanted = new Set(list.map(key));
+	return lines.reduce((sum, line) => sum + (wanted.has(key(line.name)) ? line.cents : 0), 0);
 }
 
 // a typed item, tidied; null when it is not worth keeping

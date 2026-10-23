@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareStores, listName, listPins, type ListPrice } from './list-compare';
+import { compareStores, listName, listPins, listTitle, spentOn, type ListPrice } from './list-compare';
 
 const row = (name: string, store: string, cents: number, per = 'ea'): ListPrice => ({ name, store, per, cents, bought_on: '2026-10-01' });
 
@@ -29,8 +29,33 @@ describe('compareStores', () => {
 		expect(items[0]).toMatchObject({ per: 'lb', lowest: 149, prices: [{ store: 'Parivar', cents: 149 }, { store: 'Fiesta', cents: 199 }] });
 	});
 
+	it('keeps the latest day each item was bought, at any store', () => {
+		const { items } = compareStores(['Whole milk', 'Saffron'], [...rows, { ...row('Whole milk', 'Target', 399), bought_on: '2026-10-20' }]);
+		expect(items.map((i) => i.lastOn)).toEqual(['2026-10-20', null]);
+	});
+
 	it('handles an empty list', () => {
 		expect(compareStores([], rows)).toEqual({ items: [], stores: [], split: { cents: 0, stores: 0 }, unpriced: [] });
+	});
+});
+
+describe('listTitle', () => {
+	it('keeps a short name and refuses blank or long ones', () => {
+		expect(listTitle('  Keto   week ')).toBe('Keto week');
+		expect(listTitle('')).toBeNull();
+		expect(listTitle('x'.repeat(31))).toBeNull();
+	});
+});
+
+describe('spentOn', () => {
+	it('adds up only the lines on the list, whatever the case', () => {
+		const lines = [
+			{ name: 'Whole milk', cents: 349 },
+			{ name: 'whole milk', cents: 299 },
+			{ name: 'Okra', cents: 150 }
+		];
+		expect(spentOn(['Whole Milk', 'Paneer'], lines)).toBe(648);
+		expect(spentOn([], lines)).toBe(0);
 	});
 });
 

@@ -45,7 +45,7 @@ type Line = {
 // Everything a shopper put in, as they would read it: no ids, match keys, logs or AI usage.
 // Row level security keeps every ask to their own rows.
 export async function exportSheets(supabase: SupabaseClient) {
-	const [receipts, lines, settings] = await Promise.all([
+	const [receipts, lines, lists] = await Promise.all([
 		every<Receipt>((from, to) =>
 			supabase
 				.from('receipts')
@@ -66,9 +66,9 @@ export async function exportSheets(supabase: SupabaseClient) {
 				.range(from, to)
 				.overrideTypes<Line[], { merge: false }>()
 		),
-		supabase.from('user_settings').select('shopping_list').maybeSingle()
+		supabase.from('shopping_lists').select('name, items').order('created_at')
 	]);
-	if (settings.error) throw settings.error;
+	if (lists.error) throw lists.error;
 
 	const byId = new Map(receipts.map((r) => [r.id, r]));
 	const store = (r: Receipt | undefined) => r?.stores?.name ?? null;
@@ -95,7 +95,7 @@ export async function exportSheets(supabase: SupabaseClient) {
 					})
 			]
 		},
-		{ name: 'My list', rows: [['Item'], ...((settings.data?.shopping_list as string[] | undefined) ?? []).map((item) => [item])] }
+		{ name: 'Lists', rows: [['List', 'Item'], ...(lists.data ?? []).flatMap((list) => (list.items as string[]).map((item) => [list.name, item]))] }
 	];
 	return { sheets, photos: receipts.filter((r) => r.image_path).map((r) => ({ path: r.image_path!, date: r.purchased_on, store: store(r) })) };
 }
