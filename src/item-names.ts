@@ -8,10 +8,13 @@ export const CATEGORIES = [
 	'Snacks',
 	'Beverages',
 	'Household',
+	'Home & kitchen',
 	'Personal care',
 	'Baby',
 	'Pet',
 	'Alcohol',
+	'Clothing',
+	'Electronics',
 	'Other'
 ] as const;
 
