@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import SigningIn from '../SigningIn.svelte';
 
 	const next = page.url.searchParams.get('next') === '/home' ? '/home' : '/?signin=failed';
 
@@ -19,12 +20,4 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<p class="signing-in">Signing you in…</p>
-
-<style>
-	.signing-in {
-		padding: 3rem 1.5rem;
-		text-align: center;
-		color: var(--color-muted);
-	}
-</style>
+<SigningIn />

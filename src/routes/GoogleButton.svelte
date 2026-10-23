@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import SigningIn from './SigningIn.svelte';
 
 	// Google opens in a window of its own, so its pages never enter this tab's history. A home-screen
 	// app would hand the window to Safari, which keeps the sign-in to itself, so it goes the usual way.
@@ -18,13 +19,21 @@
 		});
 	}
 
-	// the window says where to go once Google is done; Home then takes the landing's place
+	// the window says where to go once Google is done; Home then takes the landing's place, and the
+	// landing hides behind a loading screen meanwhile instead of flashing back into view
+	let going = $state(false);
 	onMount(() => {
 		const signin = new BroadcastChannel('signin');
-		signin.onmessage = (event) => location.replace(String(event.data));
+		signin.onmessage = (event) => {
+			const next = String(event.data);
+			going = next === '/home';
+			location.replace(next);
+		};
 		return () => signin.close();
 	});
 </script>
+
+{#if going}<SigningIn />{/if}
 
 <form method="POST" action="/?/google" onsubmit={inWindow}>
 	<button>
