@@ -135,7 +135,7 @@
 </script>
 
 <svelte:head>
-	<title>Receipts · Pricetrail</title>
+	<title>Receipts · Billi</title>
 </svelte:head>
 
 <AppShell fit firstName={data.firstName}>

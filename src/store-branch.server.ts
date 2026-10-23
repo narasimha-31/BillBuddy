@@ -39,7 +39,7 @@ export async function branchesOf(storeName: string, centre: Point): Promise<Bran
 	for (const [key, value] of Object.entries({ q: query, format: 'jsonv2', limit: '20', countrycodes: 'us', viewbox: box.map((n) => n.toFixed(4)).join(','), bounded: '1', addressdetails: '1', extratags: '1' }))
 		url.searchParams.set(key, value);
 	try {
-		const response = await fetch(url, { headers: { 'user-agent': 'Pricetrail/1.0 (+https://bill-buddy-green.vercel.app)' }, signal: AbortSignal.timeout(6000) });
+		const response = await fetch(url, { headers: { 'user-agent': 'Billi/1.0 (+https://bill-buddy-green.vercel.app)' }, signal: AbortSignal.timeout(6000) });
 		if (!response.ok) throw new Error(`nominatim returned ${response.status}`);
 		return matchingBranches(storeName, shopsFrom(asElements(await response.json())), centre);
 	} catch (error) {

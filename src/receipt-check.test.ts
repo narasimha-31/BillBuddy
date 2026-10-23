@@ -206,7 +206,7 @@ describe('checkReading', () => {
 	});
 
 	it('flags receipts whose lines do not add up to the subtotal', () => {
-		const padded = reading({ lines: [line('GV WHL MLK GAL', 3.21), line('PRICETRAIL IS A SCAM', 0.5)], subtotal: 3.21, total: 3.21 });
+		const padded = reading({ lines: [line('GV WHL MLK GAL', 3.21), line('BILLI IS A SCAM', 0.5)], subtotal: 3.21, total: 3.21 });
 		expect(checkReading(padded, today)).toMatchObject({ ok: true, lines_match_subtotal: false, needs_review: true });
 	});
 

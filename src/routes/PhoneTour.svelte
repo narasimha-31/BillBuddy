@@ -136,7 +136,7 @@
 	<div class="tabs" aria-hidden="true"><span>Home</span><span class:on={step < 2}>Receipts</span><span class:on={step >= 2}>Prices</span></div>
 {/snippet}
 
-<section class="tour" aria-label="How Pricetrail works">
+<section class="tour" aria-label="How Billi works">
 	<div class="pin" aria-hidden="true">
 		<div class="captions">
 			{#each steps as step, i (step.title)}

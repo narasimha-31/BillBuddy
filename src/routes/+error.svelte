@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status === 404 ? 'Not found' : 'Something went wrong'} · Pricetrail</title>
+	<title>{page.status === 404 ? 'Not found' : 'Something went wrong'} · Billi</title>
 </svelte:head>
 
 <main class="wrap">
@@ -12,7 +12,7 @@
 	{#if page.error?.ref}
 		<p class="ref">If it keeps happening, mention this reference: <code>{page.error.ref}</code></p>
 	{/if}
-	<a href="/" class="pill-button home">Go to Pricetrail</a>
+	<a href="/" class="pill-button home">Go to Billi</a>
 </main>
 
 <style>

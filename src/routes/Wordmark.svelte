@@ -2,12 +2,12 @@
 	let { href = '/' }: { href?: string } = $props();
 </script>
 
-<a {href} class="wordmark" aria-label="Pricetrail home">
+<a {href} class="wordmark" aria-label="Billi home">
 	<svg viewBox="0 0 24 24" aria-hidden="true">
 		<path d="M6 2.5h12a1 1 0 0 1 1 1v17.2l-2.33-1.4-2.33 1.4-2.34-1.4-2.33 1.4-2.34-1.4L5 20.7V3.5a1 1 0 0 1 1-1z" fill="var(--color-accent)" />
 		<path d="m8.4 13.6 2.6-2.6 2.1 2.1 3.5-3.9" fill="none" stroke="#fbfbfd" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
 	</svg>
-	<span>Pricetrail</span>
+	<span>Billi</span>
 </a>
 
 <style>

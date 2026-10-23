@@ -51,7 +51,7 @@
 	/* lets a closed section grow to its natural height, so aisles can open smoothly */
 	interpolate-size: allow-keywords;
 
-	/* Pricetrail's motion: one curve for nearly everything (iOS: quick to leave, soft to land),
+	/* Billi's motion: one curve for nearly everything (iOS: quick to leave, soft to land),
 	   three durations, and one way of arriving: coming into focus */
 	--ease: cubic-bezier(0.32, 0.72, 0, 1);
 	--quick: 120ms;

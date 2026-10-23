@@ -40,13 +40,13 @@ describe('itemRows', () => {
 
 	it('drops offensive and non-grocery lines, counts them, and never stores their text', () => {
 		const { rows, skipped } = itemRows(
-			[line('SHITTY AVOCADO', 199), line('PRICETRAIL SUCKS', 1), line('PASTA', 114)],
+			[line('SHITTY AVOCADO', 199), line('BILLI SUCKS', 1), line('PASTA', 114)],
 			[named('Hidden line', 'offensive'), named('Not a grocery item', 'not_grocery'), named('Pasta')]
 		);
 		expect(skipped).toBe(2);
 		expect(rows.map((r) => r.raw_text)).toEqual(['PASTA']);
 		expect(rows[0].position).toBe(0);
-		expect(JSON.stringify(rows)).not.toMatch(/SHITTY|PRICETRAIL/);
+		expect(JSON.stringify(rows)).not.toMatch(/SHITTY|BILLI/);
 	});
 
 	it('keeps a line the model could not name under its receipt text, marked for the shopper to check', () => {
