@@ -5,11 +5,30 @@
 	import DisplayChoices from '../DisplayChoices.svelte';
 	import MapUnlock from '../MapUnlock.svelte';
 	import { leaveApp } from '../../app-visit';
+	import { downloadData } from './download-data';
 
 	let { data, form } = $props();
 
 	// follows the saved value, and flips at once on a tap so the note under the switch never lags
 	let keepPhotos = $derived(data.keepPhotos);
+
+	let withPhotos = $state(false);
+	let downloading = $state(false);
+	let photosDone = $state(0);
+	let photosOf = $state(0);
+	let downloadProblem = $state('');
+	async function download() {
+		downloading = true;
+		downloadProblem = '';
+		photosOf = 0;
+		try {
+			await downloadData(keepPhotos && withPhotos, (done, of) => ([photosDone, photosOf] = [done, of]));
+		} catch {
+			downloadProblem = "The download didn't finish. Try again in a moment.";
+		} finally {
+			downloading = false;
+		}
+	}
 	let typed = $state('');
 	let changingZip = $state(false);
 
@@ -52,6 +71,7 @@
 			{#if form?.budgetProblem}<p class="problem budget-problem" role="alert">{form.budgetProblem}</p>{/if}
 			<noscript><button class="pill-button save">Save</button></noscript>
 		</form>
+
 
 		<!-- a switch applies the moment it flips, as in iOS; without JavaScript the Save button does it -->
 		<form method="POST" action="?/save" use:enhance={() => async ({ update }) => update({ reset: false })}>
@@ -137,6 +157,26 @@
 				</form>
 			</li>
 		</ul>
+
+		<h2 class="list-label">Your data</h2>
+		<ul class="group">
+			{#if keepPhotos}
+				<li>
+					<label class="row">
+						<span class="row-title">Include photos</span>
+						<input class="switch" type="checkbox" role="switch" bind:checked={withPhotos} />
+						<span class="row-sub">A .zip with the spreadsheet and every kept photo.</span>
+					</label>
+				</li>
+			{/if}
+			<li>
+				<button class="row action" onclick={download} disabled={downloading}>
+					<span class="row-title">{downloading ? (photosOf ? `Getting photos, ${photosDone} of ${photosOf}…` : 'Getting your data ready…') : 'Download my data'}</span>
+					<span class="row-sub">An Excel file with every receipt, item and your list.</span>
+				</button>
+			</li>
+		</ul>
+		{#if downloadProblem}<p class="problem" role="alert">{downloadProblem}</p>{/if}
 
 		<!-- the one step that can't be undone stays folded until asked for -->
 		<details class="delete-account group" open={!!form?.problem}>
@@ -288,6 +328,20 @@
 	/* an action, not a page: no chevron */
 	.action::after {
 		content: none;
+	}
+
+	.action .row-title {
+		color: inherit;
+	}
+
+	.action:disabled {
+		opacity: 0.7;
+	}
+
+	.problem {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.9375rem;
+		color: var(--color-danger);
 	}
 
 	.delete-account {
