@@ -81,8 +81,9 @@
 			<Wordmark href="/home" />
 			<nav aria-label="Main" class:ready style:--selected={selected}>
 				{#if selected >= 0}<span class="pill" aria-hidden="true"></span>{/if}
+				<!-- like a phone app: tabs open from Home stack one deep, so back goes Home, then out -->
 				{#each links as link, i (link.href)}
-					<a href={link.href} aria-current={under(page.url.pathname, link.href) ? 'page' : undefined} class:on={i === selected}>
+					<a href={link.href} data-sveltekit-replacestate={page.url.pathname === '/home' ? 'off' : ''} aria-current={under(page.url.pathname, link.href) ? 'page' : undefined} class:on={i === selected}>
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d={link.icon} /></svg>
 						<span>{link.label}</span>
 					</a>
