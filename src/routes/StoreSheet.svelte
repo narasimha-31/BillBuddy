@@ -63,6 +63,39 @@
 		await invalidateAll();
 	}
 
+	// Places on OpenStreetMap matching what's typed, listed the way a map app does, so the store is
+	// picked instead of its address guessed; it starts from the store's own name. A pause after
+	// typing before each search keeps to OpenStreetMap's one request a second.
+	type Place = { name: string | null; address: string; miles: number };
+	let places = $state<Place[] | null>(null);
+	let fromWeb = $state(false);
+	let searching = $state(false);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	function search(text: string) {
+		clearTimeout(timer);
+		const id = storeId;
+		if (!id || text.trim().length < 3) {
+			places = null;
+			return;
+		}
+		searching = true;
+		timer = setTimeout(async () => {
+			const response = await fetch(`/stores/${id}/nearby?q=${encodeURIComponent(text.trim())}`).catch(() => null);
+			const answer = response?.ok ? await response.json() : { places: [] };
+			if (id !== storeId || text !== typing) return;
+			places = answer.places ?? [];
+			fromWeb = answer.fromWeb === true;
+			searching = false;
+		}, 700);
+	}
+
+	$effect(() => {
+		if (details && typing === null && (details.unplaced > 0 || details.branches.length === 0)) {
+			typing = storeName(details.store.name) ?? '';
+			search(typing);
+		}
+	});
+
 	const pins = $derived(details?.branches.map((b) => ({ id: b.key, lat: b.lat, lng: b.lng, label: streetOf(b.address) ?? storeName(b.name), title: streetOf(b.address) ?? storeName(b.name) ?? '', guess: b.guess })) ?? []);
 </script>
 
@@ -71,6 +104,7 @@
 		storeId = null;
 		details = null;
 		typing = null;
+		places = null;
 	}} onclick={(e) => e.target === dialog && dialog.close()}>
 	<div class="body">
 		<header>
@@ -152,12 +186,29 @@
 					}}
 				>
 					<label>
-						<span>{details.unplaced === 1 ? 'One receipt here has' : `${details.unplaced} receipts here have`} no branch yet. Where was this?</span>
-						<input bind:value={typing} placeholder="Street, city and state" autocomplete="off" maxlength="200" required disabled={busy} />
+						<span>{details.unplaced === 1 ? 'One receipt here isn’t' : `${details.unplaced} receipts here aren’t`} on the map yet. Find the store:</span>
+						<input bind:value={typing} oninput={() => search(typing ?? '')} type="search" placeholder="Store name or address" autocomplete="off" maxlength="200" required disabled={busy} />
 					</label>
+					{#if searching}
+						<p class="sub" aria-live="polite">Searching the map…</p>
+					{:else if places?.length}
+						<ul class="places" aria-label="Places found">
+							{#each places as place (place.address)}
+								<li>
+									<button type="button" disabled={busy} onclick={() => send({ action: 'address', address: place.address })}>
+										<span class="place-name">{place.name ?? streetOf(place.address)}</span>
+										<span class="sub">{place.address}</span>
+										<span class="far">{shortMiles(place.miles)}</span>
+									</button>
+								</li>
+							{/each}
+						</ul>
+						{#if fromWeb}<p class="sub">Not on OpenStreetMap, so these addresses come from the web. Pick the one you went to.</p>{/if}
+					{:else if places}
+						<p class="sub" aria-live="polite">Nothing found by that name nearby. Try the street address.</p>
+					{/if}
 					<div class="actions">
-						<button class="pill-button small" disabled={busy}>{busy ? 'Finding it…' : 'Save'}</button>
-						<button type="button" class="text" disabled={busy} onclick={() => send({ action: 'lookup' })}>Look it up on the map</button>
+						<button class="pill-button small" disabled={busy}>{busy ? 'Finding it…' : 'Use what I typed'}</button>
 					</div>
 				</form>
 			{/if}
@@ -394,6 +445,63 @@
 		border-color: var(--color-accent);
 		outline: none;
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+	}
+
+	.places {
+		width: 100%;
+		overflow: hidden;
+		border-radius: 12px;
+		background: var(--color-raised);
+		box-shadow: 0 0 0 1px var(--color-line);
+	}
+
+	.places li + li {
+		border-top: 1px solid var(--color-line);
+	}
+
+	.places button {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 0.1rem 0.75rem;
+		width: 100%;
+		padding: 0.65rem 0.85rem;
+		text-align: left;
+		color: var(--color-ink);
+		transition: background-color 120ms;
+	}
+
+	.places button:active {
+		background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+	}
+
+	@media (hover: hover) {
+		.places button:hover {
+			background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+		}
+	}
+
+	.places button:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: -2px;
+	}
+
+	.place-name {
+		font-weight: 600;
+	}
+
+	.places .sub {
+		grid-column: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.places .far {
+		grid-row: 1;
+		grid-column: 2;
+		font-size: 0.875rem;
+		color: var(--color-muted);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.cheapest li {

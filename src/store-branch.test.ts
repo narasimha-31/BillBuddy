@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchingBranches, nameWords, nearestBranch, shopsFrom, type Shop } from './store-branch';
+import { addressesIn, matchingBranches, nameWords, nearestBranch, shopsFrom, type Shop } from './store-branch';
 
 const centre = { lat: 29.7, lng: -95.5 };
 const shop = (name: string | null, lat: number, brand: string | null = null): Shop => ({ name, brand, lat, lng: -95.5, address: null });
@@ -58,5 +58,16 @@ describe('shopsFrom', () => {
 			{ name: 'Kroger', brand: null, lat: 29.85, lng: -95.45, address: 'Kroger, Main Street, Houston, Texas' }
 		]);
 		expect(shopsFrom(null)).toEqual([]);
+	});
+});
+
+describe('addressesIn', () => {
+	it('finds street addresses however a page writes them', () => {
+		const text = 'Parivar Grocers | 11920 Bissonnet St, Houston, TX 77099. Call us. Also at 2010 S. Mason Rd Suite 100, Katy, TX 77450 and 2010 S. Mason Rd Suite 100, Katy, TX 77450.';
+		expect(addressesIn(text)).toEqual(['11920 Bissonnet St, Houston, TX 77099', '2010 S. Mason Rd Suite 100, Katy, TX 77450']);
+	});
+
+	it('skips numbers that are not addresses', () => {
+		expect(addressesIn('Open 9 to 9. Call 713 555 0101. Rated 4.5 by 120 people.')).toEqual([]);
 	});
 });

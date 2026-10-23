@@ -1,4 +1,4 @@
-import type { Point } from './distance';
+import { milesBetween, type Point } from './distance';
 import { matchingBranches, shopsFrom, type Branch } from './store-branch';
 
 // OpenStreetMap's Nominatim search: free, no key, at most one request a second. It is sent the chain
@@ -30,10 +30,8 @@ function asElements(places: Place[]) {
 	};
 }
 
-// every branch of the chain near the ZIP, nearest first
-export async function branchesOf(storeName: string, centre: Point): Promise<Branch[]> {
-	const query = storeName.replace(/#\s*\d+/g, ' ').replace(/\s+/g, ' ').trim();
-	if (!query) return [];
+// named places near the ZIP for a search, or [] when the search fails
+async function shopsNear(query: string, centre: Point) {
 	const url = new URL(NOMINATIM);
 	const box = [centre.lng - BOX_DEGREES, centre.lat + BOX_DEGREES, centre.lng + BOX_DEGREES, centre.lat - BOX_DEGREES];
 	for (const [key, value] of Object.entries({ q: query, format: 'jsonv2', limit: '20', countrycodes: 'us', viewbox: box.map((n) => n.toFixed(4)).join(','), bounded: '1', addressdetails: '1', extratags: '1' }))
@@ -41,12 +39,27 @@ export async function branchesOf(storeName: string, centre: Point): Promise<Bran
 	try {
 		const response = await fetch(url, { headers: { 'user-agent': 'Billie/1.0 (+https://billi3.vercel.app)' }, signal: AbortSignal.timeout(6000) });
 		if (!response.ok) throw new Error(`nominatim returned ${response.status}`);
-		return matchingBranches(storeName, shopsFrom(asElements(await response.json())), centre);
+		return shopsFrom(asElements(await response.json()));
 	} catch (error) {
 		// no suggestion this time; the shopper can still type the address
-		console.warn('store branch not found:', error instanceof Error ? error.message : error);
+		console.warn('store search failed:', error instanceof Error ? error.message : error);
 		return [];
 	}
+}
+
+// every branch of the chain near the ZIP, nearest first
+export async function branchesOf(storeName: string, centre: Point): Promise<Branch[]> {
+	const query = storeName.replace(/#\s*\d+/g, ' ').replace(/\s+/g, ' ').trim();
+	if (!query) return [];
+	return matchingBranches(storeName, await shopsNear(query, centre), centre);
+}
+
+// what the shopper typed, the way a map app lists places: name, address, how far; nearest first
+export async function searchPlaces(query: string, centre: Point) {
+	return (await shopsNear(query, centre))
+		.filter((shop) => shop.address)
+		.map((shop) => ({ name: shop.name ?? shop.brand, address: shop.address!, miles: milesBetween(centre, shop) }))
+		.sort((a, b) => a.miles - b.miles);
 }
 
 // several stores, one request a second as Nominatim asks
