@@ -3,7 +3,7 @@ import { renderSVG } from 'uqr';
 import { createPhoneLink } from '../../phone-link.server';
 import { processReceipt } from '../../process-receipt.server';
 import { readingPaused } from '../../receipt-reader.server';
-import { DAILY_RECEIPTS, savePhoto, uploadWindow } from '../../save-photo.server';
+import { savePhoto, uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
-		dailyLimit: DAILY_RECEIPTS,
+		dailyLimit: uploadWindow(uploaded.data).limit,
 		paused: await paused,
 		receipts: list.data.map(({ stores, to_check, items, ...receipt }) => ({
 			...receipt,

@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { DAILY_RECEIPTS, uploadWindow } from '../../save-photo.server';
+import { uploadWindow } from '../../save-photo.server';
 import { firstNameOf } from '../../session.server';
 import type { Actions, PageServerLoad } from './$types';
 import { readingPaused } from '../../receipt-reader.server';
@@ -62,7 +62,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
-		dailyLimit: DAILY_RECEIPTS,
+		dailyLimit: uploadWindow(uploaded.data).limit,
 		paused: await paused,
 		tour: !settings.data?.tour_seen,
 		budgetCents: (settings.data?.monthly_budget_cents as number | null) ?? null,

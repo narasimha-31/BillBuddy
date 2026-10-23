@@ -1,18 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { photoProblem } from './routes/receipts/photo-rules';
 
-export const DAILY_RECEIPTS = 10;
 
-// the limit counts the last 24 hours; frees_at is when the oldest of those drops out
+// the limit counts the last 24 hours; frees_at is when the oldest of those drops out; a first-day
+// account gets fewer, so fresh accounts can't drain the AI budget
 export const uploadWindow = (rows: unknown) => {
-	const row = (rows as { used: number; frees_at: string | null }[] | null)?.[0];
-	return { used: row?.used ?? 0, freesAt: row?.frees_at ?? null };
+	const row = (rows as { used: number; frees_at: string | null; daily_limit: number }[] | null)?.[0];
+	return { used: row?.used ?? 0, freesAt: row?.frees_at ?? null, limit: row?.daily_limit ?? 10 };
 };
 
 // database limit messages, turned into something a person can act on
 const limitMessages: Record<string, string> = {
 	'receipt limit: too many at once': 'slow down a little and try again in a minute',
-	'receipt limit: daily': `you've added ${DAILY_RECEIPTS} receipts in the last 24 hours, the page shows when the next one opens`,
+	'receipt limit: daily': "you've used today's receipts, the page shows when the next one opens",
 	'receipt limit: monthly': "you've reached 100 receipts this month",
 	photos: "you've reached today's photo limit, try again tomorrow"
 };
