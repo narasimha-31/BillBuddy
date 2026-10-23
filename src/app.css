@@ -57,6 +57,10 @@
 	--quick: 120ms;
 	--standard: 240ms;
 	--slow: 380ms;
+
+	/* pages use the whole window up to a 1920px screen; the side margin grows with it */
+	--page: 120rem;
+	--gutter: clamp(1.25rem, 3.5vw, 4rem);
 }
 
 /* Display choices from Settings, set on <html> by the server before the page is drawn. Sizes
@@ -258,8 +262,8 @@ body {
 	gap: 1rem;
 	height: 3.75rem;
 	margin: 0 auto;
-	max-width: 76rem;
-	padding: 0 1.25rem;
+	max-width: var(--page);
+	padding: 0 var(--gutter);
 }
 
 /* Apple-app building blocks shared by the signed-in pages */

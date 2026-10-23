@@ -651,6 +651,12 @@
 		}
 	}
 
+	@media (min-width: 1440px) {
+		.columns {
+			grid-template-columns: minmax(0, 1fr) 30rem;
+		}
+	}
+
 	/* the heading and drop zone stay put and only the receipt lists scroll; the side cards are sized to fit */
 	@media (min-width: 1024px) and (min-height: 600px) {
 		.columns {

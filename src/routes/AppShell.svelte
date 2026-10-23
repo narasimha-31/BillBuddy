@@ -144,8 +144,8 @@
 
 	.page {
 		margin: 0 auto;
-		max-width: 76rem;
-		padding: 1.75rem 1.25rem 4rem;
+		max-width: var(--page);
+		padding: 1.75rem var(--gutter) 4rem;
 	}
 
 	/* on a laptop a fitted page is exactly one screen tall; its own lists scroll instead of the page */

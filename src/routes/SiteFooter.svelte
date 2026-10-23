@@ -10,7 +10,7 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.35rem 1.1rem;
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		color: var(--color-muted);
 	}
 

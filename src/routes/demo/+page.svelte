@@ -153,9 +153,9 @@
 <style>
 	.bottom {
 		margin: 0 auto;
-		max-width: 76rem;
+		max-width: var(--page);
 		border-top: 1px solid rgb(60 60 67 / 0.1);
-		padding: 1rem 1.25rem 2rem;
+		padding: 1rem var(--gutter) 2rem;
 	}
 
 	/* the demo is the app itself, so it sits on the same grouped grey as the signed-in pages */
@@ -198,8 +198,8 @@
 
 	main {
 		margin: 0 auto;
-		max-width: 76rem;
-		padding: 1.75rem 1.25rem 4rem;
+		max-width: var(--page);
+		padding: 1.75rem var(--gutter) 4rem;
 	}
 
 	.ask {

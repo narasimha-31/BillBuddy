@@ -236,7 +236,7 @@
 		display: flex;
 		margin-left: auto;
 		gap: 1.5rem;
-		font-size: 0.9375rem;
+		font-size: 1rem;
 	}
 
 	.bar nav a,
@@ -254,8 +254,8 @@
 
 	section {
 		margin: 0 auto;
-		max-width: 76rem;
-		padding: 0 1.25rem;
+		max-width: var(--page);
+		padding: 0 var(--gutter);
 	}
 
 	h1,
@@ -327,8 +327,9 @@
 		outline-offset: 3px;
 	}
 
+	/* the photo runs nearly edge to edge, past the side margin */
 	.photo {
-		margin-top: clamp(2.5rem, 7vh, 4.5rem);
+		margin: clamp(2.5rem, 7vh, 4.5rem) calc(0.75rem - var(--gutter)) 0;
 	}
 
 	.photo img {
@@ -366,8 +367,8 @@
 
 	.sub {
 		margin-top: 1.25rem;
-		max-width: 32rem;
-		font-size: 1.1875rem;
+		max-width: 36rem;
+		font-size: clamp(1.1875rem, 1.25vw, 1.375rem);
 		line-height: 1.55;
 		color: var(--color-muted);
 	}
@@ -418,14 +419,14 @@
 	}
 
 	.slip-store {
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 		font-weight: 600;
 		color: var(--color-muted);
 	}
 
 	.slip-printed {
 		margin-top: 0.5rem;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		letter-spacing: 0.02em;
 		color: var(--color-muted);
 	}
@@ -543,7 +544,7 @@
 	}
 
 	.ask p {
-		font-size: 1.1875rem;
+		font-size: clamp(1.1875rem, 1.25vw, 1.375rem);
 		color: var(--color-muted);
 	}
 
@@ -578,7 +579,7 @@
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 		padding: 0.15rem 0.55rem;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--color-accent);
 	}
@@ -606,7 +607,7 @@
 	}
 
 	footer h2 {
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--color-ink);
 	}
@@ -654,13 +655,20 @@
 	.private ul {
 		display: grid;
 		gap: 1.1rem 2.5rem;
-		max-width: 52rem;
+		max-width: none;
 		margin-top: 2.25rem;
 	}
 
 	@media (min-width: 760px) {
 		.private ul {
 			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	/* four promises side by side once the screen is wide enough to read them */
+	@media (min-width: 1440px) {
+		.private ul {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 	}
 
@@ -710,7 +718,7 @@
 	}
 
 	.close {
-		padding: clamp(6rem, 16vh, 10rem) 1.25rem clamp(5rem, 12vh, 8rem);
+		padding: clamp(6rem, 16vh, 10rem) var(--gutter) clamp(5rem, 12vh, 8rem);
 		text-align: center;
 	}
 
@@ -723,10 +731,10 @@
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: 2rem 1rem;
 		margin: 0 auto;
-		max-width: 76rem;
+		max-width: var(--page);
 		border-top: 1px solid var(--color-line);
-		padding: 2.5rem 1.25rem 2.5rem;
-		font-size: 0.875rem;
+		padding: 2.5rem var(--gutter);
+		font-size: 0.9375rem;
 		color: var(--color-muted);
 	}
 

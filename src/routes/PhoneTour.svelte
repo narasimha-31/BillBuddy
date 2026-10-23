@@ -170,8 +170,8 @@
 	.tour {
 		display: grid;
 		margin: clamp(6rem, 16vh, 10rem) auto 0;
-		max-width: 76rem;
-		padding: 0 1.25rem;
+		max-width: var(--page);
+		padding: 0 var(--gutter);
 	}
 
 	h3 {
@@ -187,7 +187,7 @@
 	.say {
 		margin-top: 1rem;
 		max-width: 26rem;
-		font-size: 1.1875rem;
+		font-size: clamp(1.1875rem, 1.25vw, 1.375rem);
 		line-height: 1.55;
 		color: var(--color-muted);
 	}
@@ -773,6 +773,17 @@
 
 	.mapped .note {
 		margin-bottom: 4px;
+	}
+
+	/* still screens: each step's words sit over its phone */
+	@media (min-width: 1000px) and (prefers-reduced-motion: reduce) {
+		.step {
+			text-align: center;
+		}
+
+		.step .say {
+			margin-inline: auto;
+		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {

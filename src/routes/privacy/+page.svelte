@@ -72,9 +72,9 @@
 <style>
 	.bottom {
 		margin: 0 auto;
-		max-width: 76rem;
+		max-width: var(--page);
 		border-top: 1px solid rgb(60 60 67 / 0.1);
-		padding: 1rem 1.25rem 2rem;
+		padding: 1rem var(--gutter) 2rem;
 	}
 
 	.screen {
@@ -107,8 +107,8 @@
 		display: grid;
 		gap: 1.75rem;
 		margin: 0 auto;
-		max-width: 72rem;
-		padding: 2rem 1.25rem calc(4rem + env(safe-area-inset-bottom));
+		max-width: var(--page);
+		padding: 2rem var(--gutter) calc(4rem + env(safe-area-inset-bottom));
 	}
 
 	.lead {
@@ -151,6 +151,18 @@
 		margin: 1rem 1.25rem 0;
 		font-size: 0.875rem;
 		color: var(--color-muted);
+	}
+
+	/* a wide screen sets the promises two by two, each still a short read */
+	@media (min-width: 1440px) {
+		.promises .group {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.promises .group > li:nth-child(2)::before {
+			content: none;
+		}
 	}
 
 	/* laptops: the heading stays in view on the left while the promises fill the right */

@@ -846,4 +846,11 @@
 			flex: none;
 		}
 	}
+
+	/* a wide screen gives the month its room too, matching Receipts */
+	@media (min-width: 1440px) {
+		.board {
+			grid-template-columns: minmax(0, 1fr) 30rem;
+		}
+	}
 </style>
