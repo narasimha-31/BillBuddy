@@ -34,12 +34,21 @@
 
 	// Safari fires change and then submit on Enter; the same amount goes out once
 	let sentBudget: FormDataEntryValue | null = null;
+	const savedBudget = $derived(data.budgetCents ? String(data.budgetCents / 100) : '');
+	// what is typed, back in step whenever a save comes back
+	let budget = $derived(savedBudget);
+	let budgetSaved = $state(false);
+	let savedTimer: ReturnType<typeof setTimeout>;
 	const saveBudget: SubmitFunction = ({ formData, cancel }) => {
 		if (formData.get('budget') === sentBudget) return cancel();
 		sentBudget = formData.get('budget');
 		return async ({ update, result }) => {
 			if (result.type !== 'success') sentBudget = null;
 			await update({ reset: false });
+			if (result.type !== 'success') return;
+			budgetSaved = true;
+			clearTimeout(savedTimer);
+			savedTimer = setTimeout(() => (budgetSaved = false), 2000);
 		};
 	};
 </script>
@@ -62,14 +71,14 @@
 						<span class="row-title">Monthly groceries</span>
 						<span class="budget">
 							<span aria-hidden="true">$</span>
-							<input name="budget" inputmode="decimal" autocomplete="off" placeholder="None" maxlength="10" value={data.budgetCents ? data.budgetCents / 100 : ''} onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+							<input name="budget" inputmode="decimal" autocomplete="off" placeholder="None" maxlength="10" value={budget} oninput={(e) => (budget = e.currentTarget.value)} onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+							<button class="save-budget" class:saved={budgetSaved} disabled={budget.trim() === savedBudget}>{budgetSaved ? 'Saved' : 'Save'}</button>
 						</span>
 						<span class="row-sub">Home shows what is left this month. Leave it empty for no budget.</span>
 					</label>
 				</li>
 			</ul>
 			{#if form?.budgetProblem}<p class="problem budget-problem" role="alert">{form.budgetProblem}</p>{/if}
-			<noscript><button class="pill-button save">Save</button></noscript>
 		</form>
 
 
@@ -243,7 +252,7 @@
 
 	/* 16px text: iOS Safari zooms the page on any smaller field */
 	.budget input {
-		width: 6rem;
+		width: 4.75rem;
 		border: 1px solid color-mix(in srgb, var(--color-sep) 18%, transparent);
 		border-radius: 10px;
 		background: var(--color-surface);
@@ -258,6 +267,35 @@
 		border-color: var(--color-accent);
 		outline: none;
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+	}
+
+	.save-budget {
+		position: relative;
+		margin-left: 0.4rem;
+		border-radius: 999px;
+		background: var(--color-accent-fill);
+		padding: 0.4rem 0.9rem;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		color: #fff;
+		transition:
+			opacity var(--quick) var(--ease),
+			transform var(--quick) var(--ease);
+	}
+
+	.save-budget:active {
+		transform: scale(0.96);
+	}
+
+	.save-budget:disabled:not(.saved) {
+		opacity: 0.4;
+	}
+
+	/* a 44px reach */
+	.save-budget::after {
+		content: '';
+		position: absolute;
+		inset: -6px -4px;
 	}
 
 	.budget-problem {
