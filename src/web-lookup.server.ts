@@ -6,12 +6,6 @@ import { placeStore } from './store-place.server';
 
 export type Found = { title: string; content: string };
 
-const SEARCH_MS = 4000;
-const RESULTS = 3;
-
-// "FIESTA MART #18" -> "FIESTA MART": the chain is enough, a branch number says where someone shops
-export const chainOf = (store: string) => store.replace(/#?\s*\d+/g, '').replace(/\s+/g, ' ').trim();
-
 // searches a shopper can set off in a day; each one is a paid call
 export const SEARCHES_PER_DAY = 20;
 
@@ -28,7 +22,7 @@ async function searchedToday(userId: string) {
 
 // One Tavily search, logged with what it was for. A failed or capped search gives null, so the
 // caller keeps what it had and goes on.
-async function tavily(query: string, results: number, length: number, purpose: string, userId: string | null, signal: AbortSignal): Promise<Found[] | null> {
+export async function tavily(query: string, results: number, length: number, purpose: string, userId: string | null, signal: AbortSignal): Promise<Found[] | null> {
 	const key = env.TAVILY_API_KEY;
 	if (!key) return null;
 	if (userId && (await searchedToday(userId)) >= SEARCHES_PER_DAY) return null;
@@ -51,15 +45,6 @@ async function tavily(query: string, results: number, length: number, purpose: s
 	const logged = await admin.from('ai_calls').insert({ user_id: userId, model: 'tavily/search', served_model: null, purpose, input_tokens: 0, output_tokens: 0, cost_micros: 0, duration_ms: Date.now() - started, ok: found !== null });
 	if (logged.error) console.error('lookup log failed', logged.error.message);
 	return found;
-}
-
-// One web search per unclear line, all at once and cut off together. Only the chain's name and the
-// printed text leave, never the shopper.
-export async function searchLines(store: string, raws: string[], userId: string | null): Promise<(Found[] | null)[]> {
-	if (!env.TAVILY_API_KEY) return raws.map(() => null);
-	const chain = chainOf(store);
-	const signal = AbortSignal.timeout(SEARCH_MS);
-	return Promise.all(raws.map((raw) => tavily(`${chain} ${raw}`, RESULTS, 300, 'name_lookup', userId, signal)));
 }
 
 const STORE_RESULTS = 5;

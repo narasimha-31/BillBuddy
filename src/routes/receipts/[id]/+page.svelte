@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { deserialize, enhance } from '$app/forms';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { slide } from 'svelte/transition';
@@ -63,25 +63,6 @@
 	// set again whenever another receipt opens in this same page
 	let editing = $derived(r.status === 'review' || toCheck.length > 0);
 	let sheetForm = $state<HTMLFormElement>();
-
-	// an unclear line looked up on the web fills its name field; saving is still the shopper's call
-	let searching = $state<string | null>(null);
-	let looked = $state<Record<string, string | null>>({});
-	let lookProblem = $state('');
-	async function lookUp(id: string) {
-		searching = id;
-		lookProblem = '';
-		const body = new FormData();
-		body.set('item', id);
-		const response = await fetch('?/lookup', { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } });
-		const result = deserialize(await response.text());
-		searching = null;
-		if (result.type === 'success' && result.data?.lookup) {
-			const found = result.data.lookup as { name: string | null; category: string | null };
-			looked[id] = found.name;
-			if (found.category) picked[id] = found.category;
-		} else lookProblem = result.type === 'failure' && result.data?.problem ? String(result.data.problem) : "Couldn't look it up right now.";
-	}
 	function stopEditing() {
 		sheetForm?.reset();
 		picked = {};
@@ -256,7 +237,7 @@
 										{#if editing}
 											<input
 												name="name_{item.id}"
-												value={looked[item.id] ?? item.name ?? ''}
+												value={item.name ?? ''}
 												placeholder={item.raw_text}
 												aria-label="Name for {item.raw_text}"
 												maxlength="120"
@@ -287,21 +268,6 @@
 											{/if}
 										</span>
 									</div>
-									{#if editing && (item.issue === 'unsure' || item.issue === 'unreadable')}
-										<div class="lookup">
-											{#if !(item.id in looked)}
-												<button type="button" class="web" disabled={searching !== null} onclick={() => lookUp(item.id)}>
-													<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-													{searching === item.id ? 'Searching the web…' : 'Search the web'}
-												</button>
-											{:else if looked[item.id]}
-												<span class="web-note" role="status">Filled in from the web. Save to keep it.</span>
-											{:else}
-												<span class="web-note" role="status">Nothing clear on the web. Type the name if you know it.</span>
-											{/if}
-											{#if lookProblem && searching === null && !(item.id in looked)}<span class="web-note problem" role="alert">{lookProblem}</span>{/if}
-										</div>
-									{/if}
 									{#if item.issue === 'line_math'}
 										<p class="issue">{item.unit === 'ea' ? 'The count' : 'The weight'} times the price doesn't match the amount printed.</p>
 									{/if}
@@ -326,66 +292,6 @@
 </AppShell>
 
 <style>
-	.lookup {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
-		margin-top: 0.45rem;
-	}
-
-	.web {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		min-height: 2.25rem;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-		padding: 0.35rem 0.85rem 0.35rem 0.7rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-accent);
-		transition: transform var(--standard) var(--ease);
-	}
-
-	.web svg {
-		width: 1rem;
-		height: 1rem;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 2;
-		stroke-linecap: round;
-	}
-
-	.web:active {
-		transform: scale(0.96);
-		transition-duration: var(--quick);
-	}
-
-	.web:disabled {
-		opacity: 0.6;
-	}
-
-	.web:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
-	}
-
-	@media (pointer: coarse) {
-		.web {
-			min-height: 2.75rem;
-		}
-	}
-
-	.web-note {
-		font-size: 0.8125rem;
-		color: var(--color-muted);
-	}
-
-	.web-note.problem {
-		color: var(--color-up);
-	}
-
 	.back {
 		display: inline-flex;
 		align-items: center;

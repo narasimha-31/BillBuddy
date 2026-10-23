@@ -9,7 +9,7 @@ vi.mock('./admin.server', () => {
 	return { admin: { from: () => ({ insert: async (row: unknown) => (logged.push(row), { error: null }), select: () => counted }) } };
 });
 
-import { chainOf, searchLines, SEARCHES_PER_DAY } from './web-lookup.server';
+import { SEARCHES_PER_DAY, tavily } from './web-lookup.server';
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -18,34 +18,28 @@ afterEach(() => {
 	env.TAVILY_API_KEY = 'tvly-test-key';
 });
 
-describe('chainOf', () => {
-	it('drops the branch number', () => {
-		expect(chainOf('FIESTA MART #18')).toBe('FIESTA MART');
-		expect(chainOf('Walmart Supercenter 1234')).toBe('Walmart Supercenter');
-	});
-});
+const search = (userId: string | null) => tavily('Parivar Grocers Houston address', 3, 300, 'store_lookup', userId, AbortSignal.timeout(1000));
 
-describe('searchLines', () => {
+describe('tavily', () => {
 	it('stops at the daily searches for a shopper, without calling out', async () => {
 		const fetch = vi.fn();
 		vi.stubGlobal('fetch', fetch);
 		today.count = SEARCHES_PER_DAY;
-		expect(await searchLines('H-E-B', ['PILLW SCHUN BEEF'], 'user-1')).toEqual([null]);
+		expect(await search('user-1')).toBeNull();
 		expect(fetch).not.toHaveBeenCalled();
 	});
 
-	it('sends only the chain and the printed line, and keeps a short result', async () => {
-		const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ title: 'Kraft Original BBQ sauce', content: 'x'.repeat(500), url: 'https://a' }] })));
+	it('keeps short results and logs what the search was for', async () => {
+		const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ title: 'Parivar Grocers', content: 'x'.repeat(500), url: 'https://a' }] })));
 		vi.stubGlobal('fetch', fetch);
-		const [found] = await searchLines('FIESTA MART #18', ['CF ORGI SAUCE'], 'user-1');
-		expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ query: 'FIESTA MART CF ORGI SAUCE' });
-		expect(found).toEqual([{ title: 'Kraft Original BBQ sauce', content: 'x'.repeat(300) }]);
-		expect(logged).toMatchObject([{ model: 'tavily/search', purpose: 'name_lookup', ok: true }]);
+		expect(await search('user-1')).toEqual([{ title: 'Parivar Grocers', content: 'x'.repeat(300) }]);
+		expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ query: 'Parivar Grocers Houston address' });
+		expect(logged).toMatchObject([{ model: 'tavily/search', purpose: 'store_lookup', ok: true }]);
 	});
 
-	it('leaves the guess when the search fails, and logs the failure', async () => {
+	it('gives nothing when the search fails, and logs the failure', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('timed out', 'TimeoutError')));
-		expect(await searchLines('H-E-B', ['PILLW SCHUN BEEF'], null)).toEqual([null]);
+		expect(await search(null)).toBeNull();
 		expect(logged).toMatchObject([{ ok: false }]);
 	});
 
@@ -53,7 +47,7 @@ describe('searchLines', () => {
 		env.TAVILY_API_KEY = undefined;
 		const fetch = vi.fn();
 		vi.stubGlobal('fetch', fetch);
-		expect(await searchLines('H-E-B', ['A', 'B'], null)).toEqual([null, null]);
+		expect(await search(null)).toBeNull();
 		expect(fetch).not.toHaveBeenCalled();
 	});
 });
