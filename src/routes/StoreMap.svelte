@@ -29,36 +29,61 @@
 	let framed = '';
 	// store names come from receipts, so nothing from them reaches the page as markup
 	const plain = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-	let priced: { marker: Marker; cents: number; id: string; label: string }[] = [];
+	type Priced = { marker: Marker; cents: number; id: string; label: string; title: string; cheapest: boolean };
+	let priced: Priced[] = [];
+	// each bubble's stores, by the id of the pin that carries it
+	let groups = new Map<string, Priced[]>();
 
-	// Tags close enough to cover each other merge into one: the picked one, then the lower price, keeps its tag
-	// and lists the others' prices after its own ("$2.10 · $2.44"); the others become dots at their true spots,
-	// so every price stays readable and none sits away from its store. Redone after every zoom (pixels).
-	const TAG_W = 62;
-	const TAG_H = 32;
+	// Tags close enough to cover each other become one bubble at the cheapest of them, "3 stores · from
+	// $2.10", green when it holds the cheapest store; the others turn into dots at their true spots.
+	// Tapping a bubble zooms in until they part. Redone after every zoom, since it works in pixels.
+	const NEAR_X = 100;
+	const NEAR_Y = 32;
 	function spread() {
 		if (!map) return;
-		const groups: { x: number; y: number; tag: HTMLElement; labels: string[]; cheapest: boolean }[] = [];
+		groups = new Map();
+		const leads: { x: number; y: number; id: string }[] = [];
 		const order = [...priced].sort((a, b) => Number(b.id === selected) - Number(a.id === selected) || a.cents - b.cents);
-		for (const { marker, label } of order) {
-			const tag = marker.getElement()?.querySelector<HTMLElement>('.price-pin');
-			if (!tag) continue;
-			const at = map.latLngToContainerPoint(marker.getLatLng());
-			const near = groups.find((g) => Math.abs(g.x - at.x) < (TAG_W * (g.labels.length + 1)) / 2 && Math.abs(g.y - at.y) < TAG_H);
-			if (near) {
-				// a merged tag is white, so green never seems to cover the pricier stores; the first price leads
-				near.labels.push(label);
-				near.tag.innerHTML = `<b>${plain(near.labels[0])}</b> · ${near.labels.slice(1).map(plain).join(' · ')}`;
-				near.tag.classList.remove('cheapest');
-				near.tag.classList.toggle('merged-cheapest', near.cheapest);
-			} else groups.push({ x: at.x, y: at.y, tag, labels: [label], cheapest: tag.classList.contains('cheapest') });
-			tag.classList.toggle('priced', !near);
-			tag.classList.toggle('dot', !!near);
-			if (near) tag.textContent = '';
-			else tag.textContent = label;
+		for (const pin of order) {
+			const at = map.latLngToContainerPoint(pin.marker.getLatLng());
+			const near = leads.find((l) => Math.abs(l.x - at.x) < NEAR_X && Math.abs(l.y - at.y) < NEAR_Y);
+			if (near) groups.get(near.id)!.push(pin);
+			else {
+				leads.push({ x: at.x, y: at.y, id: pin.id });
+				groups.set(pin.id, [pin]);
+			}
+		}
+		for (const [lead, members] of groups) {
+			const low = members.reduce((a, b) => (b.cents < a.cents ? b : a));
+			for (const pin of members) {
+				const tag = pin.marker.getElement()?.querySelector<HTMLElement>('.price-pin');
+				if (!tag) continue;
+				const leads = pin.id === lead;
+				const bubble = leads && members.length > 1;
+				tag.classList.toggle('priced', leads);
+				tag.classList.toggle('dot', !leads);
+				tag.classList.toggle('bubble', bubble);
+				tag.classList.toggle('cheapest', leads && (bubble ? members.some((m) => m.cheapest) : pin.cheapest));
+				tag.textContent = !leads ? '' : bubble ? `${members.length} stores · from ${low.label}` : pin.label;
+			}
 		}
 	}
 
+	// a bubble zooms in to part its stores; when they still touch at the closest zoom, it lists them
+	function openBubble(L: typeof import('leaflet'), members: Priced[]) {
+		if (!map) return;
+		const bounds = L.latLngBounds(members.map((m) => m.marker.getLatLng()));
+		const target = Math.min(map.getBoundsZoom(bounds, false, L.point(120, 120)), map.getMaxZoom());
+		if (target > map.getZoom() + 0.2) {
+			map.flyToBounds(bounds, { padding: [60, 60], maxZoom: target, duration: prefersReducedMotion.current ? 0 : 0.5 });
+			return;
+		}
+		const rows = [...members]
+			.sort((a, b) => a.cents - b.cents)
+			.map((m) => `<button type="button" data-id="${plain(m.id)}"><span>${plain(m.title)}</span><b>${plain(m.label)}</b></button>`)
+			.join('');
+		L.popup({ className: 'bubble-list', closeButton: false, maxWidth: 280 }).setLatLng(members[0].marker.getLatLng()).setContent(`<div>${rows}</div>`).openOn(map);
+	}
 
 	// Leaflet and its styles load only where a map is shown. On a phone the strip never captures a
 	// swipe, so the page still scrolls through it; the full-screen map moves like any map app.
@@ -92,6 +117,15 @@
 			if (!touch) L.control.zoom({ position: full ? 'topleft' : 'bottomright' }).addTo(map);
 			layer = L.layerGroup().addTo(map);
 			map.on('zoomend', spread);
+			// a row in a bubble's list picks that store
+			map.on('popupopen', (e) => {
+				e.popup.getElement()?.addEventListener('click', (click) => {
+					const row = (click.target as HTMLElement).closest<HTMLElement>('[data-id]');
+					if (!row) return;
+					map?.closePopup();
+					onpick?.(row.dataset.id!);
+				});
+			});
 			leaflet = L;
 		})();
 		return () => {
@@ -117,9 +151,13 @@
 				riseOnHover: true,
 				zIndexOffset: pin.id === selected ? 1000 : pin.cheapest ? 500 : pin.label ? 100 : 0
 			})
-				.on('click', () => onpick?.(pin.id))
+				.on('click', () => {
+					const members = groups.get(pin.id);
+					if (members && members.length > 1) openBubble(L, members);
+					else onpick?.(pin.id);
+				})
 				.addTo(layer);
-			if (pin.label && pin.cents != null) priced.push({ marker, cents: pin.cents, id: pin.id, label: pin.label });
+			if (pin.label && pin.cents != null) priced.push({ marker, cents: pin.cents, id: pin.id, label: pin.label, title: pin.title, cheapest: !!pin.cheapest });
 		}
 
 		// frame the pins once per set of pins, not on every selection
@@ -259,13 +297,49 @@
 	}
 
 	/* a guessed branch: dashed edge, so it never reads as certain */
-	.store-map :global(.price-pin.merged-cheapest b) {
-		color: var(--color-cheaper);
-	}
 
 	.store-map :global(.price-pin.guess) {
 		outline: 2px dashed color-mix(in srgb, var(--color-sep) 60%, transparent);
 		outline-offset: 2.5px;
+	}
+
+	/* a bubble: a few stores close together; tapping it zooms in to part them */
+	.store-map :global(.price-pin.bubble) {
+		box-shadow:
+			0 3px 10px rgb(0 0 0 / 0.16),
+			0 0 0 0.5px rgb(0 0 0 / 0.1),
+			3px 3px 0 -1px var(--color-surface),
+			3px 3px 0 0 rgb(0 0 0 / 0.12);
+	}
+
+	.store-map :global(.bubble-list .leaflet-popup-content-wrapper) {
+		border-radius: 14px;
+		padding: 0;
+	}
+
+	.store-map :global(.bubble-list .leaflet-popup-content) {
+		margin: 0.35rem;
+	}
+
+	.store-map :global(.bubble-list button) {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		width: 100%;
+		min-height: 2.75rem;
+		border-radius: 10px;
+		padding: 0.5rem 0.65rem;
+		font: 0.875rem/1.3 var(--font-sans);
+		text-align: left;
+		color: var(--color-ink);
+	}
+
+	.store-map :global(.bubble-list button:first-child b) {
+		color: var(--color-cheaper);
+	}
+
+	.store-map :global(.bubble-list button:active) {
+		background: rgb(118 118 128 / 0.12);
 	}
 
 	.store-map :global(.price-pin:hover) {
