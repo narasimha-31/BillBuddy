@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { compareStores, listName, type ListPrice } from '../../list-compare';
 import { firstNameOf } from '../../session.server';
+import { placed } from '../../branches';
+import { mapState, myBranches } from '../../store-map.server';
 import type { Actions, PageServerLoad } from './$types';
 
 const MOST_ITEMS = 60;
@@ -9,9 +11,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
 	if (!user) redirect(303, '/');
 
-	const [settings, products] = await Promise.all([
+	const [settings, products, branches, map] = await Promise.all([
 		locals.supabase.from('user_settings').select('shopping_list').maybeSingle(),
-		locals.supabase.rpc('my_products')
+		locals.supabase.rpc('my_products'),
+		myBranches(locals.supabase),
+		mapState(locals.supabase)
 	]);
 	if (settings.error) throw settings.error;
 	if (products.error) throw products.error;
@@ -25,6 +29,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		firstName: firstNameOf(user),
 		list,
 		names,
+		you: map.you,
+		places: map.you ? placed(branches, map.you) : [],
 		...compareStores(list, prices.data as ListPrice[])
 	};
 };

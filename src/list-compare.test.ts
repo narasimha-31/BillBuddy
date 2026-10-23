@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareStores, listName, type ListPrice } from './list-compare';
+import { compareStores, listName, listPins, type ListPrice } from './list-compare';
 
 const row = (name: string, store: string, cents: number, per = 'ea'): ListPrice => ({ name, store, per, cents, bought_on: '2026-10-01' });
 
@@ -40,5 +40,30 @@ describe('listName', () => {
 		expect(listName('   ')).toBeNull();
 		expect(listName('x'.repeat(61))).toBeNull();
 		expect(listName(null)).toBeNull();
+	});
+});
+
+describe('listPins', () => {
+	const rows: ListPrice[] = [
+		{ name: 'Okra', store: 'H-E-B', per: 'lb', cents: 199, bought_on: null },
+		{ name: 'Okra', store: 'Kroger', per: 'lb', cents: 249, bought_on: null },
+		{ name: 'Milk', store: 'Kroger', per: 'ea', cents: 350, bought_on: null },
+		{ name: 'Milk', store: 'H-E-B', per: 'ea', cents: 350, bought_on: null },
+		{ name: 'Eggs', store: 'Aldi', per: 'ea', cents: 300, bought_on: null }
+	];
+	const { items } = compareStores(['Okra', 'Milk', 'Eggs', 'Saffron'], rows);
+	const near = { name: 'H-E-B', lat: 29.7, lng: -95.4, away: false };
+
+	it('adds up what is cheapest at each store, ties at both', () => {
+		const pins = listPins(items, [near, { name: 'H-E-B', lat: 30, lng: -95, away: false }, { name: 'Kroger', lat: 29.8, lng: -95.3, away: false }]);
+		expect(pins).toEqual([
+			{ store: 'H-E-B', lat: 29.7, lng: -95.4, items: ['Okra', 'Milk'], cents: 549 },
+			{ store: 'Kroger', lat: 29.8, lng: -95.3, items: ['Milk'], cents: 350 }
+		]);
+	});
+
+	it('skips a store with no home branch on the map', () => {
+		const pins = listPins(items, [near, { name: 'Aldi', lat: 41, lng: -87, away: true }]);
+		expect(pins.map((p) => p.store)).toEqual(['H-E-B']);
 	});
 });

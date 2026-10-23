@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import AppShell from '../AppShell.svelte';
 	import { money, storeName } from '../../format';
+	import { listPins } from '../../list-compare';
+	import StoreMap, { type MapPin } from '../StoreMap.svelte';
 
 	let { data, form } = $props();
 
@@ -11,6 +13,16 @@
 	// the store that has the most of the list, at the lowest total
 	const best = $derived(data.stores[0]?.store ?? null);
 	const unit = (per: string | null) => (per === 'lb' ? '/lb' : '');
+
+	// each store's cheapest items on the map; tapping one says which they are
+	const pins = $derived(listPins(data.items, data.places));
+	// green for the store with the most of the list at its lowest
+	const most = $derived(Math.max(...pins.map((p) => p.items.length)));
+	const mapPins = $derived<MapPin[]>(
+		pins.map((p) => ({ id: p.store, lat: p.lat, lng: p.lng, label: `${p.items.length} ${p.items.length === 1 ? 'item' : 'items'} · ${money(p.cents)}`, cents: p.cents, title: storeName(p.store) ?? p.store, cheapest: p.items.length === most }))
+	);
+	let picked = $state<string | null>(null);
+	const pickedPin = $derived(pins.find((p) => p.store === picked) ?? null);
 	// Safari's suggestion list takes the Enter that matches it, so the form is sent here instead
 	let sent = false;
 	const enterSends = (e: KeyboardEvent) => {
@@ -54,6 +66,18 @@
 		{#if data.list.length}
 			{#if data.stores.length}
 				<h2 class="list-label">Where to buy it</h2>
+				{#if mapPins.length}
+					<div class="map">
+						<div class="frame"><StoreMap you={data.you} pins={mapPins} selected={picked} onpick={(id) => (picked = id)} label="Where each item on your list is cheapest" /></div>
+						<p class="map-note" aria-live="polite">
+							{#if pickedPin}
+								<strong>{storeName(pickedPin.store)}</strong> is cheapest for {pickedPin.items.join(', ')}.
+							{:else}
+								Each pin is a store and what is cheapest there. Tap one to see which items.
+							{/if}
+						</p>
+					</div>
+				{/if}
 				<ul class="group">
 					{#each data.stores as store (store.store)}
 						<li class="row" class:best={store.store === best}>
@@ -108,6 +132,29 @@
 <style>
 	main {
 		max-width: 40rem;
+	}
+
+	.map {
+		margin-bottom: 0.75rem;
+	}
+
+	.frame {
+		overflow: hidden;
+		height: 15rem;
+		border-radius: 14px;
+		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
+		isolation: isolate;
+	}
+
+	.map-note {
+		margin: 0.5rem 1rem 0;
+		font-size: 0.875rem;
+		color: var(--color-muted);
+	}
+
+	.map-note strong {
+		font-weight: 600;
+		color: var(--color-ink);
 	}
 
 	.add {

@@ -47,3 +47,25 @@ export function listName(typed: unknown): string | null {
 	const name = String(typed ?? '').replace(/\s+/g, ' ').trim();
 	return name && name.length <= 60 ? name : null;
 }
+
+export type ListPin = { store: string; lat: number; lng: number; items: string[]; cents: number };
+
+// One pin per store that has something on the list at its lowest, at the shopper's nearest home branch
+// of it: which items and what they add up to there. Places come nearest first. O(items x stores).
+export function listPins(items: ListItem[], places: { name: string; lat: number; lng: number; away: boolean }[]): ListPin[] {
+	const pins = new Map<string, ListPin>();
+	for (const item of items) {
+		for (const price of item.prices.filter((p) => p.cents === item.lowest)) {
+			let pin = pins.get(price.store);
+			if (!pin) {
+				const place = places.find((p) => p.name === price.store && !p.away);
+				if (!place) continue;
+				pin = { store: price.store, lat: place.lat, lng: place.lng, items: [], cents: 0 };
+				pins.set(price.store, pin);
+			}
+			pin.items.push(item.name);
+			pin.cents += price.cents;
+		}
+	}
+	return [...pins.values()];
+}
