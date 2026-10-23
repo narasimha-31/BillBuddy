@@ -27,19 +27,34 @@
 	   box and clipped to the letter, so nothing it draws can reach past it. */
 	.e {
 		--shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='2 1.5 16.5 21'%3E%3Cpath d='M15.8 5.6C14.4 3.9 12.6 3.2 10.5 3.2 7.1 3.2 4.8 5.1 4.8 7.6S7 11.9 10 11.9M10 11.9C6.5 11.9 4 13.7 4 16.4 4 19.2 6.7 20.9 10.6 20.9 12.9 20.9 14.9 20.1 16.5 18.4' fill='none' stroke='white' stroke-width='3.3' stroke-linecap='round'/%3E%3C/svg%3E");
+		--glow: rgb(143 123 255 / 0.7);
+		--sky: #1b1446, #4b2a8f 30%, #9c2f7d 55%, #e0703f 75%, #9c2f7d 90%;
 		position: relative;
 		display: inline-block;
 		width: 0.46em;
 		height: 0.585em;
 		margin-left: 0.035em;
 		background:
-			radial-gradient(circle at 32% 60%, rgb(143 123 255 / 0.7), transparent 55%),
-			linear-gradient(135deg, #1b1446, #4b2a8f 30%, #9c2f7d 55%, #e0703f 75%, #9c2f7d 90%);
+			radial-gradient(circle at 32% 60%, var(--glow), transparent 55%),
+			linear-gradient(135deg, var(--sky));
 		background-size:
 			100% 100%,
 			300% 300%;
 		-webkit-mask: var(--shape) center / 100% 100% no-repeat;
 		mask: var(--shape) center / 100% 100% no-repeat;
+	}
+
+	/* the night sky vanishes on a dark page, so the dark theme gets a lit one */
+	@media (prefers-color-scheme: dark) {
+		:global(html[data-mode='auto'] .app) .e {
+			--glow: rgb(190 175 255 / 0.75);
+			--sky: #7b5cff, #a66bff 30%, #ff5fae 55%, #ffb067 75%, #ff5fae 90%;
+		}
+	}
+
+	:global(html[data-mode='dark'] .app) .e {
+		--glow: rgb(190 175 255 / 0.75);
+		--sky: #7b5cff, #a66bff 30%, #ff5fae 55%, #ffb067 75%, #ff5fae 90%;
 	}
 
 	/* the stars, a layer of their own so they twinkle without moving the sky */
