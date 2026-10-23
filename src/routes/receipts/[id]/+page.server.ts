@@ -1,9 +1,10 @@
 import { error as httpError, fail, redirect } from '@sveltejs/kit';
 import { chooseAisle } from '../../../aisle-choice.server';
 import { CATEGORIES, type Category } from '../../../item-names';
-import { AiUnavailable } from '../../../nebius.server';
+import { AiUnavailable, BadAnswer } from '../../../nebius.server';
 import { assignProducts } from '../../../product-merge.server';
 import { readDate, reconcile } from '../../../receipt-check';
+import { lookUpLine } from '../../../item-names.server';
 import { placed } from '../../../branches';
 import { firstNameOf } from '../../../session.server';
 import { mapState, myBranches, pickBranch, typeBranch } from '../../../store-map.server';
@@ -64,6 +65,33 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
+	// The shopper asked the web about one unclear line. The answer only fills in the name field;
+	// nothing is saved until they save the receipt.
+	lookup: async ({ params, request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { problem: 'signed out' });
+		const id = String((await request.formData()).get('item') ?? '');
+		if (!UUID.test(params.id) || !UUID.test(id)) return fail(400, { problem: 'no such line' });
+		const line = await locals.supabase
+			.from('receipt_items')
+			.select('raw_text, unit, issue, receipts!inner(stores(name))')
+			.eq('id', id)
+			.eq('receipt_id', params.id)
+			.maybeSingle();
+		if (line.error) throw line.error;
+		if (!line.data || !['unsure', 'unreadable'].includes(line.data.issue)) return fail(400, { problem: 'Only unclear lines can be looked up.' });
+		const store = (line.data.receipts as unknown as { stores: { name: string } | null }).stores?.name;
+		if (!store) return fail(400, { problem: 'This receipt has no store name to search with.' });
+		try {
+			const found = await lookUpLine(line.data.raw_text, line.data.unit === 'lb', store, user.id);
+			return { lookup: { id, name: found?.name ?? null, category: found?.category ?? null } };
+		} catch (problem) {
+			if (problem instanceof BadAnswer) return { lookup: { id, name: null, category: null } };
+			if (!(problem instanceof AiUnavailable)) throw problem;
+			return fail(503, { problem: "Couldn't look it up right now. Try again in a moment." });
+		}
+	},
+
 	// apply the edits, remember them for next time, and mark the receipt as checked
 	confirm: async ({ params, request, locals }) => {
 		const user = await locals.getUser();

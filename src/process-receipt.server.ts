@@ -109,8 +109,7 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 			userId,
 			storeId,
 			items.map((l) => l.raw),
-			items.map((l) => ['lb', 'kg', 'oz', 'g'].includes(l.unit)),
-			checked.store
+			items.map((l) => ['lb', 'kg', 'oz', 'g'].includes(l.unit))
 		);
 		const { rows, skipped } = itemRows(checked.lines, names);
 		// only names the namer was sure of join the shared product list; a guess waits for the shopper

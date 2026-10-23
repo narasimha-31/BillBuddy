@@ -6,7 +6,7 @@ vi.mock('./web-lookup.server', () => ({ searchLines: vi.fn() }));
 
 import { structured } from './nebius.server';
 import { searchLines } from './web-lookup.server';
-import { nameLines } from './item-names.server';
+import { lookUpLine, nameLines } from './item-names.server';
 
 const call = vi.mocked(structured);
 const search = vi.mocked(searchLines);
@@ -18,28 +18,32 @@ beforeEach(() => {
 	search.mockReset();
 });
 
-describe('nameLines web lookups', () => {
-	it('searches only the guessed lines, then takes the better names', async () => {
-		call.mockResolvedValueOnce({ items: [item(0, 'Whole milk', 'ok'), item(1, 'Sauce', 'unsure')] });
-		search.mockResolvedValueOnce([[{ title: 'Kraft Original BBQ sauce', content: '' }]]);
-		call.mockResolvedValueOnce({ items: [item(1, 'Barbecue sauce', 'ok')] });
-		const named = await nameLines(noUser, null, null, ['FIESTA WHL', 'CF ORGI SAUCE'], [], 'FIESTA MART');
-		expect(search).toHaveBeenCalledWith('FIESTA MART', ['CF ORGI SAUCE'], null);
-		expect(named.map((n) => n.name)).toEqual(['Whole milk', 'Barbecue sauce']);
-		expect(JSON.stringify(call.mock.calls[1][0].messages)).toContain('web_results');
-	});
-
-	it('keeps the guess when nothing was found, with no second call', async () => {
+describe('web lookups', () => {
+	it('a read never searches the web', async () => {
 		call.mockResolvedValueOnce({ items: [item(0, 'Sauce', 'unsure')] });
-		search.mockResolvedValueOnce([null]);
-		const named = await nameLines(noUser, null, null, ['CF ORGI SAUCE'], [], 'FIESTA MART');
+		const named = await nameLines(noUser, null, null, ['CF ORGI SAUCE']);
 		expect(named[0].name).toBe('Sauce');
-		expect(call).toHaveBeenCalledTimes(1);
+		expect(search).not.toHaveBeenCalled();
 	});
 
-	it('never searches without a store name', async () => {
-		call.mockResolvedValueOnce({ items: [item(0, 'Sauce', 'unsure')] });
-		await nameLines(noUser, null, null, ['CF ORGI SAUCE']);
-		expect(search).not.toHaveBeenCalled();
+	it('looks one line up when asked, and names it from what was found', async () => {
+		search.mockResolvedValueOnce([[{ title: 'Kraft Original BBQ sauce', content: '' }]]);
+		call.mockResolvedValueOnce({ items: [item(0, 'Barbecue sauce', 'ok')] });
+		const found = await lookUpLine('CF ORGI SAUCE', false, 'FIESTA MART', 'user-1');
+		expect(search).toHaveBeenCalledWith('FIESTA MART', ['CF ORGI SAUCE'], 'user-1');
+		expect(found?.name).toBe('Barbecue sauce');
+		expect(JSON.stringify(call.mock.calls[0][0].messages)).toContain('web_results');
+	});
+
+	it('gives nothing when the web had nothing, with no model call', async () => {
+		search.mockResolvedValueOnce([null]);
+		expect(await lookUpLine('CF ORGI SAUCE', false, 'FIESTA MART', 'user-1')).toBeNull();
+		expect(call).not.toHaveBeenCalled();
+	});
+
+	it('gives nothing when the model still could not tell', async () => {
+		search.mockResolvedValueOnce([[{ title: 'Some page', content: '' }]]);
+		call.mockResolvedValueOnce({ items: [item(0, 'Sauce', 'unreadable')] });
+		expect(await lookUpLine('CF ORGI SAUCE', false, 'FIESTA MART', 'user-1')).toBeNull();
 	});
 });
