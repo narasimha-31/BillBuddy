@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { nameLines } from './item-names.server';
 import { myAisles } from './aisle-choice.server';
-import { AiUnavailable } from './nebius.server';
+import { AiUnavailable, BadAnswer } from './nebius.server';
 import { checkReading } from './receipt-check';
 import { readReceipt } from './receipt-reader.server';
 import { itemRows } from './receipt-rows';
@@ -173,6 +173,8 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 			await finish({ status: 'pending' });
 			return { status: 'paused' };
 		}
+		// every model lost its way in the photo; trying it again would only spend more
+		if (error instanceof BadAnswer) return await fail('bad_photo');
 		await finish({ status: 'failed', problem: 'error' });
 		throw error;
 	}

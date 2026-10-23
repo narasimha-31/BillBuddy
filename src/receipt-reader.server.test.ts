@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AiUnavailable, recentlyFailed, structured } from './nebius.server';
+import { AiUnavailable, BadAnswer, recentlyFailed, structured } from './nebius.server';
 import { readReceipt } from './receipt-reader.server';
 
 vi.mock('./nebius.server', async (original) => ({
@@ -29,6 +29,14 @@ describe('readReceipt', () => {
 		call.mockRejectedValueOnce(new AiUnavailable('provider timed out')).mockResolvedValueOnce({ kind: 'store_receipt' });
 		await expect(readReceipt(jpeg, null)).resolves.toEqual({ kind: 'store_receipt' });
 		expect(roles()).toEqual(['vision', 'visionBackup']);
+	});
+
+	// a far-away photo once sent the backup into a loop until its token limit (Oct 23)
+	it('gives the backup a try when the main model loses its way, and reports a bad photo when both do', async () => {
+		call.mockRejectedValueOnce(new BadAnswer('length')).mockResolvedValueOnce({ kind: 'store_receipt' });
+		await expect(readReceipt(jpeg, null)).resolves.toEqual({ kind: 'store_receipt' });
+		call.mockReset().mockRejectedValue(new BadAnswer('length'));
+		await expect(readReceipt(jpeg, null)).rejects.toBeInstanceOf(BadAnswer);
 	});
 
 	it('stops when both are down', async () => {

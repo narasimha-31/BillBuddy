@@ -1,4 +1,4 @@
-import { AiUnavailable, recentlyFailed, structured } from './nebius.server';
+import { AiUnavailable, BadAnswer, recentlyFailed, structured } from './nebius.server';
 import type { Reading } from './receipt-check';
 
 const nullable = (type: string) => ({ type: [type, 'null'] });
@@ -108,7 +108,8 @@ export async function readReceipt(jpeg: Uint8Array, userId: string | null, roles
 				]
 			});
 		} catch (error) {
-			if (!(error instanceof AiUnavailable) || error.budget || i === roles.length - 1) throw error;
+			const tryNext = error instanceof BadAnswer || (error instanceof AiUnavailable && !error.budget);
+			if (!tryNext || i === roles.length - 1) throw error;
 		}
 	}
 	throw new Error('no vision model to read with');

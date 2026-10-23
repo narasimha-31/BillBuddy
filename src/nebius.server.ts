@@ -16,6 +16,10 @@ export class AiUnavailable extends Error {
 	}
 }
 
+// The model answered, but with nothing usable: cut off at the token limit or not JSON. The provider
+// is up, so this is no outage; another model, or a better photo, may still do.
+export class BadAnswer extends Error {}
+
 type Message = { role: 'system' | 'user'; content: string | unknown[] };
 type Request = { role: ModelRole; purpose: string; userId: string | null; messages: Message[]; schema: object; maxTokens?: number };
 
@@ -145,9 +149,13 @@ export async function structured<T>({ role, purpose, userId, messages, schema, m
 		const json = await response.json();
 		usage = json.usage ?? {};
 		servedModel = typeof json.model === 'string' ? json.model.slice(0, 100) : null;
-		const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? '') as T;
+		// logged ok: the outage check reads it, and the provider did answer
 		ok = true;
-		return parsed;
+		try {
+			return JSON.parse(json.choices?.[0]?.message?.content ?? '') as T;
+		} catch {
+			throw new BadAnswer(`unusable answer (${json.choices?.[0]?.finish_reason ?? 'no finish reason'})`);
+		}
 	} finally {
 		await logCall(role, purpose, userId, usage, started, ok, servedModel);
 	}

@@ -10,7 +10,7 @@ export const problems: Record<string, string> = {
 	not_a_receipt: "That doesn't look like a receipt.",
 	handwritten: "Handwritten bills can't be read.",
 	no_lines: 'No items were found on it.',
-	bad_photo: "The photo couldn't be opened."
+	bad_photo: "Couldn't read this photo. Hold the phone closer so the receipt fills the screen, and try again."
 };
 
 // the actions live on the receipts page, so any page can upload and read through them

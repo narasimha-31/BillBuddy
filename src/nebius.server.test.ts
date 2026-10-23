@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { USER_DAILY_CAP_MICROS } from './ai-budget';
-import { AiUnavailable, embed, structured } from './nebius.server';
+import { AiUnavailable, BadAnswer, embed, structured } from './nebius.server';
 
 const spent = vi.hoisted(() => ({ all_micros: 0, user_micros: 0 }));
 vi.mock('./admin.server', () => ({
@@ -48,6 +48,13 @@ describe('structured', () => {
 		await expect(call()).rejects.toBeInstanceOf(AiUnavailable);
 		expect(fetch).toHaveBeenCalledTimes(1);
 		vi.useRealTimers();
+	});
+
+	it('calls an answer cut off at the token limit a bad answer, not an outage', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(answer(200, { choices: [{ message: { content: '{"lines": [{"raw": "OKRA' }, finish_reason: 'length' }] })));
+		const error = await call().catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(BadAnswer);
+		expect(error).not.toBeInstanceOf(AiUnavailable);
 	});
 
 	it('reports a rejected request as a real error, not an outage', async () => {
