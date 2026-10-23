@@ -82,7 +82,7 @@
 			{#each data.lists as list (list.id)}
 				{@const isOpen = open?.id === list.id}
 				<li class="list surface" class:open={isOpen}>
-					<a class="list-head" href={isOpen && data.lists.length > 1 ? '/list' : `/list?open=${list.id}`} aria-expanded={isOpen} data-sveltekit-noscroll data-sveltekit-replacestate>
+					<a class="list-head" href={isOpen ? '/list' : `/list?open=${list.id}`} aria-expanded={isOpen} data-sveltekit-noscroll data-sveltekit-replacestate>
 						<span class="list-name">{list.name}</span>
 						<span class="list-meta">{plural(list.count, 'item')}{list.spentCents ? ` · ${money(list.spentCents)} on these this month` : ''}</span>
 						{#if list.best}
@@ -91,7 +91,7 @@
 								<span>at {storeName(list.best.store)}{list.best.has < list.count ? `, ${list.best.has} of ${list.count}` : ''}</span>
 							</span>
 						{/if}
-						{#if data.lists.length > 1}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>{/if}
+						<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
 					</a>
 
 					{#if isOpen && open}
@@ -159,6 +159,8 @@
 								{:else}
 									<p class="empty">Add what you plan to buy. Billie shows what it costs at each store you shop at, from your own receipts.</p>
 								{/if}
+								<!-- every change is already saved; this only closes the list -->
+								<a class="done pill-button" href="/list" data-sveltekit-noscroll data-sveltekit-replacestate>Done</a>
 							</div>
 
 							{#if open.list.length && open.stores.length}
@@ -514,6 +516,11 @@
 		.tools :global(.tool) {
 			min-height: 2.75rem;
 		}
+	}
+
+	.done {
+		display: inline-flex;
+		margin-top: 1rem;
 	}
 
 	.items {

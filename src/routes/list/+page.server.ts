@@ -43,7 +43,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		return { name: (Array.isArray(product) ? product[0]?.name : product?.name) ?? l.name ?? '', cents: l.total_cents as number };
 	});
 	const asked = url.searchParams.get('open');
-	const open = all.find((l) => l.id === asked) ?? (all.length === 1 ? all[0] : null);
+	const open = all.find((l) => l.id === asked) ?? null;
 
 	return {
 		firstName: firstNameOf(user),
