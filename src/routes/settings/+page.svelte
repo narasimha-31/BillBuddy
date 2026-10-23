@@ -118,6 +118,7 @@
 					<button class="row">Show the tour of Home again</button>
 				</form>
 			</li>
+			<li><a class="row" href="/feedback?from=/settings">Send feedback or report a bug</a></li>
 		</ul>
 		</div>
 
