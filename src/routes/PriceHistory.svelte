@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { History } from '../price-history';
+	import type { History, Paid } from '../price-history';
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
-	import { agoText, everyText, rhythm } from '../rhythm';
+	import { habitText, rhythm } from '../rhythm';
 
 	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what closes the card;
 	// map, what sits above the prices; awayOf, the town of a purchase made far from home
@@ -36,15 +36,18 @@
 	// newest first; the cheapest row is marked, and each row opens the receipt it came from
 	let everything = $state(false);
 	const storeOf = (store: string | null) => store ?? 'Unknown store';
-	const stores = $derived(history.stores.map((s) => s.store));
+	const stores = $derived([...new Set(history.all.map((v) => storeOf(v.store)))]);
+	// weighed and counted buys of one thing each get their own unit and their own bar scale
+	const mixed = $derived(history.all.some((v) => v.per !== history.per));
+	const unitOf = (v: Paid) => (v.per === 'lb' ? '/lb' : mixed ? ' each' : '');
+	const priciestOf = (v: Paid) => Math.max(...history.all.filter((o) => o.per === v.per).map((o) => o.unitCents));
 	// a price paid far from home never counts as the cheapest; it does not help the next trip
 	const lowest = $derived(Math.min(...history.visits.filter((v) => !awayOf?.(v)).map((v) => v.unitCents)));
-	const priciest = $derived(Math.max(...history.visits.map((v) => v.unitCents)));
-	const rows = $derived(history.visits.filter((v) => only === null || storeOf(v.store) === only));
+	const rows = $derived(history.all.filter((v) => only === null || storeOf(v.store) === only));
 	const shown = $derived(everything ? rows : rows.slice(0, SHOWN));
 	const opens = (v: History['visits'][number]) => (v.receiptId ? `/receipts/${v.receiptId}?from=${encodeURIComponent(history.name)}#line-${v.itemId}` : null);
 	const lastLink = $derived(opens(history.last));
-	const habit = $derived(rhythm(history.visits.map((v) => v.date), new Date().toLocaleDateString('en-CA')));
+	const habit = $derived(rhythm(history.all.map((v) => ({ on: v.date, quantity: v.quantity, unit: v.unit })), new Date().toLocaleDateString('en-CA')));
 
 	// another product starts from the full, newest-first list; a refresh of the same one keeps the view
 	const product = $derived(history.name);
@@ -85,7 +88,7 @@
 			</p>
 		{/if}
 		{#if habit}
-			<p class="habit">You buy this about {everyText(habit.everyDays)} · last {agoText(habit.sinceDays)}</p>
+			<p class="habit">{habitText(habit)}</p>
 		{/if}
 	</div>
 
@@ -94,7 +97,7 @@
 	<div class="part">
 		<p class="label">Every time you bought it</p>
 
-		{#if stores.length >= CHIPS_FROM_STORES && history.visits.length >= FILTERS_FROM}
+		{#if stores.length >= CHIPS_FROM_STORES && history.all.length >= FILTERS_FROM}
 			<div class="only" role="group" aria-label="Store">
 				<button type="button" aria-pressed={only === null} onclick={() => (only = null)}>All stores</button>
 				{#each stores as store (store)}
@@ -107,7 +110,7 @@
 
 		<ul class="visits">
 			{#each shown as visit (visit.itemId ?? `${visit.date}${visit.store}${visit.unitCents}`)}
-				{@const cheapest = stores.length > 1 && visit.unitCents === lowest && !awayOf?.(visit)}
+				{@const cheapest = stores.length > 1 && history.visits.length > 1 && visit.per === history.per && visit.unitCents === lowest && !awayOf?.(visit)}
 				{@const href = opens(visit)}
 				<li class:cheapest>
 					<svelte:element this={href ? 'a' : 'div'} class="visit" {href}>
@@ -118,8 +121,8 @@
 							{#if visit.channel === 'delivery'}<em class="tag">delivery</em>{/if}
 							{#if awayOf?.(visit)}<em class="fact">Away · {awayOf(visit)}</em>{/if}
 						</span>
-						<span class="track" aria-hidden="true"><span class="bar" style:--size={visit.unitCents / priciest}></span></span>
-						<span class="price">{money(visit.unitCents)}{per}</span>
+						<span class="track" aria-hidden="true"><span class="bar" style:--size={visit.unitCents / priciestOf(visit)}></span></span>
+						<span class="price">{money(visit.unitCents)}{unitOf(visit)}</span>
 						{#if href}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>{/if}
 					</svelte:element>
 				</li>

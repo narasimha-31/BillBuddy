@@ -45,6 +45,8 @@ describe('historyOf', () => {
 		)!;
 		expect(h.visits).toHaveLength(1);
 		expect(h.change).toBeNull();
+		// still listed as a buy, with its own price each
+		expect(h.all.map((v) => [v.per, v.unitCents])).toEqual([['lb', 56], ['ea', 25]]);
 	});
 
 	it('ranks stores by the last price paid there and keeps the lowest seen', () => {

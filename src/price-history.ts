@@ -24,6 +24,8 @@ export type History = {
 	last: Paid;
 	change: { cents: number; percent: number } | null;
 	visits: Paid[];
+	// every buy, also those priced the other way (each against per pound), for the list of buys
+	all: Paid[];
 	stores: { store: string; lastCents: number; lowestCents: number; times: number }[];
 };
 
@@ -86,6 +88,7 @@ export function historyOf(purchases: Purchase[], name: string): History | null {
 				}
 			: null,
 		visits,
+		all,
 		stores: [...stores.values()].sort((a, b) => a.lastCents - b.lastCents)
 	};
 }
