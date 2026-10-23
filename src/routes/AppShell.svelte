@@ -9,7 +9,7 @@
 	import { beforeNavigate, invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { navigating, page } from '$app/state';
-	import { markAppStart } from '../app-visit';
+	import { clearRestored, markAppStart, reloadRestored } from '../app-visit';
 	import AccountMenu from './AccountMenu.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import Toaster from './Toaster.svelte';
@@ -39,6 +39,7 @@
 	let ready = $state(false);
 	onMount(() => {
 		markAppStart();
+		clearRestored();
 		requestAnimationFrame(() => (ready = true));
 	});
 
@@ -72,7 +73,7 @@
 <!-- coming back to the tab picks up what changed on another device meanwhile -->
 <svelte:document onvisibilitychange={back} />
 <!-- a page kept from before a sign-out asks the server again -->
-<svelte:window onblur={away} onfocus={back} onpointermove={light} onpageshow={(e) => e.persisted && location.reload()} />
+<svelte:window onblur={away} onfocus={back} onpointermove={light} onpageshow={(e) => e.persisted && reloadRestored()} />
 
 <div class="app" class:fit>
 	<header class="top">

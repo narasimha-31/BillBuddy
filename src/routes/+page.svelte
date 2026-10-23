@@ -6,6 +6,7 @@
 	import GoogleButton from './GoogleButton.svelte';
 	import PhoneTour from './PhoneTour.svelte';
 	import Wordmark from './Wordmark.svelte';
+	import { skipStaleAppPage } from '../app-visit';
 	import { cartTotals, priceOf } from './store-prices';
 
 	let { data } = $props();
@@ -38,6 +39,8 @@
 	let live = $state(false);
 	let gapMark = $state<HTMLElement>();
 	let cartList: HTMLElement;
+
+	onMount(skipStaleAppPage);
 
 	onMount(() => {
 		live = true;
