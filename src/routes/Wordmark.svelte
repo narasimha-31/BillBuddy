@@ -57,31 +57,60 @@
 		--sky: #7b5cff, #a66bff 30%, #ff5fae 55%, #ffb067 75%, #ff5fae 90%;
 	}
 
-	/* the stars, a layer of their own so they twinkle without moving the sky */
+	/* Two layers of small stars, each a repeating tile drifting its own way, so they wander through
+	   the letter like a slow sky instead of sitting in place. */
+	.e::before,
 	.e::after {
+		--dot: max(0.6px, 0.011em);
+		--fade: max(1.1px, 0.02em);
 		content: '';
 		position: absolute;
 		inset: 0;
-		background:
-			radial-gradient(circle at 26% 14%, #fff 0 0.022em, transparent 0.036em),
-			radial-gradient(circle at 60% 10%, #fff 0 0.014em, transparent 0.026em),
-			radial-gradient(circle at 80% 20%, #fff 0 0.018em, transparent 0.03em),
-			radial-gradient(circle at 18% 33%, #fff 0 0.016em, transparent 0.028em),
-			radial-gradient(circle at 42% 46%, #fff 0 0.024em, transparent 0.038em),
-			radial-gradient(circle at 15% 66%, #fff 0 0.018em, transparent 0.03em),
-			radial-gradient(circle at 30% 86%, #fff 0 0.022em, transparent 0.036em),
-			radial-gradient(circle at 56% 92%, #fff 0 0.016em, transparent 0.028em),
-			radial-gradient(circle at 82% 84%, #fff 0 0.02em, transparent 0.034em);
 	}
 
-	/* the sky drifts back and forth through the letter; the stars breathe */
+	.e::before {
+		background:
+			radial-gradient(circle at 20% 30%, #fff 0 var(--dot), transparent var(--fade)),
+			radial-gradient(circle at 70% 75%, #fff 0 var(--dot), transparent var(--fade)),
+			radial-gradient(circle at 85% 15%, rgb(255 255 255 / 0.7) 0 var(--dot), transparent var(--fade));
+		background-size: 0.3em 0.34em;
+	}
+
+	.e::after {
+		background:
+			radial-gradient(circle at 40% 60%, #fff 0 var(--dot), transparent var(--fade)),
+			radial-gradient(circle at 10% 90%, rgb(255 255 255 / 0.8) 0 var(--dot), transparent var(--fade)),
+			radial-gradient(circle at 75% 35%, #fff 0 var(--dot), transparent var(--fade));
+		background-size: 0.41em 0.29em;
+	}
+
 	@media (prefers-reduced-motion: no-preference) {
 		.e {
 			animation: flow 8s ease-in-out infinite alternate;
 		}
 
+		.e::before {
+			animation:
+				drift-a 11s linear infinite,
+				twinkle 2.2s ease-in-out infinite alternate;
+		}
+
 		.e::after {
-			animation: twinkle 2.6s ease-in-out infinite alternate;
+			animation:
+				drift-b 15s linear infinite,
+				twinkle 3.1s ease-in-out 0.8s infinite alternate;
+		}
+	}
+
+	@keyframes drift-a {
+		to {
+			background-position: 0.3em -0.68em;
+		}
+	}
+
+	@keyframes drift-b {
+		to {
+			background-position: -0.82em 0.29em;
 		}
 	}
 
@@ -100,7 +129,7 @@
 
 	@keyframes twinkle {
 		to {
-			opacity: 0.35;
+			opacity: 0.4;
 		}
 	}
 
