@@ -155,6 +155,26 @@
 					</section>
 				{/if}
 
+				{#if data.recalls.length}
+					<section class="recalls" aria-labelledby="recalls-title">
+						<h2 class="due-title" id="recalls-title">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19zM12 10v4.5M12 17.5h.01" /></svg>
+							{data.recalls.length === 1 ? 'A recall for something you bought' : 'Recalls for things you bought'}
+						</h2>
+						<ul class="due-rows">
+							{#each data.recalls as recall (recall.url)}
+								<li>
+									<a class="due-row recall" href={recall.url} target="_blank" rel="noopener noreferrer">
+										<span class="due-name">{recall.title}</span>
+										<span class="due-text">You bought {recall.product} · FDA{recall.published_on ? `, ${shortDay(recall.published_on)}` : ''} · Check the brand and dates on yours</span>
+										<svg class="out" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
+
 				{#if data.due.length}
 					<section class="due-soon" aria-labelledby="due-title">
 						<h2 class="due-title" id="due-title">
@@ -441,6 +461,29 @@
 		}
 	}
 
+	/* a recall is the one thing on Home about safety, so it is tinted like a warning */
+	.recalls {
+		border-radius: 20px;
+		background: color-mix(in srgb, var(--color-up) 7%, var(--color-surface));
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-up) 18%, transparent);
+		padding: 1rem 1rem 1.1rem;
+	}
+
+	.recalls .due-title svg {
+		stroke: var(--color-up);
+	}
+
+	.recall .out {
+		grid-area: state;
+		width: 1.05rem;
+		height: 1.05rem;
+		fill: none;
+		stroke: var(--color-muted);
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
 	/* things to act on get their own look, apart from the plain lists */
 	.due-soon {
 		border-radius: 20px;
@@ -588,7 +631,8 @@
 			order: 1;
 		}
 
-		.add {
+		.add,
+		.recalls {
 			order: 2;
 		}
 

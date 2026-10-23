@@ -6,6 +6,7 @@ import { readingPaused } from '../../receipt-reader.server';
 import type { Paid } from '../../price-change';
 import { byAisle } from '../../spend';
 import { dueSoon, habitText, rhythm, type Bought } from '../../rhythm';
+import { recallsFor, type Recall } from '../../recalls';
 
 type Change = {
 	name: string;
@@ -36,7 +37,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const now = new Date();
 	// six whole months back covers both the month bars and the eight week bars
 	const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1)).toISOString().slice(0, 10);
-	const [recent, spend, undated, unread, changes, uploaded, settings] = await Promise.all([
+	const [recent, spend, undated, unread, changes, uploaded, settings, recalls] = await Promise.all([
 		locals.supabase
 			.from('receipts')
 			.select('id, purchased_on, total_cents, channel, stores(name)')
@@ -49,9 +50,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.supabase.from('receipts').select('id, status, problem, processing_at').in('status', ['pending', 'processing', 'failed']),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
 		locals.supabase.rpc('my_upload_window'),
-		locals.supabase.from('user_settings').select('tour_seen, monthly_budget_cents').maybeSingle()
+		locals.supabase.from('user_settings').select('tour_seen, monthly_budget_cents').maybeSingle(),
+		locals.supabase.from('recalls').select('url, title, published_on, found_on').gte('found_on', daysBefore(today, 30)).order('found_on', { ascending: false }).limit(100)
 	]);
-	for (const answer of [recent, spend, undated, unread, changes, uploaded, settings]) if (answer.error) throw answer.error;
+	for (const answer of [recent, spend, undated, unread, changes, uploaded, settings, recalls]) if (answer.error) throw answer.error;
 	// a read cut off mid-way frees up after two minutes, the same window the database uses
 	const stuck = (r: { status: string; problem: string | null; processing_at: string | null }) =>
 		r.status === 'pending' || (r.status === 'failed' && r.problem === 'error') || (r.status === 'processing' && (!r.processing_at || Date.now() - Date.parse(r.processing_at) > 120_000));
@@ -59,6 +61,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	type SpendLine = { category: string | null; total_cents: number; name: string | null; quantity: number; unit: string; products: { name: string } | null };
 	const spendRows = (spend.data ?? []) as unknown as { id: string; purchased_on: string; total_cents: number | null; store_id: string | null; receipt_items: SpendLine[] }[];
 	const monthRows = spendRows.filter((r) => r.purchased_on >= monthStart);
+
+	// recall notices for anything bought in the last three months
+	const lately = daysBefore(today, 90);
+	const bought = [...new Set(spendRows.filter((r) => r.purchased_on >= lately).flatMap((r) => r.receipt_items.map((l) => l.products?.name ?? l.name).filter((n): n is string => !!n)))];
+
 	return {
 		firstName: firstNameOf(user),
 		uploads: uploadWindow(uploaded.data),
@@ -75,12 +82,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		unread: (unread.data ?? []).filter(stuck).map((r) => r.id),
 		spend: { today, rows: spendRows.map(({ id, purchased_on, total_cents, receipt_items }) => ({ id, purchased_on, total_cents, aisles: byAisle(receipt_items) })), undated: undated.count ?? 0 },
 		changes: (changes.data ?? []) as Change[],
+		recalls: recallsFor((recalls.data ?? []) as Recall[], bought).slice(0, SHOWN_RECALLS),
 		due: runningLow(spendRows, today),
 		recent: (recent.data ?? []).map(({ stores, ...r }) => ({ ...r, store: storeOf(stores as One<{ name: string }>) }))
 	};
 };
 
 const SHOWN_DUE = 5;
+const SHOWN_RECALLS = 3;
+
+const daysBefore = (day: string, days: number) => new Date(Date.parse(day) - days * 86_400_000).toISOString().slice(0, 10);
 
 // items whose last lot should be about used up, the most overdue first
 function runningLow(rows: { purchased_on: string; receipt_items: { name: string | null; quantity: number; unit: string; products: { name: string } | null }[] }[], today: string) {
