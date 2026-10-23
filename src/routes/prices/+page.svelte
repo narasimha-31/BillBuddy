@@ -104,15 +104,14 @@
 
 <AppShell fit firstName={data.firstName}>
 	<main>
-		<div class="head" class:opened>
-			<div>
-				<h1 class="large-title">Prices</h1>
-				<p class="ask">What did I pay last time?</p>
+		<div class="columns" class:opened>
+			<div class="head" class:opened>
+				<div>
+					<h1 class="large-title">Prices</h1>
+					<p class="ask">What did I pay last time?</p>
+				</div>
 			</div>
-		</div>
-
-		{#if data.products.length}
-			<div class="columns" class:opened>
+			{#if data.products.length}
 				<div class="picker scroll-area">
 					<ItemPicker items={data.products} bind:selected={() => selected, pick} />
 				</div>
@@ -172,13 +171,13 @@
 						{/if}
 					{/key}
 				</div>
-			</div>
-		{:else}
-			<p class="lead">
-				Your prices show up here once a receipt is read. <a href="/home">Add a receipt</a> or
-				<a href="/demo">see how it looks</a> with a sample shopper.
-			</p>
-		{/if}
+			{:else}
+				<p class="lead">
+					Your prices show up here once a receipt is read. <a href="/home">Add a receipt</a> or
+					<a href="/demo">see how it looks</a> with a sample shopper.
+				</p>
+			{/if}
+		</div>
 	</main>
 	<StoreSheet bind:storeId={sheetStore} />
 </AppShell>
@@ -295,8 +294,7 @@
 	.columns {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
-		gap: 2rem;
-		margin-top: 1.5rem;
+		gap: 1.5rem;
 	}
 
 	.back {
@@ -346,8 +344,15 @@
 	@media (min-width: 960px) {
 		.columns {
 			grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
+			grid-template-rows: auto minmax(0, 1fr);
 			align-items: start;
-			gap: 3rem;
+			gap: 1.5rem 3rem;
+		}
+
+		/* the item card runs from the top, beside the title */
+		.history {
+			grid-column: 2;
+			grid-row: 1 / -1;
 		}
 
 		.history {
@@ -433,7 +438,7 @@
 		.columns {
 			flex: 1;
 			min-height: 0;
-			grid-template-rows: minmax(0, 1fr);
+			grid-template-rows: auto minmax(0, 1fr);
 			align-items: stretch;
 		}
 
