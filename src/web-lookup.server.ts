@@ -12,11 +12,26 @@ const RESULTS = 3;
 // "FIESTA MART #18" -> "FIESTA MART": the chain is enough, a branch number says where someone shops
 export const chainOf = (store: string) => store.replace(/#?\s*\d+/g, '').replace(/\s+/g, ' ').trim();
 
-// One Tavily search, logged with what it was for. A failed search gives null, so the caller keeps
-// what it had and goes on.
+// searches a shopper can set off in a day; each one is a paid call
+export const SEARCHES_PER_DAY = 20;
+
+async function searchedToday(userId: string) {
+	const { count, error } = await admin
+		.from('ai_calls')
+		.select('id', { count: 'exact', head: true })
+		.eq('user_id', userId)
+		.eq('model', 'tavily/search')
+		.gte('created_at', new Date().toISOString().slice(0, 10));
+	if (error) throw error;
+	return count ?? 0;
+}
+
+// One Tavily search, logged with what it was for. A failed or capped search gives null, so the
+// caller keeps what it had and goes on.
 async function tavily(query: string, results: number, length: number, purpose: string, userId: string | null, signal: AbortSignal): Promise<Found[] | null> {
 	const key = env.TAVILY_API_KEY;
 	if (!key) return null;
+	if (userId && (await searchedToday(userId)) >= SEARCHES_PER_DAY) return null;
 	const started = Date.now();
 	let found: Found[] | null = null;
 	try {
