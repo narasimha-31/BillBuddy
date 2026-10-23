@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		firstName: firstNameOf(user),
-		names: (products.data as { name: string }[]).map((p) => p.name),
+		products: (products.data as { name: string; times: number; last_bought: string | null; category: string | null }[]).map(({ name, times, last_bought, category }) => ({ name, times: Number(times), last_bought, category })),
 		lists: all.map((list) => {
 			const { stores } = compareStores(list.items, rows);
 			return { id: list.id, name: list.name, count: list.items.length, best: stores[0] ?? null, spentCents: spentOn(list.items, lines) };

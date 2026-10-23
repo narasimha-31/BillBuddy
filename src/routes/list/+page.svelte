@@ -4,6 +4,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import AppShell from '../AppShell.svelte';
 	import ConfirmButton from '../ConfirmButton.svelte';
+	import ItemSearch from './ItemSearch.svelte';
 	import { money, shortDay, storeName } from '../../format';
 	import { listPins } from '../../list-compare';
 	import type { MapPin } from '../StoreMap.svelte';
@@ -13,9 +14,8 @@
 	let { data, form } = $props();
 
 	const open = $derived(data.open);
-	let field = $state<HTMLInputElement>();
 	const onList = $derived(new Set((open?.list ?? []).map((name) => name.toLowerCase())));
-	const quick = $derived(data.names.filter((name) => !onList.has(name.toLowerCase())).slice(0, 6));
+	const quick = $derived(data.products.map((p) => p.name).filter((name) => !onList.has(name.toLowerCase())).slice(0, 6));
 	// the store that has the most of the list, at the lowest total
 	const best = $derived(open?.stores[0]?.store ?? null);
 	const unit = (per: string | null) => (per === 'lb' ? '/lb' : '');
@@ -39,17 +39,6 @@
 		picked = null;
 	});
 
-	// Safari's suggestion list takes the Enter that matches it, so the form is sent here instead
-	let sent = false;
-	const enterSends = (e: KeyboardEvent) => {
-		if (e.key !== 'Enter') return;
-		sent = false;
-		setTimeout(() => !sent && field?.form?.requestSubmit());
-	};
-	const keepFocus = () => async ({ update }: { update: (o?: { reset?: boolean }) => Promise<void> }) => {
-		await update();
-		field?.focus();
-	};
 	const made = () => async ({ update }: { update: () => Promise<void> }) => {
 		await update();
 		creating = false;
@@ -132,14 +121,7 @@
 									{/if}
 								</div>
 
-								<form class="add" method="POST" action="?/add" use:enhance={keepFocus} onsubmit={() => (sent = true)}>
-									<input type="hidden" name="list" value={open.id} />
-									<input name="name" aria-label="Add an item to {open.name}" bind:this={field} onkeydown={enterSends} list="bought" placeholder="Add an item, like milk" autocomplete="off" maxlength="60" required />
-									<datalist id="bought">
-										{#each data.names as name (name)}<option value={name}></option>{/each}
-									</datalist>
-									<button class="pill-button">Add</button>
-								</form>
+								<ItemSearch products={data.products} {onList} list={open.id} listName={open.name} />
 
 								{#if quick.length}
 									<div class="quick" aria-label="Often bought">
@@ -311,8 +293,14 @@
 		min-width: 0;
 	}
 
-	.list {
-		overflow: hidden;
+	/* not clipped, so the search's suggestions can hang past the card */
+	.list-head {
+		border-radius: inherit;
+	}
+
+	.list.open .list-head {
+		border-bottom-right-radius: 0;
+		border-bottom-left-radius: 0;
 	}
 
 	.list-head {
