@@ -110,9 +110,9 @@ export function linesPayload(unknown: { index: number; raw: string }[], weighed:
 		.replaceAll('>', '\\u003e');
 }
 
-// the shopper's own product names travel the same way: JSON data with < and > escaped
-export function knownPayload(names: string[]) {
-	return JSON.stringify(names).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
+// the shopper's own product names and web results travel the same way: JSON data with < and > escaped
+export function knownPayload(data: unknown) {
+	return JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
 }
 
 // Joins the model's answer back to the real lines. Anything it skipped, invented or mangled
