@@ -54,7 +54,7 @@ const MOST_ADDRESSES = 4;
 const NEAR_MILES = 40;
 
 // the town around the ZIP's centre, so a store's name can be searched where the shopper lives
-async function townAt(you: Point): Promise<string | null> {
+export async function townAt(you: Point): Promise<string | null> {
 	const url = new URL('https://nominatim.openstreetmap.org/reverse');
 	for (const [key, value] of Object.entries({ lat: you.lat.toFixed(3), lon: you.lng.toFixed(3), zoom: '10', format: 'jsonv2' })) url.searchParams.set(key, value);
 	try {

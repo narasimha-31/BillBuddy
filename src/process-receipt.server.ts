@@ -9,6 +9,7 @@ import { itemRows } from './receipt-rows';
 import { assignProducts } from './product-merge.server';
 import { placeStore } from './store-place.server';
 import { guessSpot, mapState, myBranches } from './store-map.server';
+import { townAt } from './web-lookup.server';
 import { sizeProblem } from './routes/receipts/photo-rules';
 
 // what was saved, for the screen to print back as a receipt
@@ -145,12 +146,12 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 		// with none, the receipt stays off the map until the shopper picks the place.
 		const mapOn = storeId !== null && settings?.keep_store_location === true;
 		const storeAddress = mapOn ? checked.storeAddress : null;
-		const point = storeAddress ? await placeStore(storeAddress) : null;
+		const map = mapOn ? await mapState(supabase) : null;
+		// many receipts print only the street; the shopper's own town keeps it from landing in another city
+		const town = storeAddress && !/\b\d{5}\b/.test(storeAddress) && map?.you ? await townAt(map.you) : null;
+		const point = storeAddress ? await placeStore(town ? `${storeAddress}, ${town}` : storeAddress) : null;
 		let guess = null;
-		if (mapOn && !storeAddress && checked.store) {
-			const map = await mapState(supabase);
-			if (map.you) guess = guessSpot({ id: storeId! }, map.you, await myBranches(supabase));
-		}
+		if (mapOn && !storeAddress && checked.store && map?.you) guess = guessSpot({ id: storeId! }, map.you, await myBranches(supabase));
 		await finish({
 			status: needsReview ? 'review' : 'saved',
 			store_id: storeId,
