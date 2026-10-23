@@ -44,6 +44,9 @@
 	<main>
 		<h1 class="large-title">My list</h1>
 
+		<div class="layout">
+		<div class="plan">
+
 		<form class="add" method="POST" action="?/add" use:enhance={keepFocus} onsubmit={() => (sent = true)}>
 			<input name="name" aria-label="Add an item" bind:this={field} onkeydown={enterSends} list="bought" placeholder="Add an item, like milk" autocomplete="off" maxlength="60" required />
 			<datalist id="bought">
@@ -64,41 +67,6 @@
 		{/if}
 
 		{#if data.list.length}
-			{#if data.stores.length}
-				<h2 class="list-label">Where to buy it</h2>
-				{#if mapPins.length}
-					<div class="map">
-						<div class="frame"><StoreMap you={data.you} pins={mapPins} selected={picked} onpick={(id) => (picked = id)} label="Where each item on your list is cheapest" /></div>
-						<p class="map-note" aria-live="polite">
-							{#if pickedPin}
-								<strong>{storeName(pickedPin.store)}</strong> is cheapest for {pickedPin.items.join(', ')}.
-							{:else}
-								Each pin is a store and what is cheapest there. Tap one to see which items.
-							{/if}
-						</p>
-					</div>
-				{/if}
-				<ul class="group">
-					{#each data.stores as store (store.store)}
-						<li class="row" class:best={store.store === best}>
-							<span class="row-title">{storeName(store.store)}</span>
-							<span class="row-sub">
-								{store.has} of {data.items.length - data.unpriced.length} items{store.cheapest ? ` · cheapest for ${store.cheapest}` : ''}{store.missing.length ? ` · no ${store.missing.join(', ')}` : ''}
-							</span>
-							<span class="row-value">{money(store.cents)}</span>
-						</li>
-					{/each}
-					{#if data.stores.length > 1 && data.split.stores > 1}
-						<li class="row">
-							<span class="row-title">Each at its cheapest store</span>
-							<span class="row-sub">{data.split.stores} stores</span>
-							<span class="row-value">{money(data.split.cents)}</span>
-						</li>
-					{/if}
-				</ul>
-				<p class="note">Your last price at each store. Weighed items count as one pound.</p>
-			{/if}
-
 			<div class="list-label-row">
 				<h2 class="list-label">Items</h2>
 				<form method="POST" action="?/clear" use:enhance><button>Clear list</button></form>
@@ -126,12 +94,73 @@
 		{:else}
 			<p class="empty">Add what you plan to buy. Billie shows what it costs at each store you shop at, from your own receipts.</p>
 		{/if}
+		</div>
+
+		{#if data.list.length && data.stores.length}
+			<section class="where" aria-label="Where to buy it">
+			<h2 class="list-label">Where to buy it</h2>
+			{#if mapPins.length}
+				<div class="map">
+					<div class="frame"><StoreMap you={data.you} pins={mapPins} selected={picked} onpick={(id) => (picked = id)} label="Where each item on your list is cheapest" /></div>
+					<p class="map-note" aria-live="polite">
+						{#if pickedPin}
+							<strong>{storeName(pickedPin.store)}</strong> is cheapest for {pickedPin.items.join(', ')}.
+						{:else}
+							Each pin is a store and what is cheapest there. Tap one to see which items.
+						{/if}
+					</p>
+				</div>
+			{/if}
+			<ul class="group">
+				{#each data.stores as store (store.store)}
+					<li class="row" class:best={store.store === best}>
+						<span class="row-title">{storeName(store.store)}</span>
+						<span class="row-sub">
+							{store.has} of {data.items.length - data.unpriced.length} items{store.cheapest ? ` · cheapest for ${store.cheapest}` : ''}{store.missing.length ? ` · no ${store.missing.join(', ')}` : ''}
+						</span>
+						<span class="row-value">{money(store.cents)}</span>
+					</li>
+				{/each}
+				{#if data.stores.length > 1 && data.split.stores > 1}
+					<li class="row">
+						<span class="row-title">Each at its cheapest store</span>
+						<span class="row-sub">{data.split.stores} stores</span>
+						<span class="row-value">{money(data.split.cents)}</span>
+					</li>
+				{/if}
+			</ul>
+			<p class="note">Your last price at each store. Weighed items count as one pound.</p>
+			</section>
+		{/if}
+		</div>
 	</main>
 </AppShell>
 
 <style>
-	main {
+	.layout {
+		display: flex;
+		flex-direction: column;
 		max-width: 40rem;
+	}
+
+	/* a laptop puts the map beside the list; a phone has it under the list */
+	@media (min-width: 1024px) {
+		.layout {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+			align-items: start;
+			gap: 2.5rem;
+			max-width: none;
+		}
+
+		.where {
+			position: sticky;
+			top: 5rem;
+		}
+
+		.where .frame {
+			height: min(28rem, 50dvh);
+		}
 	}
 
 	.map {
