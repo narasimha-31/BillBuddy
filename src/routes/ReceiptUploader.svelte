@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { money, shortDay, storeName } from '../format';
 	import { canAdd, cannotOpen, isPdf, prepareUpload } from './receipts/prepare-photo';
+	import { SHARP_ENOUGH } from './receipts/photo-rules';
 	import { onDestroy } from 'svelte';
 	import { announce, post, readReceipt, type Printed } from './receipts/reading';
 
@@ -21,8 +22,9 @@
 				: '';
 	});
 
-	type State = 'preparing' | 'reading' | 'saved' | 'review' | 'duplicate' | 'failed' | 'paused';
-	type Entry = { key: number; id?: string; photo: string | null; state: State; slow: boolean; note?: string; printed?: Printed };
+	type State = 'preparing' | 'blurry' | 'reading' | 'saved' | 'review' | 'duplicate' | 'failed' | 'paused';
+	type Held = { jpeg: Blob; hash: string };
+	type Entry = { key: number; id?: string; photo: string | null; state: State; slow: boolean; note?: string; printed?: Printed; held?: Held };
 
 	let entries = $state<Entry[]>([]);
 	let dragging = $state(false);
@@ -66,24 +68,52 @@
 		await read(begin(null), id);
 	}
 
+	// a photo that looks blurry or far off waits here, before it costs a slot or a read
 	async function send(file: File, entry: Entry) {
 		try {
-			const { jpeg, hash } = await prepareUpload(file);
+			const { jpeg, hash, sharpness } = await prepareUpload(file);
 			if (!entry.photo) entry.photo = URL.createObjectURL(jpeg);
-			const body = new FormData();
-			body.set('photo', jpeg, 'receipt.jpg');
-			body.set('hash', hash);
-			const result = await post('upload', body);
-			if (result.type === 'success' && result.data?.id) await read(entry, String(result.data.id));
-			else {
-				entry.state = result.type === 'failure' && result.status === 409 ? 'duplicate' : 'failed';
-				entry.note = result.type === 'failure' && result.status !== 409 ? String(result.data?.problem ?? '') : undefined;
+			if (sharpness !== undefined && sharpness < SHARP_ENOUGH) {
+				entry.state = 'blurry';
+				entry.held = { jpeg, hash };
+				return;
 			}
+			await upload(entry, { jpeg, hash });
 		} catch (problem) {
 			entry.state = 'failed';
 			entry.note = cannotOpen(problem, file);
 		} finally {
-			if (entry.photo && entry.state !== 'reading') URL.revokeObjectURL(entry.photo);
+			if (entry.photo && !['reading', 'blurry'].includes(entry.state)) URL.revokeObjectURL(entry.photo);
+		}
+	}
+
+	async function sendAnyway(entry: Entry) {
+		const held = entry.held!;
+		entry.held = undefined;
+		entry.state = 'preparing';
+		try {
+			await upload(entry, held);
+		} finally {
+			if (entry.photo && (entry.state as State) !== 'reading') URL.revokeObjectURL(entry.photo);
+		}
+		await invalidateAll();
+	}
+
+	function retake(entry: Entry) {
+		if (entry.photo) URL.revokeObjectURL(entry.photo);
+		entries = entries.filter((e) => e.key !== entry.key);
+		camera.click();
+	}
+
+	async function upload(entry: Entry, { jpeg, hash }: Held) {
+		const body = new FormData();
+		body.set('photo', jpeg, 'receipt.jpg');
+		body.set('hash', hash);
+		const result = await post('upload', body);
+		if (result.type === 'success' && result.data?.id) await read(entry, String(result.data.id));
+		else {
+			entry.state = result.type === 'failure' && result.status === 409 ? 'duplicate' : 'failed';
+			entry.note = result.type === 'failure' && result.status !== 409 ? String(result.data?.problem ?? '') : undefined;
 		}
 	}
 
@@ -224,6 +254,18 @@
 									<a href="/receipts/{entry.id}">{entry.state === 'review' ? 'Check the amounts' : 'Open receipt'}</a>
 								</footer>
 							</article>
+						</div>
+					{:else if entry.state === 'blurry'}
+						<div class="blurry">
+							{#if entry.photo}<img src={entry.photo} alt="" />{/if}
+							<div>
+								<p class="title">This looks blurry or far away</p>
+								<p class="sub">It may not read. A closer, steadier photo does better. This one hasn't been sent yet.</p>
+								<div class="choices">
+									<button type="button" class="pill-button" onclick={() => retake(entry)}>Retake</button>
+									<button type="button" class="send-anyway" onclick={() => sendAnyway(entry)}>Send anyway</button>
+								</div>
+							</div>
 						</div>
 					{:else}
 						<p class="message" class:bad={entry.state === 'failed'}>
@@ -423,7 +465,8 @@
 	}
 
 	/* the photo itself, with a soft line passing over it while the model reads */
-	.scanning {
+	.scanning,
+	.blurry {
 		display: flex;
 		align-items: center;
 		gap: 1rem;
@@ -441,6 +484,35 @@
 		border-radius: 0.4rem;
 		background: var(--color-receipt);
 		box-shadow: 0 0 0 1px var(--color-line);
+	}
+
+	.blurry > img {
+		flex: none;
+		width: 4.5rem;
+		height: 6rem;
+		border-radius: 0.4rem;
+		object-fit: cover;
+		box-shadow: 0 0 0 1px var(--color-line);
+	}
+
+	.choices {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 1rem;
+		margin-top: 0.7rem;
+	}
+
+	.send-anyway {
+		padding: 0.4rem 0.25rem;
+		font-weight: 500;
+		color: var(--color-accent);
+	}
+
+	.send-anyway:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+		border-radius: 6px;
 	}
 
 	.thumb img {
@@ -572,24 +644,6 @@
 		.beam {
 			animation: none;
 			transform: translateY(2.25rem);
-		}
-	}
-
-	/* on a laptop the page is one screen tall: the drop zone stays put and the results scroll under it */
-	@media (min-width: 1024px) and (min-height: 600px) {
-		.uploader {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-
-		.drop,
-		.limits {
-			flex: none;
-		}
-
-		.entries {
-			padding-bottom: 1rem;
 		}
 	}
 </style>

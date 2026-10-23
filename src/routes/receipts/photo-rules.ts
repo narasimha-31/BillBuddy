@@ -52,3 +52,26 @@ export function stackScale(pages: { width: number; height: number }[], longest =
 	const height = pages.reduce((sum, p) => sum + p.height, 0);
 	return Math.min(3, longest / Math.max(width, height));
 }
+
+// Sharpness of a grey copy about 1000 px long: the 99th percentile of edge strength (a 4-neighbour
+// Laplacian), counted in a histogram so it stays O(pixels). Clear receipt photos measured 115 to 236,
+// slightly soft ones 72, and blurred or far-off ones, which the reader then failed on, 47 and below.
+export const SHARP_ENOUGH = 60;
+
+export function sharpness(grey: ArrayLike<number>, width: number, height: number): number {
+	const counts = new Uint32Array(1021);
+	let total = 0;
+	for (let y = 1; y < height - 1; y++) {
+		for (let x = 1; x < width - 1; x++) {
+			const i = y * width + x;
+			counts[Math.abs(grey[i - width] + grey[i + width] + grey[i - 1] + grey[i + 1] - 4 * grey[i])]++;
+			total++;
+		}
+	}
+	let seen = 0;
+	for (let edge = 0; edge < counts.length; edge++) {
+		seen += counts[edge];
+		if (seen > total * 0.99) return edge;
+	}
+	return 0;
+}

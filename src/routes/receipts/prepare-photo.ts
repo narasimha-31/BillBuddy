@@ -1,4 +1,4 @@
-import { pdfProblem, stackScale } from './photo-rules';
+import { pdfProblem, sharpness, stackScale } from './photo-rules';
 
 // Full size: a long receipt shrunk to 1600px is about 600px wide, and the model misreads most
 // lines. Vercel refuses request bodies over 4.5 MB, so quality steps down instead of resolution.
@@ -18,9 +18,26 @@ async function encode(canvas: HTMLCanvasElement) {
 	throw new Error('could not encode the photo');
 }
 
+const SHARPNESS_SIDE = 1000;
+
+// scored on a grey copy at the size the score was measured at, whatever the camera
+function scoreOf(bitmap: ImageBitmap) {
+	const scale = Math.min(1, SHARPNESS_SIDE / Math.max(bitmap.width, bitmap.height));
+	const width = Math.max(3, Math.round(bitmap.width * scale));
+	const height = Math.max(3, Math.round(bitmap.height * scale));
+	const small = document.createElement('canvas');
+	Object.assign(small, { width, height });
+	const context = small.getContext('2d', { willReadFrequently: true })!;
+	context.drawImage(bitmap, 0, 0, width, height);
+	const rgba = context.getImageData(0, 0, width, height).data;
+	const grey = new Uint8Array(width * height);
+	for (let i = 0; i < grey.length; i++) grey[i] = Math.round(0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2]);
+	return sharpness(grey, width, height);
+}
+
 // The fingerprint is taken from the original file, so the same photo is caught twice.
 // Re-drawing onto a canvas also drops every bit of metadata, including GPS location.
-export async function preparePhoto(file: File): Promise<{ jpeg: Blob; hash: string }> {
+export async function preparePhoto(file: File): Promise<{ jpeg: Blob; hash: string; sharpness?: number }> {
 	const hash = hex(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
 	const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
 	const scale = Math.min(1, LONGEST_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -29,8 +46,9 @@ export async function preparePhoto(file: File): Promise<{ jpeg: Blob; hash: stri
 	canvas.width = Math.round(bitmap.width * scale);
 	canvas.height = Math.round(bitmap.height * scale);
 	canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+	const score = scoreOf(bitmap);
 	bitmap.close();
-	return { jpeg: await encode(canvas), hash };
+	return { jpeg: await encode(canvas), hash, sharpness: score };
 }
 
 export class PdfRefused extends Error {}
@@ -38,7 +56,7 @@ export class PdfRefused extends Error {}
 // An emailed receipt PDF becomes one tall JPEG here on the device: its pages drawn top to bottom
 // on white, so the server only ever sees a photo and every photo check still applies. PDF.js is
 // loaded only once someone picks a PDF; it has no script engine, and forms are not run.
-export async function preparePdf(file: File): Promise<{ jpeg: Blob; hash: string }> {
+export async function preparePdf(file: File): Promise<{ jpeg: Blob; hash: string; sharpness?: number }> {
 	const bytes = new Uint8Array(await file.arrayBuffer());
 	const early = pdfProblem(bytes);
 	if (early) throw new PdfRefused(early);

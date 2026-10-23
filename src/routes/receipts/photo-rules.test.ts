@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PHOTO_BYTES, jpegSize, pdfProblem, photoProblem, sizeProblem, stackScale } from './photo-rules';
+import { MAX_PHOTO_BYTES, SHARP_ENOUGH, jpegSize, pdfProblem, photoProblem, sharpness, sizeProblem, stackScale } from './photo-rules';
 
 const jpeg = (size = 10) => {
 	const bytes = new Uint8Array(size);
@@ -77,5 +77,26 @@ describe('pdf rules', () => {
 		const letter = { width: 612, height: 792 };
 		expect(stackScale([letter, letter, letter]) * 792 * 3).toBeCloseTo(4000);
 		expect(stackScale([{ width: 200, height: 300 }])).toBe(3);
+	});
+});
+
+describe('sharpness', () => {
+	// black strokes on white, then the same smeared sideways over a few pixels
+	const size = 100;
+	const crisp = Array.from({ length: size * size }, (_, i) => ((i % size) % 6 < 2 ? 20 : 235));
+	const smeared = crisp.map((_, i) => {
+		const x = i % size;
+		let sum = 0;
+		for (let d = -4; d <= 4; d++) sum += crisp[i - x + Math.min(size - 1, Math.max(0, x + d))];
+		return Math.round(sum / 9);
+	});
+
+	it('scores crisp text well above the line and a smear below it', () => {
+		expect(sharpness(crisp, size, size)).toBeGreaterThan(SHARP_ENOUGH);
+		expect(sharpness(smeared, size, size)).toBeLessThan(SHARP_ENOUGH);
+	});
+
+	it('scores a blank page zero', () => {
+		expect(sharpness(new Array(size * size).fill(200), size, size)).toBe(0);
 	});
 });
