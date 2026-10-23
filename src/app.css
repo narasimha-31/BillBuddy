@@ -758,18 +758,3 @@ html[data-theme='grape'][data-mode='dark'] .app {
 		--glow-c: rgb(50 110 240 / 0.18);
 	}
 }
-
-/* changing the look: one calm crossfade of the whole screen */
-html.look-swap::view-transition-old(root) {
-	animation: look-out 320ms ease both;
-}
-
-@keyframes look-out {
-	to {
-		opacity: 0;
-	}
-}
-
-html.look-swap::view-transition-new(root) {
-	animation: none;
-}
