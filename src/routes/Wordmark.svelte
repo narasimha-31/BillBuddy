@@ -12,7 +12,7 @@
 		display: inline-flex;
 		align-items: baseline;
 		font-family: var(--font-display);
-		font-size: 1.55rem;
+		font-size: 1.9rem;
 		font-weight: 650;
 		letter-spacing: -0.022em;
 		color: var(--color-ink);
