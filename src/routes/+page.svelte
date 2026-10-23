@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { inView } from 'motion';
 	import NumberFlow from '@number-flow/svelte';
 	import GoogleButton from './GoogleButton.svelte';
@@ -9,6 +10,9 @@
 	import { cartTotals, priceOf } from './store-prices';
 
 	let { data } = $props();
+
+	const DESCRIPTION = 'Billi reads your grocery receipts and keeps every price you paid, store by store. See what went up and where the same thing costs less.';
+	const home = `${page.url.origin}/`;
 
 	// Every price here is a sourced 2026 shelf price; every sum and gap is worked out below, in cents.
 	const PACK_LB = 3;
@@ -61,8 +65,26 @@
 </script>
 
 <svelte:head>
-	<title>Pricetrail · Know what you paid last time</title>
-	<meta name="description" content="Snap any grocery receipt. Pricetrail remembers every price, at every store you shop." />
+	<title>Billi · Grocery prices from your own receipts</title>
+	<meta name="description" content={DESCRIPTION} />
+	<link rel="canonical" href={home} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Billi" />
+	<meta property="og:title" content="Billi · Grocery prices from your own receipts" />
+	<meta property="og:description" content={DESCRIPTION} />
+	<meta property="og:url" content={home} />
+	<meta property="og:image" content="{home}images/hero-receipt-1024.webp" />
+	<meta name="twitter:card" content="summary_large_image" />
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: 'Billi',
+		url: home,
+		description: DESCRIPTION,
+		applicationCategory: 'ShoppingApplication',
+		operatingSystem: 'Any',
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+	})}</script>`}
 </svelte:head>
 
 <header class="bar">
@@ -78,7 +100,7 @@
 <main>
 	<section class="hero">
 		<h1>Know what you paid <span class="hl">last time.</span></h1>
-		<p class="lead">Snap any grocery receipt. Pricetrail remembers every price, at every store you shop.</p>
+		<p class="lead">Snap any grocery receipt. Billi remembers every price, at every store you shop.</p>
 		{#if data.signInFailed}<p class="failed" role="alert">Sign-in didn’t go through. Try again.</p>{/if}
 		<div class="actions">
 			<GoogleButton />

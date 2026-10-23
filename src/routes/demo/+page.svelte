@@ -38,7 +38,8 @@
 </script>
 
 <svelte:head>
-	<title>Demo · Pricetrail</title>
+	<title>Demo · Billi</title>
+	<meta name="description" content="Try Billi with a sample shopper: pick an item and see what they paid for it, at which store, and how the price moved." />
 </svelte:head>
 
 <div class="app">
@@ -142,7 +143,7 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="hint">Open one to see what was printed and the name Pricetrail gave it.</p>
+				<p class="hint">Open one to see what was printed and the name Billi gave it.</p>
 			</section>
 		</div>
 	</main>
