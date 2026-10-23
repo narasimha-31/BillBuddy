@@ -54,10 +54,12 @@
 	let picked = $state<string | null>(null);
 
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
-	const pins = $derived(itemPins(places, history.visits, withAway));
+	const pins = $derived(itemPins(places, history.all, withAway, history.per));
+	// a store that sold it the other way (each against per pound) says so on its pin
+	const unitOf = (p: Pin) => (p.per === 'lb' ? '/lb' : p.per !== history.per ? ' ea' : '');
 	const pin = $derived(pins.find((p) => `${p.storeId}@${p.key}` === picked) ?? null);
 	// away stores that sold this item, so the offer to show them only appears when it adds something
-	const awayCount = $derived(new Set(itemPins(places, history.visits, true).filter((p) => p.away && p.cents !== null).map((p) => p.storeId)).size);
+	const awayCount = $derived(new Set(itemPins(places, history.all, true).filter((p) => p.away && p.cents !== null).map((p) => p.storeId)).size);
 	// stores this item was bought at that have no branch on the map yet
 	const missing = $derived(history.stores.map((s) => s.store).filter((name) => !places.some((p) => p.name === name)).map((name) => stores.find((s) => s.name === name)).filter((s) => s !== undefined));
 	const mapPins = $derived(
@@ -65,7 +67,7 @@
 			id: `${p.storeId}@${p.key}`,
 			lat: p.lat,
 			lng: p.lng,
-			label: p.cents === null ? null : `${money(p.cents)}${per}`,
+			label: p.cents === null ? null : `${money(p.cents)}${unitOf(p)}`,
 			cents: p.cents,
 			title: `${storeName(p.name)}${streetOf(p.address) ? `, ${streetOf(p.address)}` : ''}`,
 			cheapest: p.cheapest,
@@ -116,7 +118,7 @@
 		<svelte:element this={point ? 'button' : 'div'} type={point ? 'button' : undefined} class="main" role={point ? undefined : 'group'} onclick={point ? () => pick(idOf(point)) : undefined}>
 			<span class="label">{label}</span>
 			<span class="store">{store}{#if where}<span class="where">{` · ${where}`}</span>{/if}</span>
-			<span class="paid">{money(cents)}{per}<span class="when" class:old={isOld(date)}>{` · ${date ? (isOld(date) ? `last there ${shortDay(date)}` : shortDay(date)) : 'no date'}`}</span></span>
+			<span class="paid">{money(cents)}{point ? unitOf(point) : per}<span class="when" class:old={isOld(date)}>{` · ${date ? (isOld(date) ? `last there ${shortDay(date)}` : shortDay(date)) : 'no date'}`}</span></span>
 		</svelte:element>
 		{#if point}
 			<a class="go" href={directionsTo(point)} target="_blank" rel="noopener" aria-label="Directions to {store}">

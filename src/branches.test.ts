@@ -58,6 +58,21 @@ describe('itemPins', () => {
 		expect(pins.find((p) => p.key === 'c')!.cheapest).toBe(true);
 	});
 
+	it('prices every store in its own unit, cheapest only among the same unit', () => {
+		const pins = itemPins(
+			home,
+			[
+				{ storeId: 'f', branchKey: 'c', unitCents: 29, date: '2026-10-09', per: 'ea' },
+				{ storeId: 'w', branchKey: 'a', unitCents: 149, date: '2026-09-19', per: 'lb' },
+				{ storeId: 'w', branchKey: 'b', unitCents: 147, date: '2026-10-02', per: 'lb' }
+			],
+			false,
+			'lb'
+		);
+		const priced = pins.filter((p) => p.cents !== null).map((p) => [p.key, p.cents, p.per, p.cheapest]);
+		expect(priced).toEqual(expect.arrayContaining([['c', 29, 'ea', false], ['a', 149, 'lb', false], ['b', 147, 'lb', true]]));
+	});
+
 	it('calls nothing cheapest with only one branch selling it', () => {
 		expect(itemPins(home, [{ storeId: 'f', branchKey: 'c', unitCents: 199, date: null }]).some((p) => p.cheapest)).toBe(false);
 	});

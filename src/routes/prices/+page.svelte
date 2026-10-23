@@ -24,7 +24,7 @@
 	// the store filter is shared by the map's pins and the list's chips
 	let only = $state<string | null>(null);
 	let sheetStore = $state<string | null>(null);
-	const pins = $derived(data.history && data.map.on ? itemPins(data.places, data.history.visits) : []);
+	const pins = $derived(data.history && data.map.on ? itemPins(data.places, data.history.all, false, data.history.per) : []);
 	const nearest = $derived(pins.find((p) => p.nearest) ?? null);
 	const tags = $derived(storeTags(data.usual, nearest && { name: nearest.name, miles: nearest.miles }));
 	// a purchase from a branch far from home says where it was

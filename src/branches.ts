@@ -43,24 +43,30 @@ export function townOf(address: string | null) {
 	return match ? `${titled(match[1].trim())}, ${match[2]}` : null;
 }
 
-export type Pin = Placed & { cents: number | null; date: string | null; cheapest: boolean; nearest: boolean };
+export type Pin = Placed & { cents: number | null; per: string | null; date: string | null; cheapest: boolean; nearest: boolean };
 
 // One pin per home branch for an item (away ones too once asked): the latest price paid at that branch,
-// or none if it was never bought there. Cheapest and nearest only among home branches that really sold
-// it, since a cheaper price a state away does not help the next trip. O(purchases + branches).
-export function itemPins(branches: Placed[], purchases: { branchKey?: string | null; storeId?: string | null; unitCents: number; date: string | null }[], withAway = false): Pin[] {
-	const latest = new Map<string, { cents: number; date: string }>();
+// in its own unit, or none if it was never bought there. Cheapest only among home branches priced the
+// way given (each, or per pound), nearest among all home branches that really sold it.
+export function itemPins(branches: Placed[], purchases: { branchKey?: string | null; storeId?: string | null; unitCents: number; date: string | null; per?: string }[], withAway = false, per?: string): Pin[] {
+	const latest = new Map<string, { cents: number; date: string; per: string | null }>();
 	for (const p of purchases) {
 		if (!p.branchKey || !p.storeId) continue;
 		const id = `${p.storeId}@${p.branchKey}`;
 		const seen = latest.get(id);
-		if (!seen || (p.date ?? '') > seen.date) latest.set(id, { cents: p.unitCents, date: p.date ?? '' });
+		if (!seen || (p.date ?? '') > seen.date) latest.set(id, { cents: p.unitCents, date: p.date ?? '', per: p.per ?? null });
 	}
-	const pins = branches.filter((b) => withAway || !b.away).map((b) => ({ ...b, cents: latest.get(`${b.storeId}@${b.key}`)?.cents ?? null, date: latest.get(`${b.storeId}@${b.key}`)?.date || null, cheapest: false, nearest: false }));
+	const pins = branches
+		.filter((b) => withAway || !b.away)
+		.map((b) => {
+			const seen = latest.get(`${b.storeId}@${b.key}`);
+			return { ...b, cents: seen?.cents ?? null, per: seen?.per ?? null, date: seen?.date || null, cheapest: false, nearest: false };
+		});
 	const sold = pins.filter((p) => p.cents !== null && !p.away);
-	if (sold.length > 1) {
-		const low = Math.min(...sold.map((p) => p.cents!));
-		for (const p of sold) p.cheapest = p.cents === low;
+	const alike = sold.filter((p) => !per || p.per === per);
+	if (alike.length > 1) {
+		const low = Math.min(...alike.map((p) => p.cents!));
+		for (const p of alike) p.cheapest = p.cents === low;
 	}
 	if (sold.length) sold.reduce((a, b) => (b.miles < a.miles ? b : a)).nearest = true;
 	return pins;
