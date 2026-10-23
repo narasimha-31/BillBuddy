@@ -4,7 +4,7 @@ import { milesBetween, type Point } from './distance';
 import { addressesIn } from './store-branch';
 import { placeStore } from './store-place.server';
 
-export type Found = { title: string; content: string };
+export type Found = { title: string; content: string; url: string; published: string | null };
 
 // searches a shopper can set off in a day; each one is a paid call
 export const SEARCHES_PER_DAY = 20;
@@ -21,8 +21,8 @@ async function searchedToday(userId: string) {
 }
 
 // One Tavily search, logged with what it was for. A failed or capped search gives null, so the
-// caller keeps what it had and goes on.
-export async function tavily(query: string, results: number, length: number, purpose: string, userId: string | null, signal: AbortSignal): Promise<Found[] | null> {
+// caller keeps what it had and goes on. `extra` takes Tavily's own filters (topic, time_range, domains).
+export async function tavily(query: string, results: number, length: number, purpose: string, userId: string | null, signal: AbortSignal, extra: Record<string, unknown> = {}): Promise<Found[] | null> {
 	const key = env.TAVILY_API_KEY;
 	if (!key) return null;
 	if (userId && (await searchedToday(userId)) >= SEARCHES_PER_DAY) return null;
@@ -32,12 +32,17 @@ export async function tavily(query: string, results: number, length: number, pur
 		const response = await fetch('https://api.tavily.com/search', {
 			method: 'POST',
 			headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-			body: JSON.stringify({ query, max_results: results, search_depth: 'basic' }),
+			body: JSON.stringify({ ...extra, query, max_results: results, search_depth: 'basic' }),
 			signal
 		});
 		if (response.ok) {
-			const json = (await response.json()) as { results?: { title?: unknown; content?: unknown }[] };
-			found = (json.results ?? []).slice(0, results).map((r) => ({ title: String(r.title ?? '').slice(0, 120), content: String(r.content ?? '').slice(0, length) }));
+			const json = (await response.json()) as { results?: { title?: unknown; content?: unknown; url?: unknown; published_date?: unknown }[] };
+			found = (json.results ?? []).slice(0, results).map((r) => ({
+				title: String(r.title ?? '').slice(0, 300),
+				content: String(r.content ?? '').slice(0, length),
+				url: String(r.url ?? ''),
+				published: typeof r.published_date === 'string' ? r.published_date : null
+			}));
 		}
 	} catch (problem) {
 		console.error('web lookup failed', problem instanceof Error ? problem.name : problem);

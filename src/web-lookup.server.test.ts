@@ -32,7 +32,7 @@ describe('tavily', () => {
 	it('keeps short results and logs what the search was for', async () => {
 		const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ title: 'Parivar Grocers', content: 'x'.repeat(500), url: 'https://a' }] })));
 		vi.stubGlobal('fetch', fetch);
-		expect(await search('user-1')).toEqual([{ title: 'Parivar Grocers', content: 'x'.repeat(300) }]);
+		expect(await search('user-1')).toEqual([{ title: 'Parivar Grocers', content: 'x'.repeat(300), url: 'https://a', published: null }]);
 		expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ query: 'Parivar Grocers Houston address' });
 		expect(logged).toMatchObject([{ model: 'tavily/search', purpose: 'store_lookup', ok: true }]);
 	});
