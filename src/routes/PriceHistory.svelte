@@ -4,7 +4,7 @@
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
 
-	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what sits below the name;
+	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what closes the card;
 	// map, what sits above the prices; awayOf, the town of a purchase made far from home
 	let {
 		history,
@@ -23,28 +23,23 @@
 	} = $props();
 
 	const SHOWN = 6;
-	// three rows or fewer read at a glance; sorting or filtering them is clutter
+	// three rows or two stores read at a glance; filtering them is clutter
 	const FILTERS_FROM = 4;
+	const CHIPS_FROM_STORES = 3;
 	const per = $derived(history.per === 'lb' ? '/lb' : '');
 	const previous = $derived(history.visits[1]);
 	// Ohio against Houston says nothing about prices going up, so a change is only told within one area
 	const lastAway = $derived(awayOf?.(history.last) ?? null);
 	const change = $derived(previous && lastAway === (awayOf?.(previous) ?? null) ? history.change : null);
 
-	// One list for both questions: newest first answers "what did I pay", cheapest first answers
-	// "where is it cheapest". Each row opens the receipt it came from.
-	let order = $state<'newest' | 'cheapest'>('newest');
+	// newest first; the cheapest row is marked, and each row opens the receipt it came from
 	let everything = $state(false);
 	const storeOf = (store: string | null) => store ?? 'Unknown store';
 	const stores = $derived(history.stores.map((s) => s.store));
 	// a price paid far from home never counts as the cheapest; it does not help the next trip
 	const lowest = $derived(Math.min(...history.visits.filter((v) => !awayOf?.(v)).map((v) => v.unitCents)));
 	const priciest = $derived(Math.max(...history.visits.map((v) => v.unitCents)));
-	const rows = $derived.by(() => {
-		const kept = history.visits.filter((v) => only === null || storeOf(v.store) === only);
-		// sorting a copy of a list already newest first keeps ties newest first
-		return order === 'cheapest' ? [...kept].sort((a, b) => a.unitCents - b.unitCents) : kept;
-	});
+	const rows = $derived(history.visits.filter((v) => only === null || storeOf(v.store) === only));
 	const shown = $derived(everything ? rows : rows.slice(0, SHOWN));
 	const opens = (v: History['visits'][number]) => (v.receiptId ? `/receipts/${v.receiptId}?from=${encodeURIComponent(history.name)}#line-${v.itemId}` : null);
 	const lastLink = $derived(opens(history.last));
@@ -53,7 +48,6 @@
 	const product = $derived(history.name);
 	$effect.pre(() => {
 		void product;
-		order = 'newest';
 		only = null;
 		everything = false;
 	});
@@ -63,7 +57,6 @@
 	<header>
 		<div class="title">
 			<h2>{history.name}</h2>
-			{@render under?.()}
 		</div>
 		<span>{history.per === 'lb' ? 'price per lb' : 'price each'}</span>
 	</header>
@@ -94,17 +87,9 @@
 	{#if map}<div class="map-slot">{@render map()}</div>{/if}
 
 	<div class="part">
-		<div class="list-head">
-			<p class="label">Every time you bought it</p>
-			{#if history.visits.length >= FILTERS_FROM}
-				<div class="order" role="group" aria-label="Sort">
-					<button type="button" aria-pressed={order === 'newest'} onclick={() => (order = 'newest')}>Newest</button>
-					<button type="button" aria-pressed={order === 'cheapest'} onclick={() => (order = 'cheapest')}>Lowest</button>
-				</div>
-			{/if}
-		</div>
+		<p class="label">Every time you bought it</p>
 
-		{#if stores.length > 1 && history.visits.length >= FILTERS_FROM}
+		{#if stores.length >= CHIPS_FROM_STORES && history.visits.length >= FILTERS_FROM}
 			<div class="only" role="group" aria-label="Store">
 				<button type="button" aria-pressed={only === null} onclick={() => (only = null)}>All stores</button>
 				{#each stores as store (store)}
@@ -141,6 +126,8 @@
 			</button>
 		{/if}
 	</div>
+
+	{#if under}<div class="under">{@render under()}</div>{/if}
 </section>
 
 <style>
@@ -244,45 +231,10 @@
 		padding: 1.1rem 0 0.25rem;
 	}
 
-	.list-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem 1rem;
-	}
-
-	.list-head .label {
-		white-space: nowrap;
-	}
-
-	/* the sort is a small segmented control; the store filter is a row of chips that scrolls */
-	.order {
-		display: inline-grid;
-		grid-auto-flow: column;
-		grid-auto-columns: 1fr;
-		border-radius: 9px;
-		background: rgb(118 118 128 / 0.12);
-		padding: 2px;
-	}
-
-	.order button {
-		border-radius: 7px;
-		padding: 0.25rem 0.75rem;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--color-ink);
-		transition:
-			background-color var(--quick) var(--ease),
-			box-shadow var(--quick) var(--ease),
-			transform var(--standard) var(--ease);
-	}
-
-	.order button[aria-pressed='true'] {
-		background: var(--color-selected);
-		box-shadow:
-			0 3px 8px rgb(0 0 0 / 0.12),
-			0 3px 1px rgb(0 0 0 / 0.04);
+	.under {
+		border-top: 1px solid color-mix(in srgb, var(--color-sep) 12%, transparent);
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
 	}
 
 	/* a scroll row still reports all its chips as its width; containing it keeps the card from growing */
@@ -323,14 +275,12 @@
 		color: var(--color-on-ink);
 	}
 
-	.order button:active,
 	.only button:active,
 	.more:active {
 		transform: scale(0.96);
 		transition-duration: var(--quick);
 	}
 
-	.order button:focus-visible,
 	.only button:focus-visible,
 	.more:focus-visible,
 	.visit:focus-visible {

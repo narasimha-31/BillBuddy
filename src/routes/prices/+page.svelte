@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { itemPins, townOf } from '../../branches';
 	import { storeTags } from '../../store-facts';
@@ -19,7 +20,6 @@
 	let picked = $state<string | null>(null);
 	const selected = $derived(picked ?? data.selected ?? '');
 
-	let history = $state<HTMLElement>();
 
 	// the store filter is shared by the map's pins and the list's chips
 	let only = $state<string | null>(null);
@@ -78,14 +78,23 @@
 		aisleNote = '';
 	});
 
-	// on a phone the history sits below the list, so it is brought into view once it arrives
+	// On a phone an item opens as its own screen, so back (the link or the swipe) returns to the list
+	// where it was left. A laptop shows both side by side and swaps the item in place.
+	const PHONE = '(max-width: 959px)';
+	const opened = $derived(page.url.searchParams.has('item'));
+	let fromList = false;
 	async function pick(name: string) {
 		picked = name;
-		await goto(`?item=${encodeURIComponent(name)}`, { replaceState: true, noScroll: true, keepFocus: true });
-		// on a phone, picking from an aisle below the history brings the history back into view
-		const top = history?.getBoundingClientRect().top ?? 0;
-		if (matchMedia('(max-width: 959px)').matches && (top < 0 || top > innerHeight * 0.6))
-			history?.scrollIntoView({ behavior: prefersReducedMotion.current ? 'auto' : 'smooth' });
+		const phone = matchMedia(PHONE).matches;
+		fromList = phone;
+		await goto(`?item=${encodeURIComponent(name)}`, phone ? {} : { replaceState: true, noScroll: true, keepFocus: true });
+		picked = null;
+	}
+	function back(event: MouseEvent) {
+		if (!fromList) return;
+		event.preventDefault();
+		fromList = false;
+		history.back();
 	}
 </script>
 
@@ -95,7 +104,7 @@
 
 <AppShell fit firstName={data.firstName}>
 	<main>
-		<div class="head">
+		<div class="head" class:opened>
 			<div>
 				<h1 class="large-title">Prices</h1>
 				<p class="ask">What did I pay last time?</p>
@@ -103,11 +112,14 @@
 		</div>
 
 		{#if data.products.length}
-			<div class="columns">
+			<div class="columns" class:opened>
 				<div class="picker scroll-area">
 					<ItemPicker items={data.products} bind:selected={() => selected, pick} />
 				</div>
-				<div class="history scroll-area" bind:this={history}>
+				<div class="history scroll-area">
+					<a class="back" href="/prices" onclick={back}>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>Prices
+					</a>
 					{#if data.maybeSame}
 						<form
 							class="same"
@@ -136,6 +148,7 @@
 									{#snippet under()}
 										<form class="aisle-pick" method="POST" action="?/aisle" use:enhance={saveAisle}>
 											<input type="hidden" name="item" value={data.selected} />
+											<span class="aisle-word" aria-hidden="true">Aisle</span>
 											<label>
 												<AisleIcon aisle={shownAisle} />
 												<span class="visually-hidden">Aisle for {data.selected}</span>
@@ -171,7 +184,7 @@
 </AppShell>
 
 <style>
-	/* the aisle reads as a quiet pill under the name; the whole pill opens the menu */
+	/* the aisle closes the card as a quiet pill; the whole pill opens the menu */
 	.aisle-pick {
 		display: flex;
 		flex-wrap: wrap;
@@ -240,6 +253,11 @@
 		pointer-events: none;
 	}
 
+	.aisle-word {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
 	.aisle-note {
 		font-size: 0.8125rem;
 		color: var(--color-muted);
@@ -273,37 +291,55 @@
 		color: var(--color-up);
 	}
 
+	/* minmax(0, …) so the swipeable row of tiles never widens the page */
 	.columns {
 		display: grid;
+		grid-template-columns: minmax(0, 1fr);
 		gap: 2rem;
 		margin-top: 1.5rem;
 	}
 
-	/* on a phone the price comes straight after the items tapped most; the aisles follow it */
-	@media (max-width: 959px) {
-		.columns {
-			display: flex;
-			flex-direction: column;
-			gap: 0;
-		}
-
-		.picker {
-			display: contents;
-		}
-
-		.history {
-			order: 2;
-			margin-top: 1.5rem;
-		}
-
-		.picker > :global(h2:nth-of-type(2)),
-		.picker > :global(.aisles) {
-			order: 3;
-		}
+	.back {
+		display: none;
 	}
 
-	.history {
-		scroll-margin-top: 5rem;
+	/* a phone shows the list or one item, never both */
+	@media (max-width: 959px) {
+		.columns.opened .picker,
+		.columns:not(.opened) .history,
+		.head.opened {
+			display: none;
+		}
+
+		.columns.opened .history {
+			margin-top: 0;
+		}
+
+		.back {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.15rem;
+			min-height: 2.75rem;
+			margin: -0.5rem 0 0.25rem -0.4rem;
+			font-size: 1.0625rem;
+			color: var(--color-accent);
+		}
+
+		.back svg {
+			width: 1.4rem;
+			height: 1.4rem;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 2.2;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.back:focus-visible {
+			outline: 2px solid var(--color-accent);
+			outline-offset: 2px;
+			border-radius: 8px;
+		}
 	}
 
 	/* the history stays in view while the list beside it is browsed */
