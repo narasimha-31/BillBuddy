@@ -24,12 +24,14 @@
 	// the window says where to go once Google is done; Home then takes the landing's place, and the
 	// landing hides behind a loading screen meanwhile instead of flashing back into view
 	let going = $state(false);
+	const HOLD_MS = 1100;
 	onMount(() => {
 		const signin = new BroadcastChannel('signin');
 		signin.onmessage = (event) => {
 			const next = String(event.data);
 			going = next === '/home';
-			location.replace(next);
+			// the loading screen stays long enough to read as a step, not a flicker
+			setTimeout(() => location.replace(next), going ? HOLD_MS : 0);
 		};
 		return () => signin.close();
 	});
