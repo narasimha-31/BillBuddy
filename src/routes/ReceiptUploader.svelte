@@ -3,7 +3,8 @@
 	import { money, shortDay, storeName } from '../format';
 	import { canAdd, cannotOpen, isPdf, prepareUpload } from './receipts/prepare-photo';
 	import { SHARP_ENOUGH } from './receipts/photo-rules';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import { handoff } from './receipts/handoff';
 	import { announce, post, readReceipt, type Printed } from './receipts/reading';
 
 	let {
@@ -140,6 +141,12 @@
 		await Promise.all(batch.map((file) => send(file, begin(isPdf(file) ? '' : URL.createObjectURL(file)))));
 		if (batch.length) await invalidateAll();
 	}
+
+	onMount(() => {
+		const files = handoff.files;
+		handoff.files = [];
+		if (files.length) add(files);
+	});
 
 	function dropped(event: DragEvent) {
 		event.preventDefault();

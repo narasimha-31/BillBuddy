@@ -6,8 +6,8 @@
 	import Tour from '../Tour.svelte';
 	import { aisleSpend, spendBars, type Bar } from '../../spend';
 	import { budgetLine } from '../../budget';
-	import { agoText, everyText } from '../../rhythm';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { handoff } from '../receipts/handoff';
 	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
@@ -16,6 +16,17 @@
 	import { toast } from '../../toasts.svelte';
 
 	let { data } = $props();
+
+	// a phone opens the camera, a laptop the file picker; Receipts reads what was picked
+	let camera = $state<HTMLInputElement>();
+	let picker = $state<HTMLInputElement>();
+	const firstTime = $derived(data.recent.length === 0);
+	const coarse = () => matchMedia('(pointer: coarse)').matches;
+	function handOver(files: FileList | null) {
+		if (!files?.length) return;
+		handoff.files = [...files];
+		goto('/receipts');
+	}
 
 	const monthName = $derived(new Date(`${data.month.start}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }));
 
@@ -92,7 +103,7 @@
 
 	// the first visit gets a short tour; finished or skipped, it is saved on the account
 	const TOUR = [
-		{ target: '.add', title: 'Add a receipt', text: 'Snap it, or drop a photo or PDF. Every line is read in about ten seconds.', icon: 'M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z' },
+		{ target: '.add-button, .add', title: 'Add a receipt', text: 'Snap it, or pick a photo or PDF. Every line is read in about ten seconds.', icon: 'M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z' },
 		{ target: '.month', title: 'What you spent', text: 'Your total by week or month. Tap a bar to see those receipts.', icon: 'M5 20V11M10 20V5M15 20v-7M20 20V8M3 20h18' },
 		{ target: '.changes', title: 'Your prices', text: 'What went up, and where the same thing costs less. Tap one for every time you bought it.', icon: 'M7 7h.01M3 12V3h9l9 9-9 9z' },
 		{ target: 'nav[aria-label="Main"] a[href="/prices"]', title: 'Look anything up', text: 'Prices shows the last price of everything you buy, at every store, on a map.', icon: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3' }
@@ -115,11 +126,21 @@
 
 <AppShell firstName={data.firstName}>
 	<main>
-		<!-- daily things first: adding a receipt, what runs out, the month, then prices and old receipts -->
+		<!-- daily things first: what runs out, the month, prices, then old receipts -->
 		<div class="board">
 			<div class="main-col">
 				<div class="hi">
-					<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
+					<div class="hi-row">
+						<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
+						{#if !firstTime}
+							<button type="button" class="add-button" onclick={() => (coarse() ? camera : picker)?.click()}>
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+								Add receipt
+							</button>
+							<input bind:this={camera} type="file" accept="image/*" capture="environment" hidden onchange={(e) => handOver(e.currentTarget.files)} />
+							<input bind:this={picker} type="file" accept="image/*,application/pdf" multiple hidden onchange={(e) => handOver(e.currentTarget.files)} />
+						{/if}
+					</div>
 
 					{#if data.unread.length}
 						<p class="unread surface" aria-live="polite">
@@ -128,19 +149,29 @@
 						</p>
 					{/if}
 				</div>
-				<section class="add surface" aria-label="Add a receipt">
-					<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
-				</section>
+				{#if firstTime}
+					<section class="add surface" aria-label="Add a receipt">
+						<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
+					</section>
+				{/if}
 
 				{#if data.due.length}
 					<section class="due-soon" aria-labelledby="due-title">
-						<h2 class="list-label" id="due-title">Running low soon</h2>
-						<ul class="group due" aria-labelledby="due-title">
+						<h2 class="due-title" id="due-title">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M6 21h12M7.5 3v2.5c0 2.5 4.5 4.5 4.5 6.5s-4.5 4-4.5 6.5V21M16.5 3v2.5c0 2.5-4.5 4.5-4.5 6.5s4.5 4 4.5 6.5V21M9.5 19h5" /></svg>
+							Running low
+						</h2>
+						<ul class="due-rows">
 							{#each data.due as item (item.name)}
+								{@const used = Math.min(1, item.sinceDays / item.everyDays)}
 								<li>
-									<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
-										<span class="row-title">{item.name}</span>
-										<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
+									<a class="due-row" href="/prices?item={encodeURIComponent(item.name)}">
+										<span class="due-name">{item.name}</span>
+										<span class="due-text">{item.text}</span>
+										<span class="due-state">
+											<span class="due-flag">{used >= 1 ? 'Probably out' : `${Math.round(used * 100)}% used`}</span>
+											<span class="gauge" aria-hidden="true"><span style="transform: scaleX({used})"></span></span>
+										</span>
 									</a>
 								</li>
 							{/each}
@@ -352,6 +383,188 @@
 		.settings {
 			display: block;
 			margin-top: 1.75rem;
+		}
+	}
+
+	.hi-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.hi-row h1 {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.add-button {
+		display: inline-flex;
+		flex: none;
+		align-items: center;
+		gap: 0.45rem;
+		min-height: 2.75rem;
+		border-radius: 999px;
+		background: var(--color-accent-fill);
+		padding: 0.6rem 1.15rem 0.6rem 0.95rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: #fff;
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 12px -4px color-mix(in srgb, var(--color-accent-fill) 60%, transparent);
+		transition: transform var(--standard) var(--ease), filter var(--standard) var(--ease);
+	}
+
+	.add-button svg {
+		width: 1.2rem;
+		height: 1.2rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.9;
+		stroke-linejoin: round;
+	}
+
+	.add-button:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.add-button:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	@media (hover: hover) {
+		.add-button:hover {
+			filter: brightness(1.08);
+		}
+	}
+
+	/* things to act on get their own look, apart from the plain lists */
+	.due-soon {
+		border-radius: 20px;
+		background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 16%, transparent);
+		padding: 1rem 1rem 1.1rem;
+	}
+
+	.due-title {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0 0 0.8rem 0.15rem;
+		font-size: 1.0625rem;
+		font-weight: 650;
+		letter-spacing: -0.01em;
+		color: var(--color-ink);
+	}
+
+	.due-title svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		fill: none;
+		stroke: var(--color-accent);
+		stroke-width: 1.9;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.due-rows {
+		overflow: hidden;
+		border-radius: 14px;
+		background: var(--color-surface);
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+	}
+
+	.due-rows > li + li {
+		border-top: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
+	}
+
+	.due-row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-areas: 'name state' 'text state';
+		align-items: center;
+		gap: 0.15rem 1.25rem;
+		padding: 0.8rem 1rem;
+		transition: background-color var(--standard) var(--ease);
+	}
+
+	.due-row:active {
+		background: rgb(118 118 128 / 0.1);
+		transition-duration: var(--quick);
+	}
+
+	.due-row:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: -2px;
+		border-radius: 14px;
+	}
+
+	.due-name {
+		grid-area: name;
+		overflow-wrap: anywhere;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--color-ink);
+	}
+
+	.due-text {
+		grid-area: text;
+		font-size: 0.8125rem;
+		line-height: 1.35;
+		color: var(--color-muted);
+	}
+
+	.due-state {
+		grid-area: state;
+		display: grid;
+		justify-items: end;
+		gap: 0.35rem;
+		width: 6.5rem;
+	}
+
+	.due-flag {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-accent);
+		white-space: nowrap;
+	}
+
+	.gauge {
+		display: block;
+		overflow: hidden;
+		width: 100%;
+		height: 5px;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.16);
+	}
+
+	.gauge span {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: var(--color-accent);
+		transform-origin: left;
+	}
+
+	@media (hover: hover) {
+		.due-row:hover {
+			background: rgb(118 118 128 / 0.06);
+		}
+	}
+
+	@media (max-width: 640px) {
+		.due-soon {
+			padding: 0.85rem 0.75rem 0.75rem;
+		}
+
+		.due-row {
+			gap: 0.15rem 0.85rem;
+		}
+
+		.due-state {
+			width: 4.75rem;
 		}
 	}
 
@@ -736,10 +949,19 @@
 		display: none;
 	}
 
-	@media (min-width: 1024px) {
-		.extra {
-			display: block;
-		}
+	/* every section on Home is titled the same way */
+	.changes .list-label,
+	.recent .list-label {
+		font-size: 1.0625rem;
+		font-weight: 650;
+		letter-spacing: -0.01em;
+		color: var(--color-ink);
+	}
+
+	.changes .list-label-row,
+	.recent .list-label-row {
+		align-items: center;
+		margin-bottom: 0.6rem;
 	}
 
 	.history {
