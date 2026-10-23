@@ -124,7 +124,8 @@
 			</p>
 		{/if}
 
-		<div class="board">
+		<!-- on a phone, in the order people need it: adding a receipt, the month, what runs out, prices -->
+		<div class="board" class:with-due={data.due.length > 0}>
 			<section class="add surface" aria-label="Add a receipt">
 				<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
 			</section>
@@ -198,6 +199,22 @@
 				{/if}
 			</section>
 
+			{#if data.due.length}
+				<section class="due-soon" aria-labelledby="due-title">
+					<h2 class="list-label" id="due-title">Running low soon</h2>
+					<ul class="group due" aria-labelledby="due-title">
+						{#each data.due as item (item.name)}
+							<li>
+								<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
+									<span class="row-title">{item.name}</span>
+									<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
 			<section class="changes" aria-labelledby="changes-title">
 				<div class="list-label-row">
 					<h2 class="list-label" id="changes-title">Your prices</h2>
@@ -250,19 +267,6 @@
 			</section>
 
 			<section class="recent" aria-labelledby="recent-title">
-				{#if data.due.length}
-					<h2 class="list-label" id="due-title">Running low soon</h2>
-					<ul class="group due" aria-labelledby="due-title">
-						{#each data.due as item (item.name)}
-							<li>
-								<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
-									<span class="row-title">{item.name}</span>
-									<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				{/if}
 				<div class="list-label-row">
 					<h2 class="list-label" id="recent-title">Recent receipts</h2>
 					{#if data.recent.length}<a href="/receipts">See all</a>{/if}
@@ -346,10 +350,6 @@
 		}
 	}
 
-	.due {
-		margin-bottom: 1.75rem;
-	}
-
 	.board {
 		display: grid;
 		gap: 1.75rem;
@@ -362,6 +362,14 @@
 			grid-template-columns: minmax(0, 1fr) 22rem;
 			grid-template-areas: 'add month' 'changes month' 'changes recent';
 			gap: 1.75rem 2.5rem;
+		}
+
+		.board.with-due {
+			grid-template-areas: 'add month' 'changes month' 'changes due' 'changes recent';
+		}
+
+		.due-soon {
+			grid-area: due;
 		}
 
 		.add {
