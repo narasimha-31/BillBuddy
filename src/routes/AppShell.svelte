@@ -9,6 +9,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { navigating, page } from '$app/state';
+	import { markAppStart } from '../app-visit';
 	import AccountMenu from './AccountMenu.svelte';
 	import ThemePicker from './ThemePicker.svelte';
 	import Toaster from './Toaster.svelte';
@@ -36,7 +37,10 @@
 
 	// the pill starts where it belongs, and only slides once the page is on screen
 	let ready = $state(false);
-	onMount(() => requestAnimationFrame(() => (ready = true)));
+	onMount(() => {
+		markAppStart();
+		requestAnimationFrame(() => (ready = true));
+	});
 
 	// with a mouse, buttons and rows carry a light that follows the pointer (drawn in app.css)
 	const LIT = '.pill-button, .small-button, .drop, a.row, button.row, .tile';
@@ -54,7 +58,8 @@
 	}
 </script>
 
-<svelte:window onpointermove={light} />
+<!-- a page kept from before a sign-out asks the server again -->
+<svelte:window onpointermove={light} onpageshow={(e) => e.persisted && location.reload()} />
 
 <div class="app" class:fit>
 	<header class="top">

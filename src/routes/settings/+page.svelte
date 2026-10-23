@@ -4,7 +4,7 @@
 	import AppShell from '../AppShell.svelte';
 	import DisplayChoices from '../DisplayChoices.svelte';
 	import MapUnlock from '../MapUnlock.svelte';
-	import { clearToasts } from '../../toasts.svelte';
+	import { leaveApp } from '../../app-visit';
 
 	let { data, form } = $props();
 
@@ -131,7 +131,7 @@
 				</li>
 			{/if}
 			<li>
-				<form method="POST" action="/?/signout_everywhere" onsubmit={clearToasts}>
+				<form method="POST" action="/?/signout_everywhere" use:enhance={leaveApp}>
 					<button class="row action">Sign out of all devices</button>
 				</form>
 			</li>
@@ -140,7 +140,7 @@
 		<!-- the one step that can't be undone stays folded until asked for -->
 		<details class="delete-account group" open={!!form?.problem}>
 			<summary class="row">Delete account…</summary>
-		<form class="danger" method="POST" action="?/delete_account" use:enhance>
+		<form class="danger" method="POST" action="?/delete_account" use:enhance={leaveApp}>
 			<p>
 				Deletes every receipt, price and photo, then your account. This can't be undone. Type <strong>DELETE</strong> to
 				confirm.

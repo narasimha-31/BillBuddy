@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { leaveApp } from '../app-visit';
 	import { backStep } from '../back-step.svelte';
-	import { clearToasts } from '../toasts.svelte';
 
 	let { firstName }: { firstName: string | null } = $props();
 
@@ -24,7 +25,7 @@
 		<div class="menu">
 			<a href="/list">My list</a>
 			<a href="/settings">Settings</a>
-			<form method="POST" action="/?/signout" onsubmit={clearToasts}>
+			<form method="POST" action="/?/signout" use:enhance={leaveApp}>
 				<button>Sign out</button>
 			</form>
 		</div>
