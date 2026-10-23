@@ -90,6 +90,7 @@
 	// swipe, so the page still scrolls through it; the full-screen map moves like any map app.
 	onMount(() => {
 		let gone = false;
+		let sized: ResizeObserver | undefined;
 		(async () => {
 			const [L] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]);
 			if (gone) return;
@@ -143,9 +144,13 @@
 				});
 			});
 			leaflet = L;
+			// the box can still be settling when the map starts, which left tiles over half of it
+			sized = new ResizeObserver(() => map?.invalidateSize({ pan: false }));
+			sized.observe(box);
 		})();
 		return () => {
 			gone = true;
+			sized?.disconnect();
 			map?.remove();
 		};
 	});
