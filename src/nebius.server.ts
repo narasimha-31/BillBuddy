@@ -1,6 +1,6 @@
 import { NEBIUS_API_KEY } from '$env/static/private';
 import { admin } from './admin.server';
-import { MODELS, costMicros, overDailyCap, overUserCap, type ModelRole } from './ai-budget';
+import { MODELS, costMicros, overDailyCap, overNewAccountsCap, overUserCap, type ModelRole } from './ai-budget';
 
 const BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
 
@@ -27,8 +27,8 @@ type Request = { role: ModelRole; purpose: string; userId: string | null; messag
 async function spentToday(userId: string | null) {
 	const { data, error } = await admin.rpc('ai_spent_today', { p_user_id: userId });
 	if (error) throw error;
-	const row = (data as { all_micros: number; user_micros: number }[])[0];
-	return { all: Number(row?.all_micros ?? 0), mine: Number(row?.user_micros ?? 0) };
+	const row = (data as { all_micros: number; user_micros: number; new_micros: number; user_is_new: boolean }[])[0];
+	return { all: Number(row?.all_micros ?? 0), mine: Number(row?.user_micros ?? 0), fresh: Number(row?.new_micros ?? 0), isNew: !!row?.user_is_new };
 }
 
 // Whether this model's last call in the past three minutes failed. A model that is down then
@@ -71,6 +71,7 @@ async function checkBudget(userId: string | null) {
 	const spent = await spentToday(userId);
 	if (overDailyCap(spent.all)) throw new AiUnavailable('daily AI budget reached', true);
 	if (overUserCap(spent.mine)) throw new AiUnavailable('daily AI budget for this person reached', true);
+	if (overNewAccountsCap(spent.isNew, spent.fresh)) throw new AiUnavailable('daily AI budget for new accounts reached', true);
 }
 
 async function logCall(role: ModelRole, purpose: string, userId: string | null, usage: Usage, started: number, ok: boolean, servedModel: string | null) {

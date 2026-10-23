@@ -41,6 +41,14 @@ export function overDailyCap(spentTodayMicros: number) {
 	return spentTodayMicros >= DAILY_CAP_MICROS;
 }
 
+// Accounts under three days old share half the day's budget between them. Fresh accounts made by
+// the thousand then use up that half, never the half that keeps earlier shoppers reading.
+export const NEW_ACCOUNTS_CAP_MICROS = DAILY_CAP_MICROS / 2;
+
+export function overNewAccountsCap(isNew: boolean, newSpentTodayMicros: number) {
+	return isNew && newSpentTodayMicros >= NEW_ACCOUNTS_CAP_MICROS;
+}
+
 export function overUserCap(userSpentTodayMicros: number) {
 	return userSpentTodayMicros >= USER_DAILY_CAP_MICROS;
 }

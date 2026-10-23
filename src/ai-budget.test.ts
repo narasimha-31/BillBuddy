@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAILY_CAP_MICROS, USER_DAILY_CAP_MICROS, costMicros, overDailyCap, overUserCap } from './ai-budget';
+import { DAILY_CAP_MICROS, USER_DAILY_CAP_MICROS, costMicros, overDailyCap, overUserCap, NEW_ACCOUNTS_CAP_MICROS, overNewAccountsCap } from './ai-budget';
 
 describe('costMicros', () => {
 	it('prices input and output tokens separately at the catalog rate', () => {
@@ -29,5 +29,16 @@ describe('overUserCap', () => {
 		expect(overUserCap(USER_DAILY_CAP_MICROS - 1)).toBe(false);
 		expect(overUserCap(USER_DAILY_CAP_MICROS)).toBe(true);
 		expect(USER_DAILY_CAP_MICROS * 5).toBeLessThanOrEqual(DAILY_CAP_MICROS);
+	});
+});
+
+describe('overNewAccountsCap', () => {
+	it('stops new accounts once their shared half is spent', () => {
+		expect(overNewAccountsCap(true, NEW_ACCOUNTS_CAP_MICROS)).toBe(true);
+		expect(overNewAccountsCap(true, NEW_ACCOUNTS_CAP_MICROS - 1)).toBe(false);
+	});
+
+	it('never stops an older account', () => {
+		expect(overNewAccountsCap(false, NEW_ACCOUNTS_CAP_MICROS * 10)).toBe(false);
 	});
 });
