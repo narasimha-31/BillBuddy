@@ -16,7 +16,7 @@ describe('tileAllowed', () => {
 
 	it('refuses tiles outside the US, too far out, or not numbers', () => {
 		expect(tileAllowed(...tileOf(51.5, -0.12, 13))).toBe(false);
-		expect(tileAllowed(...tileOf(29.76, -95.36, 5))).toBe(false);
+		expect(tileAllowed(...tileOf(29.76, -95.36, 3))).toBe(false);
 		expect(tileAllowed(...tileOf(29.76, -95.36, 19))).toBe(false);
 		expect(tileAllowed(13, -1, 3000)).toBe(false);
 		expect(tileAllowed(13, 1.5, 3000)).toBe(false);

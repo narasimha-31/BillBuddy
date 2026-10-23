@@ -18,6 +18,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import type { Map as LeafletMap, LayerGroup, Marker } from 'leaflet';
 	import type { Point } from '../distance';
+	import { MIN_ZOOM } from '../map-tiles';
 
 	// full: the map has the screen to itself, so a finger drags and pinches it
 	let { you, pins, selected = null, onpick, label, full = false }: { you: Point | null; pins: MapPin[]; selected?: string | null; onpick?: (id: string) => void; label: string; full?: boolean } = $props();
@@ -102,19 +103,34 @@
 				doubleClickZoom: !touch,
 				minZoom: 9,
 				maxZoom: 17,
+				maxBoundsViscosity: 1,
 				zoomSnap: 0.25,
 				zoomAnimation: !still,
 				fadeAnimation: !still,
 				markerZoomAnimation: !still
 			});
 			L.tileLayer('/map/tiles/{z}/{x}/{y}', {
-				minZoom: 9,
+				minZoom: MIN_ZOOM,
 				maxZoom: 17,
 				attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
 			}).addTo(map);
 			map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 			// full screen keeps the bottom for the store bar
 			if (!touch) L.control.zoom({ position: full ? 'topleft' : 'bottomright' }).addTo(map);
+			const Recenter = L.Control.extend({
+				onAdd: () => {
+					const button = L.DomUtil.create('button', 'recenter');
+					button.type = 'button';
+					button.title = 'Back to your stores';
+					button.setAttribute('aria-label', 'Back to your stores');
+					button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>';
+					L.DomEvent.disableClickPropagation(button);
+					L.DomEvent.on(button, 'click', () => frame(true));
+					return button;
+				}
+			});
+			// the phone's strip can't be moved, so it has nothing to come back from
+			if (!touch) new Recenter({ position: full ? 'topleft' : 'topright' }).addTo(map);
 			layer = L.layerGroup().addTo(map);
 			map.on('zoomend', spread);
 			// a row in a bubble's list picks that store
@@ -161,15 +177,31 @@
 		}
 
 		// frame the pins once per set of pins, not on every selection
-		const points = [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(you ? [[you.lat, you.lng] as [number, number]] : [])];
+		points = [...pins.map((p) => [p.lat, p.lng] as [number, number]), ...(you ? [[you.lat, you.lng] as [number, number]] : [])];
 		const key = points.map((p) => p.join()).join('|');
 		if (key !== framed && points.length) {
 			framed = key;
-			if (points.length === 1) map.setView(points[0], 14, { animate: false });
-			else map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15, animate: false });
+			frame(false);
 		}
 		spread();
 	});
+
+	// Shows every pin, even stores in different cities. The map can't be dragged or zoomed out far
+	// past them, so nobody gets lost over an empty state; the button brings them back into view.
+	let points: [number, number][] = [];
+	function frame(animate: boolean) {
+		const L = leaflet;
+		if (!L || !map || !points.length) return;
+		const pinned = L.latLngBounds(points);
+		const room = pinned.pad(0.6);
+		// a lone store still gets a neighbourhood around it
+		const edge = L.latLngBounds([room.getSouth() - 0.15, room.getWest() - 0.2], [room.getNorth() + 0.15, room.getEast() + 0.2]);
+		map.setMinZoom(Math.max(MIN_ZOOM, Math.min(9, Math.floor(map.getBoundsZoom(edge)))));
+		map.setMaxBounds(edge);
+		const move = { animate: animate && !prefersReducedMotion.current };
+		if (points.length === 1) map.setView(points[0], 14, move);
+		else map.fitBounds(pinned, { padding: [36, 36], maxZoom: 15, ...move });
+	}
 </script>
 
 <div class="store-map" bind:this={box} role="region" aria-label={label}></div>
@@ -214,6 +246,38 @@
 		border: 0;
 		line-height: 30px;
 		color: var(--color-ink);
+	}
+
+	.store-map :global(.recenter) {
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 10px;
+		background: #fff;
+		color: #1d1d1f;
+		box-shadow:
+			0 4px 12px rgb(0 0 0 / 0.12),
+			0 0 0 0.5px rgb(0 0 0 / 0.08);
+		transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	.store-map :global(.recenter:active) {
+		transform: scale(0.92);
+	}
+
+	.store-map :global(.recenter:focus-visible) {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.store-map :global(.recenter svg) {
+		width: 18px;
+		height: 18px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
 	}
 
 	/* the shopper's ZIP: a calm dot with a soft ring, never a pulsing beacon */

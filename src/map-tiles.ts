@@ -1,6 +1,6 @@
-// Tiles the proxy will fetch: street level to city level, and only over the US (Alaska and Hawaii
+// Tiles the proxy will fetch: street level out to a few states, and only over the US (Alaska and Hawaii
 // included), so it can never be used as a free tile server for the whole world.
-export const MIN_ZOOM = 9;
+export const MIN_ZOOM = 4;
 export const MAX_ZOOM = 18;
 const US = { north: 72, south: 18, west: -180, east: -64 };
 
