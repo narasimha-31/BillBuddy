@@ -195,7 +195,7 @@
 				</button>
 			{/if}
 			<!-- with a map to open, the stores not on it are told there -->
-			{#if !pins.length}{@render notPlaced()}{/if}
+			{@render notPlaced()}
 		</div>
 	</div>
 {:else}
