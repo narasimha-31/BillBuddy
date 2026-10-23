@@ -5,7 +5,6 @@
 	import NumberFlow from '@number-flow/svelte';
 	import GoogleButton from './GoogleButton.svelte';
 	import PhoneTour from './PhoneTour.svelte';
-	import SiteFooter from './SiteFooter.svelte';
 	import Wordmark from './Wordmark.svelte';
 	import { cartTotals, priceOf } from './store-prices';
 
@@ -190,7 +189,7 @@
 		<a class="fine" href="/privacy">How we handle your receipts</a>
 	</section>
 
-	<section class="close">
+	<section class="close" id="start">
 		<h2>Start with your <span class="hl">last receipt.</span></h2>
 		<div class="actions">
 			<GoogleButton />
@@ -200,12 +199,27 @@
 </main>
 
 <footer>
-	<Wordmark />
-	<span class="sources">
-		Prices are typical 2026 shelf prices from published store price lists and local price trackers. Distances and the
-		usual store belong to a sample shopper. Your own receipts replace all of it.
-	</span>
-	<SiteFooter />
+	<div class="brand">
+		<Wordmark />
+		<p>Every price you paid, read from your own receipts.</p>
+	</div>
+	<nav aria-label="Footer">
+		<div>
+			<h2>Product</h2>
+			<a href="/demo">Try the demo</a>
+			<a href="#start">Sign in</a>
+		</div>
+		<div>
+			<h2>Help</h2>
+			<a href="/privacy">Privacy</a>
+			<a href="/feedback?from=/">Send feedback</a>
+		</div>
+	</nav>
+	<p class="sources">
+		Prices on this page are typical 2026 shelf prices from published store price lists and local price trackers.
+		Distances and the usual store belong to a sample shopper. Your own receipts replace all of it.
+	</p>
+	<p class="legal">© 2026 Billi</p>
 </footer>
 
 <style>
@@ -217,21 +231,21 @@
 		backdrop-filter: saturate(1.6) blur(18px);
 	}
 
-	nav {
+	.bar nav {
 		display: flex;
 		margin-left: auto;
 		gap: 1.5rem;
 		font-size: 0.9375rem;
 	}
 
-	nav a,
+	.bar nav a,
 	.quiet,
 	.fine {
 		color: var(--color-ink);
 	}
 
 	@media (hover: hover) {
-		nav a:hover,
+		.bar nav a:hover,
 		.fine:hover {
 			color: var(--color-accent);
 		}
@@ -568,13 +582,68 @@
 		color: var(--color-accent);
 	}
 
-	footer :global(.site-footer) {
-		flex-basis: 100%;
+	.brand {
+		display: grid;
+		gap: 0.6rem;
+		align-content: start;
+	}
+
+	.brand p {
+		max-width: 18rem;
+		line-height: 1.5;
+	}
+
+	footer nav {
+		display: flex;
+		gap: 3rem;
+	}
+
+	footer nav div {
+		display: grid;
+		gap: 0.55rem;
+		align-content: start;
+	}
+
+	footer h2 {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-ink);
+	}
+
+	footer nav a {
+		position: relative;
+		color: inherit;
+		transition: color 150ms;
+	}
+
+	/* a 44px reach on small links */
+	footer nav a::after {
+		content: '';
+		position: absolute;
+		inset: -12px -6px;
+	}
+
+	@media (hover: hover) {
+		footer nav a:hover {
+			color: var(--color-ink);
+		}
+	}
+
+	.sources,
+	.legal {
+		grid-column: 1 / -1;
 	}
 
 	.sources {
-		max-width: 40rem;
+		max-width: 44rem;
+		border-top: 1px solid var(--color-line);
+		padding-top: 1.25rem;
+		font-size: 0.8125rem;
 		line-height: 1.5;
+	}
+
+	.legal {
+		font-size: 0.8125rem;
 	}
 
 	.private {
@@ -645,17 +714,21 @@
 	}
 
 	footer {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 2rem 1rem;
 		margin: 0 auto;
 		max-width: 76rem;
 		border-top: 1px solid var(--color-line);
-		padding: 1.5rem 1.25rem 2.5rem;
+		padding: 2.5rem 1.25rem 2.5rem;
 		font-size: 0.875rem;
 		color: var(--color-muted);
+	}
+
+	@media (max-width: 599px) {
+		footer {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 
 	:global(::selection) {
