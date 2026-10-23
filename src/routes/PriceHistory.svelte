@@ -3,6 +3,7 @@
 	import type { History } from '../price-history';
 	import { money, shortDay, storeName } from '../format';
 	import Trend from './Trend.svelte';
+	import { agoText, everyText, rhythm } from '../rhythm';
 
 	// extra facts per store, such as "Your usual" or "Nearest · 0.8 mi"; under, what closes the card;
 	// map, what sits above the prices; awayOf, the town of a purchase made far from home
@@ -43,6 +44,7 @@
 	const shown = $derived(everything ? rows : rows.slice(0, SHOWN));
 	const opens = (v: History['visits'][number]) => (v.receiptId ? `/receipts/${v.receiptId}?from=${encodeURIComponent(history.name)}#line-${v.itemId}` : null);
 	const lastLink = $derived(opens(history.last));
+	const habit = $derived(rhythm(history.visits.map((v) => v.date), new Date().toLocaleDateString('en-CA')));
 
 	// another product starts from the full, newest-first list; a refresh of the same one keeps the view
 	const product = $derived(history.name);
@@ -81,6 +83,9 @@
 					{money(Math.abs(change.cents))} ({Math.abs(change.percent)}%) from {storeName(previous.store) ?? 'an unknown store'} on {shortDay(previous.date)}.
 				{/if}
 			</p>
+		{/if}
+		{#if habit}
+			<p class="habit">You buy this about {everyText(habit.everyDays)} · last {agoText(habit.sinceDays)}</p>
 		{/if}
 	</div>
 
@@ -204,6 +209,12 @@
 	.change {
 		margin-top: 0.75rem;
 		font-size: 0.875rem;
+	}
+
+	.habit {
+		margin-top: 0.5rem;
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 
 	.change.up {

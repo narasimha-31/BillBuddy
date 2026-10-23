@@ -6,6 +6,7 @@
 	import Tour from '../Tour.svelte';
 	import { aisleSpend, spendBars, type Bar } from '../../spend';
 	import { budgetLine } from '../../budget';
+	import { agoText, everyText } from '../../rhythm';
 	import { invalidateAll } from '$app/navigation';
 	import { changeLine, isLowest } from '../../price-change';
 	import { slide } from 'svelte/transition';
@@ -249,6 +250,19 @@
 			</section>
 
 			<section class="recent" aria-labelledby="recent-title">
+				{#if data.due.length}
+					<h2 class="list-label" id="due-title">Running low soon</h2>
+					<ul class="group due" aria-labelledby="due-title">
+						{#each data.due as item (item.name)}
+							<li>
+								<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
+									<span class="row-title">{item.name}</span>
+									<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				<div class="list-label-row">
 					<h2 class="list-label" id="recent-title">Recent receipts</h2>
 					{#if data.recent.length}<a href="/receipts">See all</a>{/if}
@@ -330,6 +344,10 @@
 			display: block;
 			margin-top: 1.75rem;
 		}
+	}
+
+	.due {
+		margin-bottom: 1.75rem;
 	}
 
 	.board {
@@ -822,6 +840,10 @@
 		.changes .scroll-area,
 		.recent .scroll-area {
 			flex: 0 1 auto;
+		}
+
+		.recent > :not(.scroll-area) {
+			flex: none;
 		}
 	}
 </style>
