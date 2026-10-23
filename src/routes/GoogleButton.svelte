@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { markSigninStart } from '../app-visit';
 	import SigningIn from './SigningIn.svelte';
 
 	// Google opens in a window of its own, so its pages never enter this tab's history. A home-screen
 	// app would hand the window to Safari, which keeps the sign-in to itself, so it goes the usual way.
 	function inWindow(event: SubmitEvent) {
+		markSigninStart();
 		if (matchMedia('(display-mode: standalone)').matches) return;
 		const [width, height] = [480, 640];
 		const left = Math.round(screenX + (outerWidth - width) / 2);

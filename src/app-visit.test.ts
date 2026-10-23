@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stepsSinceStart } from './app-visit';
+import { pagesBehind, stepsSinceStart } from './app-visit';
 
 describe('stepsSinceStart', () => {
 	const start = 1_761_200_000_000;
@@ -18,5 +18,18 @@ describe('stepsSinceStart', () => {
 	it('is zero across a full page load', () => {
 		expect(stepsSinceStart(start + 4_000, start, 9)).toBe(0);
 		expect(stepsSinceStart(start - 2, start, 9)).toBe(0);
+	});
+});
+
+describe('pagesBehind', () => {
+	it('counts the pages a same-tab Google sign-in added', () => {
+		expect(pagesBehind(4, 6)).toBe(2);
+	});
+
+	// a sign-in window replaces the landing with Home, so the count doesn't grow
+	it('is zero for a sign-in window, with no mark, or a stale one', () => {
+		expect(pagesBehind(4, 4)).toBe(0);
+		expect(pagesBehind(0, 6)).toBe(0);
+		expect(pagesBehind(3, 40)).toBe(0);
 	});
 });
