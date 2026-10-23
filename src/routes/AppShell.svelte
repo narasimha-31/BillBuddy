@@ -2,11 +2,14 @@
 	// set by the page being left, read by the page arriving: only a tap between pages eases the new
 	// one in, never a first load or a refresh
 	let arrivedByTap = false;
+	// the page slide running now, shared by every page's shell
+	let moving: ViewTransition | null = null;
+	let release: (() => void) | null = null;
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { beforeNavigate, invalidateAll } from '$app/navigation';
+	import { beforeNavigate, invalidateAll, onNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { navigating, page } from '$app/state';
 	import { clearRestored, markAppStart, reloadRestored } from '../app-visit';
@@ -28,9 +31,40 @@
 	const path = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	const selected = $derived(links.findIndex((link) => under(path, link.href)));
 
-	// the old page stays put until the next one has its data, which then rises in
-	const entering = arrivedByTap;
+	// the old page stays put until the next one has its data, which then rises in; browsers that can
+	// slide whole pages (below) do that instead
+	const entering = arrivedByTap && typeof document !== 'undefined' && !document.startViewTransition;
 	arrivedByTap = false;
+
+	// Pages move like a phone app's: a deeper page slides in from the right, going back slides it
+	// away, a tab cross-fades. Safari's own edge swipe has already moved the page, so it gets none.
+	const depth = (url: URL) => url.pathname.split('/').filter(Boolean).length + (url.searchParams.has('item') ? 1 : 0);
+	let swiped = false;
+	onNavigate((navigation) => {
+		const { from, to } = navigation;
+		// A quick back in the middle of a slide cancels the page it was waiting for, so that slide is let
+		// go and jumps to its end, and this change happens without one.
+		const sliding = moving;
+		release?.();
+		moving?.skipTransition();
+		const skip = sliding || swiped || !document.startViewTransition || !from || !to || matchMedia('(prefers-reduced-motion: reduce)').matches;
+		swiped = false;
+		if (skip || (from.url.pathname === to.url.pathname && depth(from.url) === depth(to.url))) return;
+		const step = depth(to.url) - depth(from.url);
+		const section = (url: URL) => url.pathname.split('/')[1];
+		document.documentElement.dataset.nav = section(to.url) !== section(from.url) || step === 0 ? 'tab' : step > 0 ? 'forward' : 'back';
+		return new Promise((resolve) => {
+			const transition = document.startViewTransition(async () => {
+				resolve();
+				await new Promise<void>((done) => {
+					release = done;
+					navigation.complete.then(done, done);
+				});
+			});
+			moving = transition;
+			transition.finished.finally(() => moving === transition && (moving = null));
+		});
+	});
 	beforeNavigate(({ to }) => {
 		arrivedByTap = !!to && to.route.id !== page.route.id;
 	});
@@ -73,7 +107,13 @@
 <!-- coming back to the tab picks up what changed on another device meanwhile -->
 <svelte:document onvisibilitychange={back} />
 <!-- a page kept from before a sign-out asks the server again -->
-<svelte:window onblur={away} onfocus={back} onpointermove={light} onpageshow={(e) => e.persisted && reloadRestored()} />
+<svelte:window
+	onblur={away}
+	onfocus={back}
+	onpointermove={light}
+	onpageshow={(e) => e.persisted && reloadRestored()}
+	onpopstate={(e) => (swiped = (e as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition === true)}
+/>
 
 <div class="app" class:fit>
 	<header class="top">
@@ -122,7 +162,9 @@
 		background-attachment: fixed;
 	}
 
+	/* the bars stay put while the page under them moves */
 	.top {
+		view-transition-name: top-bar;
 		position: sticky;
 		top: 0;
 		z-index: 20;
@@ -282,6 +324,7 @@
 		}
 
 		nav {
+			view-transition-name: tab-bar;
 			--pad: 0.3rem;
 			position: fixed;
 			right: 1rem;

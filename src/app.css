@@ -762,3 +762,111 @@ html[data-theme='grape'][data-mode='dark'] .app {
 		--glow-c: rgb(50 110 240 / 0.18);
 	}
 }
+
+/* Page changes inside the app (set up in the app shell). A phone slides like iOS: the new page comes
+   in from the right over the old one, which drifts left and dims; back is the same in reverse. A laptop
+   only shifts a little. Tabs cross-fade. */
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 360ms;
+		animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	html[data-nav='tab']::view-transition-old(root),
+	html[data-nav='tab']::view-transition-new(root) {
+		animation-duration: 180ms;
+	}
+
+	html[data-nav='forward']::view-transition-old(root) {
+		animation-name: page-behind;
+	}
+
+	html[data-nav='forward']::view-transition-new(root) {
+		animation-name: page-from-right;
+	}
+
+	html[data-nav='back']::view-transition-old(root) {
+		z-index: 1;
+		animation-name: page-to-right;
+	}
+
+	html[data-nav='back']::view-transition-new(root) {
+		animation-name: page-from-behind;
+	}
+
+	@media (min-width: 1024px) {
+		html[data-nav]::view-transition-old(root),
+		html[data-nav]::view-transition-new(root) {
+			animation-duration: 220ms;
+		}
+
+		html[data-nav='forward']::view-transition-new(root) {
+			animation-name: page-nudge;
+		}
+
+		html[data-nav='forward']::view-transition-old(root) {
+			animation-name: page-fade;
+		}
+
+		html[data-nav='back']::view-transition-old(root) {
+			animation-name: page-nudge-out;
+		}
+
+		html[data-nav='back']::view-transition-new(root) {
+			animation-name: page-fade-in;
+		}
+	}
+}
+
+@keyframes page-from-right {
+	from {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes page-to-right {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes page-behind {
+	to {
+		transform: translateX(-28%);
+		filter: brightness(0.9);
+	}
+}
+
+@keyframes page-from-behind {
+	from {
+		transform: translateX(-28%);
+		filter: brightness(0.9);
+	}
+}
+
+@keyframes page-nudge {
+	from {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+}
+
+@keyframes page-nudge-out {
+	to {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+}
+
+@keyframes page-fade {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
+	}
+}
