@@ -44,7 +44,7 @@
 	<AppShell firstName={data.firstName}>{@render sendForm()}</AppShell>
 {:else}
 	<div class="screen">
-		<header class="top"><Wordmark /></header>
+		<header><div class="site-top"><Wordmark /></div></header>
 		<main class="feedback">
 			<h1 class="large-title">Send feedback</h1>
 			<p class="lead">Sign in first, so we can keep spam out and get back to you.</p>
@@ -62,16 +62,22 @@
 		padding-bottom: 3rem;
 	}
 
+	/* the page's own width and margins, as on Privacy; the text keeps a readable line */
 	.screen .feedback {
+		justify-items: start;
+		max-width: var(--page);
 		margin: 0 auto;
-		padding: 1.5rem 1.25rem 3rem;
+		padding: clamp(2rem, 8vh, 5rem) var(--gutter) clamp(3rem, 12vh, 7rem);
 	}
 
-	.screen > .top,
+	.screen .feedback .large-title {
+		font-size: clamp(2.125rem, 4vw, 3.25rem);
+	}
+
 	.screen > .bottom {
-		max-width: 36rem;
+		max-width: var(--page);
 		margin: 0 auto;
-		padding: 1.25rem;
+		padding: 1.25rem var(--gutter) 2rem;
 	}
 
 	form {
