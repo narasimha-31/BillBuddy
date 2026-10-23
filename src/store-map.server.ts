@@ -1,15 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { placed, type Branch } from './branches';
 import { milesBetween, type Point } from './distance';
-import { branchesOf } from './store-branch.server';
 import { placeStore } from './store-place.server';
 
 export type MapState = { on: boolean; zip: string | null; you: Point | null };
 export type Store = { id: string; name: string; visits: number };
 type Spot = { lat: number; lng: number; address: string | null };
 
-// stores looked up on OpenStreetMap in one go; at one request a second this is about 9 seconds
-const MOST_LOOKUPS = 8;
 // Two lookups of one address can land ~100 m apart (Census against OpenStreetMap), so a typed or
 // picked address this close to a branch the shopper already has is that branch.
 const SAME_BRANCH_MILES = 0.15;
@@ -53,32 +50,24 @@ export async function myBranches(supabase: SupabaseClient): Promise<Branch[]> {
 
 // For a receipt with no printed address: the branch of that store the shopper uses most near home,
 // else the chain's branch nearest their ZIP on OpenStreetMap. Always marked as a guess.
-export async function guessSpot(store: { id: string; name: string }, you: Point, known: Branch[]): Promise<Spot | null> {
+// Only the shopper's own usual branch of this same store stands in. A map search by name found
+// other shops with a similar name, so a store with no branch yet stays off the map until they pick one.
+export function guessSpot(store: { id: string }, you: Point, known: Branch[]): Spot | null {
 	const usual = placed(known.filter((b) => b.storeId === store.id && !b.guess), you)
 		.filter((b) => !b.away)
 		.sort((a, b) => b.visits - a.visits)[0];
-	if (usual) return { lat: usual.lat, lng: usual.lng, address: usual.address };
-	// a saved point always carries an address (a database rule), so a branch with none is no guess
-	const nearest = (await branchesOf(store.name, you)).find((b) => b.address);
-	return nearest ? { lat: nearest.lat, lng: nearest.lng, address: nearest.address } : null;
+	return usual ? { lat: usual.lat, lng: usual.lng, address: usual.address } : null;
 }
 
-// receipts saved before the map was on, or without an address, get a guessed branch per store
+// receipts saved before the map was on, or without an address, get the shopper's usual branch
 export async function placeWaiting(supabase: SupabaseClient, you: Point, onlyStore?: string) {
-	let query = supabase.from('receipts').select('store_id, stores(name)').eq('status', 'saved').is('store_lat', null).not('store_id', 'is', null);
+	let query = supabase.from('receipts').select('store_id').eq('status', 'saved').is('store_lat', null).not('store_id', 'is', null);
 	if (onlyStore) query = query.eq('store_id', onlyStore);
 	const waiting = await query;
 	if (waiting.error) throw waiting.error;
-	const stores = new Map<string, string>();
-	for (const r of waiting.data as unknown as { store_id: string; stores: { name: string } | { name: string }[] }[])
-		stores.set(r.store_id, (Array.isArray(r.stores) ? r.stores[0]?.name : r.stores?.name) ?? '');
 	const known = await myBranches(supabase);
-	let lookups = 0;
-	for (const [id, name] of stores) {
-		const hasUsual = known.some((b) => b.storeId === id && !b.guess);
-		if (!hasUsual && lookups++ >= MOST_LOOKUPS) continue;
-		if (!hasUsual && lookups > 1) await new Promise((wait) => setTimeout(wait, 1100));
-		const spot = await guessSpot({ id, name }, you, known);
+	for (const id of new Set(waiting.data.map((r) => r.store_id as string))) {
+		const spot = guessSpot({ id }, you, known);
 		if (!spot) continue;
 		const { error } = await supabase
 			.from('receipts')

@@ -141,14 +141,15 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 
 		const needsReview = checked.needs_review || rows.some((r) => r.issue === 'line_math');
 		// The branch only means something next to a kept store name, and only with the map on. With no
-		// address printed, the shopper's usual branch of that store stands in, marked as a guess.
+		// address printed, the shopper's usual branch of that store stands in, marked as a guess;
+		// with none, the receipt stays off the map until the shopper picks the place.
 		const mapOn = storeId !== null && settings?.keep_store_location === true;
 		const storeAddress = mapOn ? checked.storeAddress : null;
 		const point = storeAddress ? await placeStore(storeAddress) : null;
 		let guess = null;
 		if (mapOn && !storeAddress && checked.store) {
 			const map = await mapState(supabase);
-			if (map.you) guess = await guessSpot({ id: storeId!, name: checked.store }, map.you, await myBranches(supabase));
+			if (map.you) guess = guessSpot({ id: storeId! }, map.you, await myBranches(supabase));
 		}
 		await finish({
 			status: needsReview ? 'review' : 'saved',
