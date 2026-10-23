@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { backStep } from '../back-step.svelte';
 	import { clearToasts } from '../toasts.svelte';
 
 	let { firstName }: { firstName: string | null } = $props();
 
 	let menu: HTMLDetailsElement;
+	const step = backStep('account', () => (menu.open = false));
 	const initial = $derived((firstName ?? 'B').charAt(0).toUpperCase());
 
 	// a <details> menu works with the keyboard and without JavaScript; this only closes it on an outside click
@@ -15,7 +17,7 @@
 <svelte:window onclick={closeOutside} />
 
 <div class="account">
-	<details bind:this={menu}>
+	<details bind:this={menu} ontoggle={() => (menu.open ? step.opened() : step.closed())}>
 		<summary aria-label="Account menu">
 			<span class="initial">{initial}</span>
 		</summary>

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { backStep } from '../back-step.svelte';
 	import { applyDisplay, displayOf, MODES, THEMES, type Display } from '../display';
 
 	const MODE_NAMES: Record<Display['mode'], string> = { light: 'Light', dark: 'Dark', auto: 'System' };
 	const THEME_NAMES: Record<Display['theme'], string> = { green: 'Green', ocean: 'Ocean', sunset: 'Sunset', grape: 'Grape' };
 
 	let panel: HTMLDetailsElement;
+	const step = backStep('look', () => (panel.open = false));
 	let form: HTMLFormElement;
 	let chosen = $state<Display | null>(null);
 	let saved: Display | null = null;
@@ -13,7 +15,9 @@
 
 	// the page already carries the saved look, so opening needs no request
 	function opened() {
-		if (panel.open) chosen = saved = displayOf(document.documentElement);
+		if (!panel.open) return step.closed();
+		chosen = saved = displayOf(document.documentElement);
+		step.opened();
 	}
 
 	// the look changes at once and saves behind it; a failed save puts the saved look back

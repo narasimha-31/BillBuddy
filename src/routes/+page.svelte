@@ -64,6 +64,9 @@
 	const money = new Intl.NumberFormat('en-US', usd);
 </script>
 
+<!-- back to this page from the app restores a saved copy; asking again sends a signed-in shopper home -->
+<svelte:window onpageshow={(e) => e.persisted && location.reload()} />
+
 <svelte:head>
 	<title>Billi · Grocery prices from your own receipts</title>
 	<meta name="description" content={DESCRIPTION} />

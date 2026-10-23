@@ -14,6 +14,10 @@ declare global {
 			// the account's saved look, when it differs from this device's cookie
 			display?: Display;
 		}
+		interface PageState {
+			// the sheet or menu open in this history step
+			overlay?: string;
+		}
 	}
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
+	import { backStep } from '../back-step.svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { directionsTo, isOld, itemPins, streetOf, townOf, type Pin, type Placed } from '../branches';
 	import { shortMiles, type Point } from '../distance';
@@ -34,7 +35,18 @@
 	let opening = $state(false);
 	// the map on the whole screen; a phone's strip only opens it, a laptop's still works in place
 	let big = $state(false);
+	const step = backStep('map', () => (big = false));
+	function openBig() {
+		big = true;
+		step.opened();
+	}
+	function closeBig() {
+		big = false;
+		step.closed();
+	}
+	// the store sheet takes the map's place, and its back step with it
 	function details(storeId: string) {
+		if (big) step.handedOff();
 		big = false;
 		onstore?.(storeId);
 	}
@@ -149,7 +161,7 @@
 		{#if pins.length}
 		<div class="frame">
 			<StoreMap you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
-			<button type="button" class="open-map" onclick={() => (big = true)}>
+			<button type="button" class="open-map" onclick={openBig}>
 				<span class="pill">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></svg>
 					Open map
@@ -158,11 +170,11 @@
 		</div>
 		{/if}
 		{#if big}
-			<dialog class="big-map" {@attach (d) => d.showModal()} onclose={() => (big = false)} aria-label="Where you bought {history.name}">
+			<dialog class="big-map" {@attach (d) => d.showModal()} onclose={closeBig} aria-label="Where you bought {history.name}">
 				<div class="big-frame">
 					<StoreMap full you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
 				</div>
-				<button type="button" class="close-map" aria-label="Close the map" onclick={() => (big = false)}>
+				<button type="button" class="close-map" aria-label="Close the map" onclick={closeBig}>
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 				</button>
 				<div class="big-bar">

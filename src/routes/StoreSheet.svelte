@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { untrack } from 'svelte';
+	import { backStep } from '../back-step.svelte';
 	import { directionsTo, streetOf, townOf, type Placed } from '../branches';
 	import { shortMiles, type Point } from '../distance';
 	import { money, storeName } from '../format';
@@ -18,6 +20,7 @@
 	let { storeId = $bindable(null) }: { storeId?: string | null } = $props();
 
 	let dialog: HTMLDialogElement;
+	const step = backStep('store', () => dialog.open && dialog.close());
 	let details = $state<Details | null>(null);
 	let problem = $state('');
 	let busy = $state(false);
@@ -37,6 +40,7 @@
 	$effect(() => {
 		if (storeId) {
 			if (!dialog.open) dialog.showModal();
+			untrack(step.opened);
 			load(storeId);
 		} else if (dialog.open) dialog.close();
 	});
@@ -63,6 +67,7 @@
 </script>
 
 <dialog bind:this={dialog} class="store-sheet" aria-labelledby="store-sheet-title" onclose={() => {
+		step.closed();
 		storeId = null;
 		details = null;
 		typing = null;
