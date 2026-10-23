@@ -3,6 +3,8 @@ import { DISPLAY_COLUMNS, DISPLAY_COOKIE, DISPLAY_COOKIE_OPTIONS, displayCookie,
 import { signInWithCode } from '../session.server';
 import type { Actions, PageServerLoad } from './$types';
 
+const SIGNIN_WINDOW = 'signin_window';
+
 export const load: PageServerLoad = async ({ url, locals, cookies }) => {
 	const code = url.searchParams.get('code');
 	if (code) {
@@ -12,7 +14,12 @@ export const load: PageServerLoad = async ({ url, locals, cookies }) => {
 			const { data } = await locals.supabase.from('user_settings').select(DISPLAY_COLUMNS).maybeSingle();
 			cookies.set(DISPLAY_COOKIE, displayCookie(fromRow(data)), DISPLAY_COOKIE_OPTIONS);
 		}
-		redirect(303, ok ? '/home' : '/?signin=failed');
+		const next = ok ? '/home' : '/?signin=failed';
+		if (cookies.get(SIGNIN_WINDOW)) {
+			cookies.delete(SIGNIN_WINDOW, { path: '/' });
+			redirect(303, `/signed-in?next=${encodeURIComponent(next)}`);
+		}
+		redirect(303, next);
 	}
 
 	if (await locals.getUser()) redirect(303, '/home');
@@ -20,7 +27,9 @@ export const load: PageServerLoad = async ({ url, locals, cookies }) => {
 };
 
 export const actions: Actions = {
-	google: async ({ url, locals }) => {
+	google: async ({ url, locals, cookies }) => {
+		if (url.searchParams.has('window')) cookies.set(SIGNIN_WINDOW, '1', { path: '/', maxAge: 600, httpOnly: true, sameSite: 'lax' });
+		else cookies.delete(SIGNIN_WINDOW, { path: '/' });
 		const { data, error } = await locals.supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: { redirectTo: url.origin }

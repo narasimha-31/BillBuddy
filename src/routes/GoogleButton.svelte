@@ -1,4 +1,32 @@
-<form method="POST" action="/?/google">
+<script lang="ts">
+	import { onMount } from 'svelte';
+
+	// Google opens in a window of its own, so its pages never enter this tab's history. A home-screen
+	// app would hand the window to Safari, which keeps the sign-in to itself, so it goes the usual way.
+	function inWindow(event: SubmitEvent) {
+		if (matchMedia('(display-mode: standalone)').matches) return;
+		const [width, height] = [480, 640];
+		const left = Math.round(screenX + (outerWidth - width) / 2);
+		const top = Math.round(screenY + (outerHeight - height) / 2);
+		if (!open('', 'google-signin', `popup,width=${width},height=${height},left=${left},top=${top}`)) return;
+		const form = event.currentTarget as HTMLFormElement;
+		form.target = 'google-signin';
+		form.action = '/?/google&window';
+		setTimeout(() => {
+			form.removeAttribute('target');
+			form.action = '/?/google';
+		});
+	}
+
+	// the window says where to go once Google is done; Home then takes the landing's place
+	onMount(() => {
+		const signin = new BroadcastChannel('signin');
+		signin.onmessage = (event) => location.replace(String(event.data));
+		return () => signin.close();
+	});
+</script>
+
+<form method="POST" action="/?/google" onsubmit={inWindow}>
 	<button>
 		<svg viewBox="0 0 48 48" aria-hidden="true">
 			<path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
