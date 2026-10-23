@@ -230,6 +230,30 @@
 						<p class="empty surface">Buy something twice and you’ll see here whether it got cheaper.</p>
 					{/if}
 				</section>
+
+				<section class="recent" aria-labelledby="recent-title">
+					<div class="list-label-row">
+						<h2 class="list-label" id="recent-title">Recent receipts</h2>
+						{#if data.recent.length}<a href="/receipts">See all</a>{/if}
+					</div>
+					{#if data.recent.length}
+						<div>
+							<ul class="group">
+								{#each data.recent as receipt (receipt.id)}
+									<li>
+										<a class="row" href="/receipts/{receipt.id}">
+											<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
+											<span class="row-value">{money(receipt.total_cents)}</span>
+											<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{:else}
+						<p class="empty surface">Your receipts show up here once they’re read.</p>
+					{/if}
+				</section>
 			</div>
 			<div class="side-col">
 				<section class="month surface" aria-labelledby="month-title">
@@ -301,29 +325,6 @@
 					{/if}
 				</section>
 
-				<section class="recent" aria-labelledby="recent-title">
-					<div class="list-label-row">
-						<h2 class="list-label" id="recent-title">Recent receipts</h2>
-						{#if data.recent.length}<a href="/receipts">See all</a>{/if}
-					</div>
-					{#if data.recent.length}
-						<div>
-							<ul class="group">
-								{#each data.recent as receipt (receipt.id)}
-									<li>
-										<a class="row" href="/receipts/{receipt.id}">
-											<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
-											<span class="row-value">{money(receipt.total_cents)}</span>
-											<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
-										</a>
-									</li>
-								{/each}
-							</ul>
-						</div>
-					{:else}
-						<p class="empty surface">Your receipts show up here once they’re read.</p>
-					{/if}
-				</section>
 			</div>
 		</div>
 
@@ -608,13 +609,18 @@
 		}
 	}
 
-	/* each column stacks on its own, so a tall card on one side leaves no gap on the other */
+	/* each column stacks on its own; the month stays in view beside the lists */
 	@media (min-width: 1024px) {
 		.board {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) 22rem;
 			align-items: start;
 			gap: 2.5rem;
+		}
+
+		.side-col {
+			position: sticky;
+			top: 5rem;
 		}
 	}
 
