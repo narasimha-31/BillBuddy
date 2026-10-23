@@ -88,8 +88,24 @@
 	}
 
 	// every photo shows at once and is read alongside the others; one at a time hid the later ones for minutes
+	// counted by the server only after the batch, so ones sent since then are added here
+	let sent = $state(0);
+	$effect(() => {
+		uploads.used;
+		sent = 0;
+	});
+	let overCap = $state('');
+
 	async function add(files: Iterable<File>) {
-		const batch = [...files].filter(canAdd);
+		const picked = [...files].filter(canAdd);
+		const left = Math.max(0, dailyLimit - uploads.used - sent);
+		const batch = picked.slice(0, left);
+		const skipped = picked.length - batch.length;
+		const opens = uploads.freesAt ? new Date(uploads.freesAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+		overCap = skipped
+			? `${skipped} not added. ${dailyLimit} receipts a day${opens ? `, the next opens at ${opens}` : ''}.`
+			: '';
+		sent += batch.length;
 		// a PDF has no picture to show until its pages are drawn
 		await Promise.all(batch.map((file) => send(file, begin(isPdf(file) ? '' : URL.createObjectURL(file)))));
 		if (batch.length) await invalidateAll();
@@ -112,7 +128,7 @@
 	<!-- phones open the back camera straight away; the picker stays for saved photos and PDFs -->
 	<button type="button" class="camera" onclick={() => camera.click()}>
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-		Take a photo
+		Scan a receipt
 	</button>
 	<input
 		bind:this={camera}
@@ -139,7 +155,7 @@
 	>
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
 		<strong>{dragging ? 'Drop to add' : 'Add a receipt'}</strong>
-		<span class="pill">Choose photos</span>
+		<span class="pill">Upload photos or PDF</span>
 	</button>
 	<input
 		bind:this={picker}
@@ -154,6 +170,9 @@
 	/>
 	{#if paused}
 		<p class="paused" role="status">Reading is paused for a few minutes. Photos you add are kept to read later.</p>
+	{/if}
+	{#if overCap}
+		<p class="paused" role="status">{overCap}</p>
 	{/if}
 	<p class="limits">
 		{uploads.used} of {dailyLimit} receipts in the last 24 hours.
