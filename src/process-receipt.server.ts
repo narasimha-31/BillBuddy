@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { admin } from './admin.server';
 import { nameLines } from './item-names.server';
 import { myAisles } from './aisle-choice.server';
 import { AiUnavailable, BadAnswer } from './nebius.server';
@@ -63,10 +64,13 @@ export async function processReceipt(supabase: SupabaseClient, userId: string, r
 	const dropPhoto = async () => {
 		if (photoPath) await supabase.storage.from('receipts').remove([photoPath]);
 	};
-	// the photo is gone, so its fingerprint goes too: the same photo can be added again if we got it wrong
+	// the photo is gone, so its fingerprint goes too: the same photo can be added again if we got it wrong.
+	// Nothing was read from it, so its daily slot comes back (the log is only writable by the server).
 	const fail = async (problem: 'not_a_receipt' | 'handwritten' | 'no_lines' | 'bad_photo') => {
 		await dropPhoto();
 		await finish({ status: 'failed', problem, image_path: null, image_hash: null });
+		const given = await admin.from('upload_log').update({ given_back: true }).eq('receipt_id', receiptId);
+		if (given.error) throw given.error;
 		return { status: 'failed' as const, problem };
 	};
 

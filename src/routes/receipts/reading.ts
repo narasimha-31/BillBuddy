@@ -29,7 +29,9 @@ export async function readReceipt(id: string): Promise<Outcome> {
 	if (outcome.status === 'saved' || outcome.status === 'review') return { state: outcome.status, printed: outcome.printed };
 	if (outcome.status === 'paused') return { state: 'paused' };
 	if (outcome.status === 'busy') return { state: 'reading', note: 'It is already being read.' };
-	return { state: 'failed', note: problems[outcome.problem ?? ''] ?? 'Try again.' };
+	// these give their daily slot back, so the shopper is told they cost nothing
+	const known = problems[outcome.problem ?? ''];
+	return { state: 'failed', note: known ? `${known} It didn't count toward today's receipts.` : 'Try again.' };
 }
 
 // Told only when the result is not already on screen: the shopper left the page the photo was added on,
