@@ -6,7 +6,9 @@
 	import ConfirmButton from '../ConfirmButton.svelte';
 	import { money, shortDay, storeName } from '../../format';
 	import { listPins } from '../../list-compare';
-	import StoreMap, { type MapPin } from '../StoreMap.svelte';
+	import type { MapPin } from '../StoreMap.svelte';
+	import MapFrame from '../MapFrame.svelte';
+	import MapLegend from '../MapLegend.svelte';
 
 	let { data, form } = $props();
 
@@ -24,7 +26,7 @@
 	const pins = $derived(open ? listPins(open.items, data.places) : []);
 	const most = $derived(Math.max(...pins.map((p) => p.items.length)));
 	const mapPins = $derived<MapPin[]>(
-		pins.map((p) => ({ id: p.store, lat: p.lat, lng: p.lng, label: `${p.items.length} ${p.items.length === 1 ? 'item' : 'items'} · ${money(p.cents)}`, cents: p.cents, title: storeName(p.store) ?? p.store, cheapest: p.items.length === most }))
+		pins.map((p) => ({ id: p.store, lat: p.lat, lng: p.lng, label: `${storeName(p.store) ?? p.store} · ${p.items.length} ${p.items.length === 1 ? 'item' : 'items'}`, cents: p.cents, title: storeName(p.store) ?? p.store, cheapest: p.items.length === most }))
 	);
 	let picked = $state<string | null>(null);
 	const pickedPin = $derived(pins.find((p) => p.store === picked) ?? null);
@@ -181,15 +183,34 @@
 								<section class="where" aria-label="Where to buy it">
 									<h2 class="where-title">Where to buy it</h2>
 									{#if mapPins.length}
-										<div class="map">
-											<div class="frame"><StoreMap you={data.you} pins={mapPins} selected={picked} onpick={(id) => (picked = id)} label="Where each item on {open.name} is cheapest" /></div>
+										{#snippet pickedNote()}
 											<p class="map-note" aria-live="polite">
 												{#if pickedPin}
-													<strong>{storeName(pickedPin.store)}</strong> is cheapest for {pickedPin.items.join(', ')}.
+													<strong>{storeName(pickedPin.store)}</strong> is cheapest for {pickedPin.items.join(', ')}: {money(pickedPin.cents)} there.
 												{:else}
-													Each pin is a store and what is cheapest there. Tap one to see which items.
+													Tap a pin to see which items are cheapest there.
 												{/if}
 											</p>
+										{/snippet}
+										{#snippet legend()}
+											<MapLegend
+												keys={[
+													{ kind: 'tag', sample: 'Store · 2 items', text: 'how many things on this list are cheapest there' },
+													{ kind: 'cheapest', sample: `${most} items`, text: 'the store with the most of them. Tap a pin for the total.' }
+												]}
+											/>
+										{/snippet}
+										<div class="map">
+											<MapFrame you={data.you} pins={mapPins} selected={picked} onpick={(id) => (picked = picked === id ? null : id)} label="Where each item on {open.name} is cheapest" title="{open.name}: where each item is cheapest">
+												{#snippet bar()}
+													{@render legend()}
+													{@render pickedNote()}
+												{/snippet}
+											</MapFrame>
+											<div class="map-under">
+												{@render legend()}
+												{@render pickedNote()}
+											</div>
 										</div>
 									{/if}
 									<ul class="group">
@@ -414,8 +435,8 @@
 			gap: 2rem;
 		}
 
-		.where .frame {
-			height: min(24rem, 45dvh);
+		.where .map {
+			--map-height: min(24rem, 45dvh);
 		}
 	}
 
@@ -428,19 +449,18 @@
 	}
 
 	.map {
+		--map-height: 15rem;
 		margin-bottom: 0.75rem;
 	}
 
-	.frame {
-		overflow: hidden;
-		height: 15rem;
-		border-radius: 14px;
-		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
-		isolation: isolate;
+	.map-under {
+		display: grid;
+		gap: 0.4rem;
+		margin-top: 0.6rem;
 	}
 
 	.map-note {
-		margin: 0.5rem 0.25rem 0;
+		margin: 0 0.25rem;
 		font-size: 0.875rem;
 		color: var(--color-muted);
 	}
