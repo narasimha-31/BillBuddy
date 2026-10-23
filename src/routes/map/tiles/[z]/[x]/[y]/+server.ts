@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 	if (!tileAllowed(z, x, y)) error(404, 'Not found');
 
 	const tile = await fetch(`https://tile.openstreetmap.org/${z}/${x}/${y}.png`, {
-		headers: { 'user-agent': 'Billie/1.0 (+https://billi-12.vercel.app)', referer: 'https://billi-12.vercel.app/' },
+		headers: { 'user-agent': 'Billie/1.0 (+https://billi3.vercel.app)', referer: 'https://billi3.vercel.app/' },
 		signal: AbortSignal.timeout(8000)
 	});
 	if (!tile.ok) error(502, 'Map tile unavailable');

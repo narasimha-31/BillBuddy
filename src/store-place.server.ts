@@ -29,7 +29,7 @@ async function placeOnOpenStreetMap(address: string): Promise<Point | null> {
 	const url = new URL(NOMINATIM);
 	for (const [key, value] of Object.entries({ q: address, format: 'jsonv2', limit: '1', countrycodes: 'us' })) url.searchParams.set(key, value);
 	try {
-		const response = await fetch(url, { headers: { 'user-agent': 'Billie/1.0 (+https://billi-12.vercel.app)' }, signal: AbortSignal.timeout(5000) });
+		const response = await fetch(url, { headers: { 'user-agent': 'Billie/1.0 (+https://billi3.vercel.app)' }, signal: AbortSignal.timeout(5000) });
 		if (!response.ok) throw new Error(`nominatim returned ${response.status}`);
 		return pointFromNominatim(await response.json());
 	} catch (error) {
