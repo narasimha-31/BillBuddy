@@ -9,7 +9,7 @@ export type Outcome = { state: 'saved' | 'review' | 'paused' | 'reading' | 'fail
 export const problems: Record<string, string> = {
 	not_a_receipt: "That doesn't look like a receipt.",
 	handwritten: "Handwritten bills can't be read.",
-	no_lines: 'No items were found on it.',
+	no_lines: 'No items were found on it. If it is a receipt, hold the phone closer so it fills the screen.',
 	bad_photo: "Couldn't read this photo. Hold the phone closer so the receipt fills the screen, and try again."
 };
 
