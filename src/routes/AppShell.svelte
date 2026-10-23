@@ -6,7 +6,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate, invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { navigating, page } from '$app/state';
 	import { markAppStart } from '../app-visit';
@@ -42,6 +42,17 @@
 		requestAnimationFrame(() => (ready = true));
 	});
 
+	// a quick glance away doesn't refetch
+	let awayAt = 0;
+	function away() {
+		awayAt ||= Date.now();
+	}
+	function back() {
+		if (document.hidden) return away();
+		if (awayAt && Date.now() - awayAt > 5000) invalidateAll();
+		awayAt = 0;
+	}
+
 	// with a mouse, buttons and rows carry a light that follows the pointer (drawn in app.css)
 	const LIT = '.pill-button, .small-button, .drop, a.row, button.row, .tile';
 	let frame = 0;
@@ -58,8 +69,10 @@
 	}
 </script>
 
+<!-- coming back to the tab picks up what changed on another device meanwhile -->
+<svelte:document onvisibilitychange={back} />
 <!-- a page kept from before a sign-out asks the server again -->
-<svelte:window onpointermove={light} onpageshow={(e) => e.persisted && location.reload()} />
+<svelte:window onblur={away} onfocus={back} onpointermove={light} onpageshow={(e) => e.persisted && location.reload()} />
 
 <div class="app" class:fit>
 	<header class="top">
