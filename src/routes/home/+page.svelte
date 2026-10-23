@@ -115,180 +115,185 @@
 
 <AppShell firstName={data.firstName}>
 	<main>
-		<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
+		<!-- daily things first: adding a receipt, what runs out, the month, then prices and old receipts -->
+		<div class="board">
+			<div class="main-col">
+				<div class="hi">
+					<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
 
-		{#if data.unread.length}
-			<p class="unread surface" aria-live="polite">
-				<span>{data.unread.length === 1 ? '1 receipt wasn’t read' : `${data.unread.length} receipts weren’t read`}</span>
-				<button type="button" class="small-button" disabled={rereading} onclick={readUnread}>{rereading ? 'Reading…' : data.unread.length === 1 ? 'Read it now' : 'Read them now'}</button>
-			</p>
-		{/if}
-
-		<!-- on a phone, in the order people need it: adding a receipt, the month, what runs out, prices -->
-		<div class="board" class:with-due={data.due.length > 0}>
-			<section class="add surface" aria-label="Add a receipt">
-				<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
-			</section>
-
-			<section class="month surface" aria-labelledby="month-title">
-				<div class="month-head">
-					<h2 id="month-title" aria-live="polite">{title}</h2>
-					<div class="order" role="group" aria-label="Group spending by">
-						<button type="button" aria-pressed={by === 'week'} onclick={() => show('week')}>Weeks</button>
-						<button type="button" aria-pressed={by === 'month'} onclick={() => show('month')}>Months</button>
-					</div>
-				</div>
-				<div class="headline" aria-live="polite">
-					<p class="spent">{money(focus.cents)}</p>
-					{#if delta}
-						<!-- spending more is the red direction here -->
-						<p class="delta" class:up={delta > 0} class:down={delta < 0}>
-							<Trend up={delta > 0} />{dollars(Math.abs(delta))} {delta > 0 ? 'more' : 'less'} than {versus}
+					{#if data.unread.length}
+						<p class="unread surface" aria-live="polite">
+							<span>{data.unread.length === 1 ? '1 receipt wasn’t read' : `${data.unread.length} receipts weren’t read`}</span>
+							<button type="button" class="small-button" disabled={rereading} onclick={readUnread}>{rereading ? 'Reading…' : data.unread.length === 1 ? 'Read it now' : 'Read them now'}</button>
 						</p>
 					{/if}
 				</div>
-				<p class="note">
-					{#if focus.receipts}
-						{plural(focus.receipts, 'receipt')}{#if focus.ids.length === 1}{' · '}<a href="/receipts/{focus.ids[0]}">Open it</a>{:else}{' · '}<a href="/receipts?from={focus.from}&to={focus.to}">See them</a>{/if}
-					{:else}
-						Nothing dated {current ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
-					{/if}
-				</p>
-				{#if budget}
-					<p class="budget" class:over={budget.over}>
-						<span class="meter" style:--size={Math.min(1, data.month.spentCents / data.budgetCents!)} aria-hidden="true"></span>
-						{budget.text}
-					</p>
-				{/if}
-				<ul class="bars" class:weeks={by === 'week'}>
-					{#each bars as bar, i (bar.from)}
-						<li>
-							<button
-								type="button"
-								class:on={i === at}
-								aria-pressed={picked === i}
-								aria-label="{periodName(bar)}: {money(bar.cents)}"
-								onclick={() => (picked = picked === i ? null : i)}
-							>
-								<span class="col">
-									{#if average}<span class="avg" style:--size={average / tallest} aria-hidden="true"></span>{/if}
-									{#if bar.cents}<span class="cap">{dollars(bar.cents)}</span>{/if}
-									<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
-								</span>
-								<!-- only weeks with spending, the highlighted one and both ends are dated, so eight thin bars never crowd -->
-								<span class="tick" class:hide={by === 'week' && !bar.cents && i !== at && i !== 0 && i !== bars.length - 1}>{bar.label}</span>
-							</button>
-						</li>
-					{/each}
-				</ul>
-				{#if average}<p class="legend"><span aria-hidden="true"></span>Average of {by === 'month' ? 'months' : 'weeks'} you shopped · {dollars(average)}</p>{/if}
-				{#if aisles.length}
-					<p class="aisles-label" id="aisles-label">By aisle, before tax</p>
-					<ul class="aisles" aria-labelledby="aisles-label">
-						{#each aisles as { aisle, cents } (aisle)}
-							<li>
-								<span class="aisle-name">{aisle}</span>
-								<span class="aisle-bar" style:--size={cents / Math.max(...aisles.map((a) => a.cents))} aria-hidden="true"></span>
-								<span class="aisle-cents">{dollars(cents)}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				{#if data.spend.undated}
-					<p class="undated">{plural(data.spend.undated, 'receipt')} with no date {data.spend.undated === 1 ? 'is' : 'are'} left out</p>
-				{/if}
-			</section>
-
-			{#if data.due.length}
-				<section class="due-soon" aria-labelledby="due-title">
-					<h2 class="list-label" id="due-title">Running low soon</h2>
-					<ul class="group due" aria-labelledby="due-title">
-						{#each data.due as item (item.name)}
-							<li>
-								<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
-									<span class="row-title">{item.name}</span>
-									<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
+				<section class="add surface" aria-label="Add a receipt">
+					<ReceiptUploader uploads={data.uploads} dailyLimit={data.dailyLimit} paused={data.paused} />
 				</section>
-			{/if}
 
-			<section class="changes" aria-labelledby="changes-title">
-				<div class="list-label-row">
-					<h2 class="list-label" id="changes-title">Your prices</h2>
-					{#if data.changes.length > SHOWN_CHANGES}
-						<button type="button" onclick={() => (allChanges = !allChanges)}>{allChanges ? 'Show fewer' : `Show all ${data.changes.length}`}</button>
-					{/if}
-				</div>
-				{#if data.changes.length}
-					<div>
-						{#each groups as group (group.label)}
-							<h3 class="group-label" class:extra={!allChanges && group.from >= SHOWN_CHANGES}>{group.label}</h3>
-							<ul class="group">
-								{#each group.rows as { change, per, line }, n (change.name)}
-									{@const back = `from=${encodeURIComponent(change.name)}`}
-									{@const elsewhere = change.store !== change.before_store}
-									<li class:extra={!allChanges && group.from + n >= SHOWN_CHANGES}>
-										<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
-											<span class="row-title">{change.name}</span>
-											<span class="row-value">
-												{money(change.now_cents)}{per}
-												{#if elsewhere}<span class="at">at {storeName(change.store) ?? 'last store'}</span>{/if}
-											</span>
-											<span class="row-sub move" class:up={line.tone === 'up'} class:down={line.tone === 'down'}>
-												<Trend up={line.tone === 'up'} />{line.text}
-											</span>
-										</button>
-										{#if opened === change.name}
-											<!-- the last few purchases by date, the lowest in green, each opening its receipt line -->
-											<div class="history" transition:slide={{ duration: still ? 0 : 200 }} onintroend={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' })}>
-												{#each change.history as paid (paid.item)}
-													{@const low = isLowest(change.history, paid.cents)}
-													{@const where = storeName(paid.store) ?? 'Unknown store'}
-													<a href="/receipts/{paid.receipt}?{back}#line-{paid.item}" aria-label="{shortDay(paid.on)}, {where}, {money(paid.cents)}{per}{low ? ', lowest' : ''}">
-														<span class="when">{shortDay(paid.on)}</span>
-														<span class="where">{where}</span>
-														<span class="paid" class:down={low}>{money(paid.cents)}{per}</span>
-													</a>
-												{/each}
-												<a class="all" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
-											</div>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						{/each}
-					</div>
-				{:else}
-					<p class="empty surface">Buy something twice and you’ll see here whether it got cheaper.</p>
-				{/if}
-			</section>
-
-			<section class="recent" aria-labelledby="recent-title">
-				<div class="list-label-row">
-					<h2 class="list-label" id="recent-title">Recent receipts</h2>
-					{#if data.recent.length}<a href="/receipts">See all</a>{/if}
-				</div>
-				{#if data.recent.length}
-					<div>
-						<ul class="group">
-							{#each data.recent as receipt (receipt.id)}
+				{#if data.due.length}
+					<section class="due-soon" aria-labelledby="due-title">
+						<h2 class="list-label" id="due-title">Running low soon</h2>
+						<ul class="group due" aria-labelledby="due-title">
+							{#each data.due as item (item.name)}
 								<li>
-									<a class="row" href="/receipts/{receipt.id}">
-										<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
-										<span class="row-value">{money(receipt.total_cents)}</span>
-										<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
+									<a class="row" href="/prices?item={encodeURIComponent(item.name)}">
+										<span class="row-title">{item.name}</span>
+										<span class="row-sub">You buy it {everyText(item.everyDays)} · last {agoText(item.sinceDays)}</span>
 									</a>
 								</li>
 							{/each}
 						</ul>
-					</div>
-				{:else}
-					<p class="empty surface">Your receipts show up here once they’re read.</p>
+					</section>
 				{/if}
-			</section>
+
+
+				<section class="changes" aria-labelledby="changes-title">
+					<div class="list-label-row">
+						<h2 class="list-label" id="changes-title">Your prices</h2>
+						{#if data.changes.length > SHOWN_CHANGES}
+							<button type="button" onclick={() => (allChanges = !allChanges)}>{allChanges ? 'Show fewer' : `Show all ${data.changes.length}`}</button>
+						{/if}
+					</div>
+					{#if data.changes.length}
+						<div>
+							{#each groups as group (group.label)}
+								<h3 class="group-label" class:extra={!allChanges && group.from >= SHOWN_CHANGES}>{group.label}</h3>
+								<ul class="group">
+									{#each group.rows as { change, per, line }, n (change.name)}
+										{@const back = `from=${encodeURIComponent(change.name)}`}
+										{@const elsewhere = change.store !== change.before_store}
+										<li class:extra={!allChanges && group.from + n >= SHOWN_CHANGES}>
+											<button type="button" class="row" aria-expanded={opened === change.name} onclick={() => (opened = opened === change.name ? null : change.name)}>
+												<span class="row-title">{change.name}</span>
+												<span class="row-value">
+													{money(change.now_cents)}{per}
+													{#if elsewhere}<span class="at">at {storeName(change.store) ?? 'last store'}</span>{/if}
+												</span>
+												<span class="row-sub move" class:up={line.tone === 'up'} class:down={line.tone === 'down'}>
+													<Trend up={line.tone === 'up'} />{line.text}
+												</span>
+											</button>
+											{#if opened === change.name}
+												<!-- the last few purchases by date, the lowest in green, each opening its receipt line -->
+												<div class="history" transition:slide={{ duration: still ? 0 : 200 }} onintroend={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' })}>
+													{#each change.history as paid (paid.item)}
+														{@const low = isLowest(change.history, paid.cents)}
+														{@const where = storeName(paid.store) ?? 'Unknown store'}
+														<a href="/receipts/{paid.receipt}?{back}#line-{paid.item}" aria-label="{shortDay(paid.on)}, {where}, {money(paid.cents)}{per}{low ? ', lowest' : ''}">
+															<span class="when">{shortDay(paid.on)}</span>
+															<span class="where">{where}</span>
+															<span class="paid" class:down={low}>{money(paid.cents)}{per}</span>
+														</a>
+													{/each}
+													<a class="all" href="/prices?item={encodeURIComponent(change.name)}">Full price history</a>
+												</div>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							{/each}
+						</div>
+					{:else}
+						<p class="empty surface">Buy something twice and you’ll see here whether it got cheaper.</p>
+					{/if}
+				</section>
+			</div>
+			<div class="side-col">
+				<section class="month surface" aria-labelledby="month-title">
+					<div class="month-head">
+						<h2 id="month-title" aria-live="polite">{title}</h2>
+						<div class="order" role="group" aria-label="Group spending by">
+							<button type="button" aria-pressed={by === 'week'} onclick={() => show('week')}>Weeks</button>
+							<button type="button" aria-pressed={by === 'month'} onclick={() => show('month')}>Months</button>
+						</div>
+					</div>
+					<div class="headline" aria-live="polite">
+						<p class="spent">{money(focus.cents)}</p>
+						{#if delta}
+							<!-- spending more is the red direction here -->
+							<p class="delta" class:up={delta > 0} class:down={delta < 0}>
+								<Trend up={delta > 0} />{dollars(Math.abs(delta))} {delta > 0 ? 'more' : 'less'} than {versus}
+							</p>
+						{/if}
+					</div>
+					<p class="note">
+						{#if focus.receipts}
+							{plural(focus.receipts, 'receipt')}{#if focus.ids.length === 1}{' · '}<a href="/receipts/{focus.ids[0]}">Open it</a>{:else}{' · '}<a href="/receipts?from={focus.from}&to={focus.to}">See them</a>{/if}
+						{:else}
+							Nothing dated {current ? (by === 'month' ? 'this month' : 'this week') : 'then'} yet
+						{/if}
+					</p>
+					{#if budget}
+						<p class="budget" class:over={budget.over}>
+							<span class="meter" style:--size={Math.min(1, data.month.spentCents / data.budgetCents!)} aria-hidden="true"></span>
+							{budget.text}
+						</p>
+					{/if}
+					<ul class="bars" class:weeks={by === 'week'}>
+						{#each bars as bar, i (bar.from)}
+							<li>
+								<button
+									type="button"
+									class:on={i === at}
+									aria-pressed={picked === i}
+									aria-label="{periodName(bar)}: {money(bar.cents)}"
+									onclick={() => (picked = picked === i ? null : i)}
+								>
+									<span class="col">
+										{#if average}<span class="avg" style:--size={average / tallest} aria-hidden="true"></span>{/if}
+										{#if bar.cents}<span class="cap">{dollars(bar.cents)}</span>{/if}
+										<span class="bar" style:--size={bar.cents / tallest} style:--i={i}></span>
+									</span>
+									<!-- only weeks with spending, the highlighted one and both ends are dated, so eight thin bars never crowd -->
+									<span class="tick" class:hide={by === 'week' && !bar.cents && i !== at && i !== 0 && i !== bars.length - 1}>{bar.label}</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+					{#if average}<p class="legend"><span aria-hidden="true"></span>Average of {by === 'month' ? 'months' : 'weeks'} you shopped · {dollars(average)}</p>{/if}
+					{#if aisles.length}
+						<p class="aisles-label" id="aisles-label">By aisle, before tax</p>
+						<ul class="aisles" aria-labelledby="aisles-label">
+							{#each aisles as { aisle, cents } (aisle)}
+								<li>
+									<span class="aisle-name">{aisle}</span>
+									<span class="aisle-bar" style:--size={cents / Math.max(...aisles.map((a) => a.cents))} aria-hidden="true"></span>
+									<span class="aisle-cents">{dollars(cents)}</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					{#if data.spend.undated}
+						<p class="undated">{plural(data.spend.undated, 'receipt')} with no date {data.spend.undated === 1 ? 'is' : 'are'} left out</p>
+					{/if}
+				</section>
+
+				<section class="recent" aria-labelledby="recent-title">
+					<div class="list-label-row">
+						<h2 class="list-label" id="recent-title">Recent receipts</h2>
+						{#if data.recent.length}<a href="/receipts">See all</a>{/if}
+					</div>
+					{#if data.recent.length}
+						<div>
+							<ul class="group">
+								{#each data.recent as receipt (receipt.id)}
+									<li>
+										<a class="row" href="/receipts/{receipt.id}">
+											<span class="row-title">{storeName(receipt.store) ?? 'Store not printed'}</span>
+											<span class="row-value">{money(receipt.total_cents)}</span>
+											<span class="row-sub">{shortDay(receipt.purchased_on)}{receipt.channel === 'delivery' ? ' · Delivery' : ''}</span>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{:else}
+						<p class="empty surface">Your receipts show up here once they’re read.</p>
+					{/if}
+				</section>
+			</div>
 		</div>
 
 		{#if touring}<Tour stops={TOUR} onclose={endTour} />{/if}
@@ -350,47 +355,57 @@
 		}
 	}
 
-	.board {
-		display: grid;
-		gap: 1.75rem;
-		margin-top: 1.25rem;
+	.board,
+	.main-col,
+	.side-col {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
 	}
 
-	/* the same two columns as Receipts, so the drop zone has one size and place on both pages */
-	@media (min-width: 1024px) {
-		.board {
-			grid-template-columns: minmax(0, 1fr) 22rem;
-			grid-template-areas: 'add month' 'changes month' 'changes recent';
-			gap: 1.75rem 2.5rem;
+	/* a phone mixes both columns into one, in this order */
+	@media (max-width: 1023px) {
+		.main-col,
+		.side-col {
+			display: contents;
 		}
 
-		.board.with-due {
-			grid-template-areas: 'add month' 'changes month' 'changes due' 'changes recent';
-		}
-
-		.due-soon {
-			grid-area: due;
+		.hi {
+			order: 1;
 		}
 
 		.add {
-			grid-area: add;
+			order: 2;
+		}
+
+		.due-soon {
+			order: 3;
 		}
 
 		.month {
-			grid-area: month;
+			order: 4;
 		}
 
 		.changes {
-			grid-area: changes;
+			order: 5;
 		}
 
 		.recent {
-			grid-area: recent;
+			order: 6;
+		}
+	}
+
+	/* each column stacks on its own, so a tall card on one side leaves no gap on the other */
+	@media (min-width: 1024px) {
+		.board {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 22rem;
+			align-items: start;
+			gap: 2.5rem;
 		}
 	}
 
 	.add {
-		align-self: start;
 		padding: 1rem;
 	}
 
