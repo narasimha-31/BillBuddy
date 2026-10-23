@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
-	import { backStep } from '../back-step.svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { directionsTo, isOld, itemPins, streetOf, townOf, type Pin, type Placed } from '../branches';
 	import { shortMiles, type Point } from '../distance';
 	import { money, shortDay, storeName } from '../format';
 	import type { History } from '../price-history';
 	import MapUnlock from './MapUnlock.svelte';
-	import StoreMap from './StoreMap.svelte';
+	import MapFrame from './MapFrame.svelte';
+	import MapLegend from './MapLegend.svelte';
 
 	// Where each branch sold this item, or a locked picture of a map until the shopper turns it on.
 	// Picking a pin filters the price list to that store; its details open the store sheet.
@@ -33,21 +33,11 @@
 	} = $props();
 
 	let opening = $state(false);
-	// the map on the whole screen; a phone's strip only opens it, a laptop's still works in place
+	// the map on the whole screen; the store sheet takes its place when asked for
 	let big = $state(false);
-	const step = backStep('map', () => (big = false));
-	function openBig() {
-		big = true;
-		step.opened();
-	}
-	function closeBig() {
-		big = false;
-		step.closed();
-	}
-	// the store sheet takes the map's place, and its back step with it
+	let frame = $state<MapFrame>();
 	function details(storeId: string) {
-		if (big) step.handedOff();
-		big = false;
+		frame?.handOff();
 		onstore?.(storeId);
 	}
 	let withAway = $state(false);
@@ -138,6 +128,16 @@
 			{/each}
 		</div>
 	{/if}
+	{#snippet legend()}
+		{@const unit = history.per === 'lb' ? '/lb' : ''}
+		<MapLegend
+			keys={[
+				{ kind: 'tag', sample: `${money(history.last.unitCents)}${unit}`, text: 'last price you paid there' },
+				...(pins.some((p) => p.cheapest) ? [{ kind: 'cheapest' as const, sample: `${money(Math.min(...pins.filter((p) => p.cheapest).map((p) => p.cents!)))}${unit}`, text: 'cheapest of your stores' }] : []),
+				...(pins.some((p) => p.cents === null) ? [{ kind: 'dot' as const, text: 'your store, not bought there' }] : [])
+			]}
+		/>
+	{/snippet}
 	{#snippet whatsPicked()}
 		{#if pin}
 			<p class="picked" transition:slide={{ duration: still ? 0 : 200 }}>
@@ -161,32 +161,16 @@
 	<div class="price-map">
 		<!-- with none of the shopper's stores placed yet, an empty map says nothing; the list below does -->
 		{#if pins.length}
-		<div class="frame">
-			<StoreMap you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
-			<button type="button" class="open-map" onclick={openBig}>
-				<span class="pill">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></svg>
-					Open map
-				</span>
-			</button>
-		</div>
-		{/if}
-		{#if big}
-			<dialog class="big-map" {@attach (d) => d.showModal()} onclose={closeBig} aria-label="Where you bought {history.name}">
-				<div class="big-frame">
-					<StoreMap full you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
-				</div>
-				<button type="button" class="close-map" aria-label="Close the map" onclick={closeBig}>
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-				</button>
-				<div class="big-bar">
-					<p class="big-title">{history.name}</p>
-					{@render whatsPicked()}
-					{@render notPlaced()}
-				</div>
-			</dialog>
+		<MapFrame bind:this={frame} bind:big you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" title={history.name}>
+			{#snippet bar()}
+				{@render legend()}
+				{@render whatsPicked()}
+				{@render notPlaced()}
+			{/snippet}
+		</MapFrame>
 		{/if}
 		<div class="under">
+			{#if pins.length && !big}{@render legend()}{/if}
 			{#if !big}{@render whatsPicked()}{/if}
 			{#if pins.length && !pins.some((p) => p.cents !== null)}
 				<p class="hint">None of your stores on the map has sold you this yet.</p>
@@ -390,140 +374,6 @@
 		}
 	}
 
-	.frame {
-		overflow: hidden;
-		height: 13rem;
-		border-radius: 14px;
-		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
-		isolation: isolate;
-	}
-
-	.frame {
-		position: relative;
-	}
-
-	/* a phone's whole strip is the button; a laptop's map stays usable, with the button in its corner */
-	.open-map {
-		position: absolute;
-		inset: 0;
-		z-index: 500;
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-end;
-		padding: 0.5rem;
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	@media (pointer: fine) {
-		.open-map {
-			inset: 0 0 auto auto;
-		}
-	}
-
-	.pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		min-height: 2rem;
-		border-radius: 999px;
-		background: var(--color-surface);
-		padding: 0.3rem 0.75rem;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--color-ink);
-		box-shadow: 0 2px 8px rgb(0 0 0 / 0.16);
-		transition: transform var(--quick) var(--ease);
-	}
-
-	.open-map:active .pill {
-		transform: scale(0.96);
-	}
-
-	.pill svg,
-	.close-map svg {
-		width: 0.95rem;
-		height: 0.95rem;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 2;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-	}
-
-	.open-map:focus-visible .pill,
-	.close-map:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
-	}
-
-	.big-map {
-		width: 100%;
-		max-width: none;
-		height: 100%;
-		max-height: none;
-		margin: 0;
-		border: 0;
-		padding: 0;
-		background: var(--color-map);
-	}
-
-	.big-frame {
-		position: absolute;
-		inset: 0;
-	}
-
-	/* the zoom buttons clear the notch, level with the close button */
-	.big-frame :global(.leaflet-top) {
-		top: calc(0.75rem + env(safe-area-inset-top));
-	}
-
-	.big-frame :global(.leaflet-left .leaflet-control) {
-		margin: 0 0 0 0.75rem;
-	}
-
-	.big-frame :global(.leaflet-control-zoom a) {
-		width: 2.75rem;
-		height: 2.75rem;
-		line-height: 2.75rem;
-		font-size: 1.25rem;
-	}
-
-	.close-map {
-		position: absolute;
-		top: calc(0.75rem + env(safe-area-inset-top));
-		right: 0.75rem;
-		z-index: 1000;
-		display: grid;
-		place-items: center;
-		width: 2.75rem;
-		height: 2.75rem;
-		border-radius: 999px;
-		background: var(--color-surface);
-		color: var(--color-ink);
-		box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
-	}
-
-	.big-bar {
-		position: absolute;
-		left: 0.75rem;
-		right: 0.75rem;
-		bottom: calc(0.75rem + env(safe-area-inset-bottom));
-		z-index: 1000;
-		display: grid;
-		gap: 0.35rem;
-		max-width: 30rem;
-		border-radius: 16px;
-		background: var(--color-surface);
-		padding: 0.85rem 1rem;
-		font-size: 0.875rem;
-		box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
-	}
-
-	.big-title {
-		font-weight: 600;
-		color: var(--color-ink);
-	}
-
 	.under {
 		display: grid;
 		justify-items: start;
@@ -678,8 +528,8 @@
 			margin-inline: -0.25rem;
 		}
 
-		.frame {
-			height: 9rem;
+		.price-map {
+			--map-height: 9rem;
 		}
 	}
 </style>
