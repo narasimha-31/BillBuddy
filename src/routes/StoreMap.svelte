@@ -19,7 +19,8 @@
 	import type { Map as LeafletMap, LayerGroup, Marker } from 'leaflet';
 	import type { Point } from '../distance';
 
-	let { you, pins, selected = null, onpick, label }: { you: Point | null; pins: MapPin[]; selected?: string | null; onpick?: (id: string) => void; label: string } = $props();
+	// full: the map has the screen to itself, so a finger drags and pinches it
+	let { you, pins, selected = null, onpick, label, full = false }: { you: Point | null; pins: MapPin[]; selected?: string | null; onpick?: (id: string) => void; label: string; full?: boolean } = $props();
 
 	let box: HTMLDivElement;
 	let leaflet: typeof import('leaflet') | null = $state(null);
@@ -60,19 +61,19 @@
 
 
 	// Leaflet and its styles load only where a map is shown. On a phone the strip never captures a
-	// swipe, so the page still scrolls through it; pins stay tappable.
+	// swipe, so the page still scrolls through it; the full-screen map moves like any map app.
 	onMount(() => {
 		let gone = false;
 		(async () => {
 			const [L] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]);
 			if (gone) return;
-			const touch = matchMedia('(pointer: coarse)').matches;
+			const touch = !full && matchMedia('(pointer: coarse)').matches;
 			const still = prefersReducedMotion.current;
 			map = L.map(box, {
 				zoomControl: false,
 				scrollWheelZoom: false,
 				dragging: !touch,
-				touchZoom: false,
+				touchZoom: !touch,
 				doubleClickZoom: !touch,
 				minZoom: 9,
 				maxZoom: 17,
@@ -87,7 +88,8 @@
 				attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
 			}).addTo(map);
 			map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
-			if (!touch) L.control.zoom({ position: 'bottomright' }).addTo(map);
+			// full screen keeps the bottom for the store bar
+			if (!touch) L.control.zoom({ position: full ? 'topleft' : 'bottomright' }).addTo(map);
 			layer = L.layerGroup().addTo(map);
 			map.on('zoomend', spread);
 			leaflet = L;

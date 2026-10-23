@@ -32,6 +32,12 @@
 	} = $props();
 
 	let opening = $state(false);
+	// the map on the whole screen; a phone's strip only opens it, a laptop's still works in place
+	let big = $state(false);
+	function details(storeId: string) {
+		big = false;
+		onstore?.(storeId);
+	}
 	let withAway = $state(false);
 	let picked = $state<string | null>(null);
 
@@ -118,22 +124,57 @@
 			{/each}
 		</div>
 	{/if}
+	{#snippet whatsPicked()}
+		{#if pin}
+			<p class="picked" transition:slide={{ duration: still ? 0 : 200 }}>
+				<span class="where">
+					{[storeName(pin.name), streetOf(pin.address), pin.away ? (townOf(pin.address) ?? 'away') : shortMiles(pin.miles), pin.guess ? 'probably' : null].filter(Boolean).join(' · ')}
+				</span>
+				{#if onstore}<button type="button" class="link" onclick={() => details(pin.storeId)}>Store details</button>{/if}
+			</p>
+		{/if}
+	{/snippet}
+	{#snippet notPlaced()}
+		{#if missing.length}
+			<p class="missing">
+				Not on the map yet:
+				{#each missing as store, i (store.id)}
+					<span>{#if onstore}<button type="button" class="link" onclick={() => details(store.id)}>{storeName(store.name)}</button>{:else}{storeName(store.name)}{/if}{i < missing.length - 1 ? ',' : ''}</span>{' '}
+				{/each}
+			</p>
+		{/if}
+	{/snippet}
 	<div class="price-map">
 		<!-- with none of the shopper's stores placed yet, an empty map says nothing; the list below does -->
 		{#if pins.length}
 		<div class="frame">
 			<StoreMap you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
+			<button type="button" class="open-map" onclick={() => (big = true)}>
+				<span class="pill">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></svg>
+					Open map
+				</span>
+			</button>
 		</div>
 		{/if}
+		{#if big}
+			<dialog class="big-map" {@attach (d) => d.showModal()} onclose={() => (big = false)} aria-label="Where you bought {history.name}">
+				<div class="big-frame">
+					<StoreMap full you={map.you} pins={mapPins} selected={picked} onpick={pick} label="Where you bought {history.name}" />
+				</div>
+				<button type="button" class="close-map" aria-label="Close the map" onclick={() => (big = false)}>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+				</button>
+				<div class="big-bar">
+					<p class="big-title">{history.name}</p>
+					{@render whatsPicked()}
+					{@render notPlaced()}
+				</div>
+			</dialog>
+		{/if}
 		<div class="under">
-			{#if pin}
-				<p class="picked" transition:slide={{ duration: still ? 0 : 200 }}>
-					<span class="where">
-						{[storeName(pin.name), streetOf(pin.address), pin.away ? (townOf(pin.address) ?? 'away') : shortMiles(pin.miles), pin.guess ? 'probably' : null].filter(Boolean).join(' · ')}
-					</span>
-					{#if onstore}<button type="button" class="link" onclick={() => onstore(pin.storeId)}>Store details</button>{/if}
-				</p>
-			{:else if pins.length && !pins.some((p) => p.cents !== null)}
+			{#if !big}{@render whatsPicked()}{/if}
+			{#if pins.length && !pins.some((p) => p.cents !== null)}
 				<p class="hint">None of your stores on the map has sold you this yet.</p>
 			{/if}
 			{#if awayCount && !demo}
@@ -141,14 +182,8 @@
 					{withAway ? 'Home area only' : `${awayCount} ${awayCount === 1 ? 'store' : 'stores'} away from home · Show`}
 				</button>
 			{/if}
-			{#if missing.length}
-				<p class="missing">
-					Not on the map yet:
-					{#each missing as store, i (store.id)}
-						<span>{#if onstore}<button type="button" class="link" onclick={() => onstore(store.id)}>{storeName(store.name)}</button>{:else}{storeName(store.name)}{/if}{i < missing.length - 1 ? ',' : ''}</span>{' '}
-					{/each}
-				</p>
-			{/if}
+			<!-- with a map to open, the stores not on it are told there -->
+			{#if !pins.length}{@render notPlaced()}{/if}
 		</div>
 	</div>
 {:else}
@@ -347,6 +382,132 @@
 		border-radius: 14px;
 		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
 		isolation: isolate;
+	}
+
+	.frame {
+		position: relative;
+	}
+
+	/* a phone's whole strip is the button; a laptop's map stays usable, with the button in its corner */
+	.open-map {
+		position: absolute;
+		inset: 0;
+		z-index: 500;
+		display: flex;
+		align-items: flex-start;
+		justify-content: flex-end;
+		padding: 0.5rem;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	@media (pointer: fine) {
+		.open-map {
+			inset: 0 0 auto auto;
+		}
+	}
+
+	.pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-height: 2rem;
+		border-radius: 999px;
+		background: var(--color-surface);
+		padding: 0.3rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--color-ink);
+		box-shadow: 0 2px 8px rgb(0 0 0 / 0.16);
+		transition: transform var(--quick) var(--ease);
+	}
+
+	.open-map:active .pill {
+		transform: scale(0.96);
+	}
+
+	.pill svg,
+	.close-map svg {
+		width: 0.95rem;
+		height: 0.95rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.open-map:focus-visible .pill,
+	.close-map:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.big-map {
+		width: 100%;
+		max-width: none;
+		height: 100%;
+		max-height: none;
+		margin: 0;
+		border: 0;
+		padding: 0;
+		background: var(--color-map);
+	}
+
+	.big-frame {
+		position: absolute;
+		inset: 0;
+	}
+
+	/* the zoom buttons clear the notch, level with the close button */
+	.big-frame :global(.leaflet-top) {
+		top: calc(0.75rem + env(safe-area-inset-top));
+	}
+
+	.big-frame :global(.leaflet-left .leaflet-control) {
+		margin: 0 0 0 0.75rem;
+	}
+
+	.big-frame :global(.leaflet-control-zoom a) {
+		width: 2.75rem;
+		height: 2.75rem;
+		line-height: 2.75rem;
+		font-size: 1.25rem;
+	}
+
+	.close-map {
+		position: absolute;
+		top: calc(0.75rem + env(safe-area-inset-top));
+		right: 0.75rem;
+		z-index: 1000;
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 999px;
+		background: var(--color-surface);
+		color: var(--color-ink);
+		box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+	}
+
+	.big-bar {
+		position: absolute;
+		left: 0.75rem;
+		right: 0.75rem;
+		bottom: calc(0.75rem + env(safe-area-inset-bottom));
+		z-index: 1000;
+		display: grid;
+		gap: 0.35rem;
+		max-width: 30rem;
+		border-radius: 16px;
+		background: var(--color-surface);
+		padding: 0.85rem 1rem;
+		font-size: 0.875rem;
+		box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+	}
+
+	.big-title {
+		font-weight: 600;
+		color: var(--color-ink);
 	}
 
 	.under {
