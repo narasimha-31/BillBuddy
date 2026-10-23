@@ -29,7 +29,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// the shopper's look is on the very first frame, so nothing jumps after load; read once the page's
 	// loads have run, since the root layout may have found a newer look saved on the account
 	let display: string | undefined;
-	return resolve(event, {
+	const response = await resolve(event, {
 		transformPageChunk: ({ html }) => {
 			display ??= htmlAttributes(event.locals.display ?? readDisplay(event.cookies.get(DISPLAY_COOKIE)));
 			return display ? html.replace('<html lang="en">', `<html lang="en" ${display}>`) : html;
@@ -37,7 +37,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		filterSerializedResponseHeaders: (name) =>
 			name === 'content-range' || name === 'x-supabase-api-version'
 	});
+	// A signed-in page is never kept by the browser: after signing out, back can't show it again from
+	// the page cache, and a shared computer keeps none of it.
+	if (event.route.id && SIGNED_IN.test(event.route.id)) response.headers.set('cache-control', 'private, no-store');
+	return response;
 };
+
+const SIGNED_IN = /^\/(home|receipts|prices|list|settings|feedback|export|stores)(\/|$)/;
 
 // Unexpected errors get a short reference the user can quote; the details go to error_log.
 // Expected ones (404s and the like) are not logged.
