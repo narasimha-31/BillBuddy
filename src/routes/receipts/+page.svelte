@@ -107,6 +107,18 @@
 	});
 	const shownCents = $derived(shown.reduce((sum, r) => sum + (r.total_cents ?? 0), 0));
 
+	// where the money in the list went, store by store, biggest first; it follows the filters
+	const byStore = $derived.by(() => {
+		const totals = new Map<string, { cents: number; count: number }>();
+		for (const r of listed) {
+			const name = storeName(r.store) ?? 'Store not printed';
+			const seen = totals.get(name) ?? { cents: 0, count: 0 };
+			totals.set(name, { cents: seen.cents + (r.total_cents ?? 0), count: seen.count + 1 });
+		}
+		return [...totals].map(([name, t]) => ({ name, ...t })).sort((a, b) => b.cents - a.cents);
+	});
+	const topStore = $derived(byStore[0]?.cents || 1);
+
 	// read receipts by the month they were bought, newest first, each month with its total
 	const months = $derived.by(() => {
 		const groups = new Map<string, typeof shown>();
@@ -138,7 +150,7 @@
 	<title>Receipts · Billie</title>
 </svelte:head>
 
-<AppShell fit firstName={data.firstName}>
+<AppShell firstName={data.firstName}>
 	<div class="columns">
 		<main>
 			<h1 class="large-title">Receipts</h1>
@@ -193,7 +205,7 @@
 				</p>
 			{/if}
 
-			<div class="scroll scroll-area">
+			<div class="scroll">
 				{#if review.length}
 					<section>
 						<h2 class="list-label">Needs a quick look</h2>
@@ -297,6 +309,20 @@
 					</div>
 				{/if}
 			</div>
+			{#if byStore.length}
+				<div class="card surface for-wide stores">
+					<h2>By store</h2>
+					<ul>
+						{#each byStore as store (store.name)}
+							<li>
+								<span class="store-name">{store.name}<small>{store.count} {store.count === 1 ? 'receipt' : 'receipts'}</small></span>
+								<span class="store-bar" aria-hidden="true"><span style:width="{(store.cents / topStore) * 100}%"></span></span>
+								<span class="store-total">{money(store.cents)}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 			{#if saved.length < 3}
 				<div class="card surface">
 					<h2>Good photo, good reading</h2>
@@ -521,6 +547,52 @@
 		padding: 1.1rem 1.25rem;
 	}
 
+	.card.stores ul {
+		gap: 0.75rem;
+		margin-top: 0.85rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.card.stores li {
+		display: grid;
+		grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.85rem;
+		font-size: 0.9375rem;
+		color: var(--color-ink);
+	}
+
+	.store-name {
+		display: grid;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.store-name small {
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+	}
+
+	.store-bar {
+		height: 6px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-sep) 12%, transparent);
+	}
+
+	.store-bar span {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: var(--color-ink);
+		opacity: 0.75;
+	}
+
+	.store-total {
+		font-variant-numeric: tabular-nums;
+	}
+
 	.card h2 {
 		font-size: 1.0625rem;
 		font-weight: 600;
@@ -654,35 +726,6 @@
 	@media (min-width: 1440px) {
 		.columns {
 			grid-template-columns: minmax(0, 1fr) 30rem;
-		}
-	}
-
-	/* the heading and drop zone stay put and only the receipt lists scroll; the side cards are sized to fit */
-	@media (min-width: 1024px) and (min-height: 600px) {
-		.columns {
-			flex: 1;
-			min-height: 0;
-			grid-template-rows: minmax(0, 1fr);
-		}
-
-		main {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-
-		.upload {
-			display: flex;
-			flex: none;
-			flex-direction: column;
-			max-height: 55%;
-			min-height: 0;
-		}
-
-		.scroll {
-			flex: 1;
-			min-height: 0;
-			margin-top: 0.5rem;
 		}
 	}
 </style>
