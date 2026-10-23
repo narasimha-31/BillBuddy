@@ -113,7 +113,7 @@
 	<title>Home · Billie</title>
 </svelte:head>
 
-<AppShell fit firstName={data.firstName}>
+<AppShell firstName={data.firstName}>
 	<main>
 		<h1 class="large-title">{data.firstName ? `Hi ${data.firstName}` : 'Your groceries'}</h1>
 
@@ -206,7 +206,7 @@
 					{/if}
 				</div>
 				{#if data.changes.length}
-					<div class="scroll-area">
+					<div>
 						{#each groups as group (group.label)}
 							<h3 class="group-label" class:extra={!allChanges && group.from >= SHOWN_CHANGES}>{group.label}</h3>
 							<ul class="group">
@@ -268,7 +268,7 @@
 					{#if data.recent.length}<a href="/receipts">See all</a>{/if}
 				</div>
 				{#if data.recent.length}
-					<div class="scroll-area">
+					<div>
 						<ul class="group">
 							{#each data.recent as receipt (receipt.id)}
 								<li>
@@ -806,45 +806,6 @@
 		padding: 1rem 1.1rem;
 		font-size: 0.9375rem;
 		color: var(--color-muted);
-	}
-
-	/* on a laptop the page is one screen tall; the two lists scroll inside their columns instead */
-	@media (min-width: 1024px) and (min-height: 600px) {
-		main {
-			display: flex;
-			flex: 1;
-			flex-direction: column;
-			min-height: 0;
-		}
-
-		.board {
-			flex: 1;
-			min-height: 0;
-			grid-template-rows: auto auto minmax(0, 1fr);
-		}
-
-		.add {
-			display: flex;
-			flex-direction: column;
-			max-height: 55dvh;
-			min-height: 0;
-		}
-
-		.changes,
-		.recent {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-
-		.changes .scroll-area,
-		.recent .scroll-area {
-			flex: 0 1 auto;
-		}
-
-		.recent > :not(.scroll-area) {
-			flex: none;
-		}
 	}
 
 	/* a wide screen gives the month its room too, matching Receipts */
