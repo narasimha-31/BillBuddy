@@ -99,7 +99,7 @@
 </script>
 
 <svelte:head>
-	<title>Prices · Billi</title>
+	<title>Prices · Billie</title>
 </svelte:head>
 
 <AppShell fit firstName={data.firstName}>

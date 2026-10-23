@@ -53,7 +53,7 @@
 	const store = $derived(storeName(r.store) ?? 'Receipt');
 	const offLines = $derived(data.items.some((i) => i.issue === 'line_math'));
 	const allGood = $derived(data.math.lines_match_subtotal && data.math.totals_match !== false && !offLines);
-	// names Billi guessed come first, so they can be checked without hunting down the receipt
+	// names Billie guessed come first, so they can be checked without hunting down the receipt
 	const toCheck = $derived(data.items.filter((i) => i.issue === 'unsure' || i.issue === 'unreadable'));
 	const rest = $derived(data.items.filter((i) => i.issue !== 'unsure' && i.issue !== 'unreadable'));
 	// opened from an item's price history: back goes to that item, and its line is lit up
@@ -71,7 +71,7 @@
 </script>
 
 <svelte:head>
-	<title>{store} · Billi</title>
+	<title>{store} · Billie</title>
 </svelte:head>
 
 <AppShell firstName={data.firstName}>
@@ -180,7 +180,7 @@
 					{/if}
 					{#if toCheck.length}
 						<p class="warn">
-							Billi wasn't sure about {toCheck.length === 1 ? '1 name' : `${toCheck.length} names`}. {toCheck.length === 1
+							Billie wasn't sure about {toCheck.length === 1 ? '1 name' : `${toCheck.length} names`}. {toCheck.length === 1
 								? "It's"
 								: "They're"} at the top of the receipt.
 						</p>
@@ -212,13 +212,13 @@
 				<form method="POST" action="?/confirm" id="confirm" class="receipt surface" bind:this={sheetForm}>
 					{#if toCheck.length}
 						<h2>Check these names</h2>
-						<p class="hint">Billi guessed these. Fix any that are wrong and it remembers next time.</p>
+						<p class="hint">Billie guessed these. Fix any that are wrong and it remembers next time.</p>
 						<ul class="lines">
 							{#each toCheck as item (item.id)}{@render line(item)}{/each}
 						</ul>
 						<h2 class="rest">The rest of the receipt</h2>
 					{:else if editing}
-						<p class="hint">Change any name or aisle. Billi uses your names from then on.</p>
+						<p class="hint">Change any name or aisle. Billie uses your names from then on.</p>
 					{/if}
 					<ul class="lines">
 						{#each rest as item (item.id)}{@render line(item)}{/each}

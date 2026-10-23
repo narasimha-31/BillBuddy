@@ -110,7 +110,7 @@
 </script>
 
 <svelte:head>
-	<title>Home · Billi</title>
+	<title>Home · Billie</title>
 </svelte:head>
 
 <AppShell fit firstName={data.firstName}>

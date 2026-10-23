@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Signing in · Billi</title>
+	<title>Signing in · Billie</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>My list · Billi</title>
+	<title>My list · Billie</title>
 </svelte:head>
 
 <AppShell firstName={data.firstName}>
@@ -124,7 +124,7 @@
 				{/each}
 			</ul>
 		{:else}
-			<p class="empty">Add what you plan to buy. Billi shows what it costs at each store you shop at, from your own receipts.</p>
+			<p class="empty">Add what you plan to buy. Billie shows what it costs at each store you shop at, from your own receipts.</p>
 		{/if}
 	</main>
 </AppShell>

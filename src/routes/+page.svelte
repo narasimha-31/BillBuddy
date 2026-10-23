@@ -10,7 +10,7 @@
 
 	let { data } = $props();
 
-	const DESCRIPTION = 'Billi reads your grocery receipts and keeps every price you paid, store by store. See what went up and where the same thing costs less.';
+	const DESCRIPTION = 'Billie reads your grocery receipts and keeps every price you paid, store by store. See what went up and where the same thing costs less.';
 	const home = `${page.url.origin}/`;
 
 	// Every price here is a sourced 2026 shelf price; every sum and gap is worked out below, in cents.
@@ -67,12 +67,12 @@
 <svelte:window onpageshow={(e) => e.persisted && location.reload()} />
 
 <svelte:head>
-	<title>Billi · Grocery prices from your own receipts</title>
+	<title>Billie · Grocery prices from your own receipts</title>
 	<meta name="description" content={DESCRIPTION} />
 	<link rel="canonical" href={home} />
 	<meta property="og:type" content="website" />
-	<meta property="og:site_name" content="Billi" />
-	<meta property="og:title" content="Billi · Grocery prices from your own receipts" />
+	<meta property="og:site_name" content="Billie" />
+	<meta property="og:title" content="Billie · Grocery prices from your own receipts" />
 	<meta property="og:description" content={DESCRIPTION} />
 	<meta property="og:url" content={home} />
 	<meta property="og:image" content="{home}images/hero-receipt-1024.webp" />
@@ -80,7 +80,7 @@
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebApplication',
-		name: 'Billi',
+		name: 'Billie',
 		url: home,
 		description: DESCRIPTION,
 		applicationCategory: 'ShoppingApplication',
@@ -102,7 +102,7 @@
 <main>
 	<section class="hero">
 		<h1>Know what you paid <span class="hl">last time.</span></h1>
-		<p class="lead">Snap any grocery receipt. Billi remembers every price, at every store you shop.</p>
+		<p class="lead">Snap any grocery receipt. Billie remembers every price, at every store you shop.</p>
 		{#if data.signInFailed}<p class="failed" role="alert">Sign-in didn’t go through. Try again.</p>{/if}
 		<div class="actions">
 			<GoogleButton />
@@ -190,6 +190,7 @@
 	</section>
 
 	<section class="close" id="start">
+		<div class="sign"><Wordmark big /></div>
 		<h2>Start with your <span class="hl">last receipt.</span></h2>
 		<div class="actions">
 			<GoogleButton />
@@ -219,7 +220,7 @@
 		Prices on this page are typical 2026 shelf prices from published store price lists and local price trackers.
 		Distances and the usual store belong to a sample shopper. Your own receipts replace all of it.
 	</p>
-	<p class="legal">© 2026 Billi</p>
+	<p class="legal">© 2026 Billie</p>
 </footer>
 
 <style>
@@ -711,6 +712,10 @@
 	.close {
 		padding: clamp(6rem, 16vh, 10rem) 1.25rem clamp(5rem, 12vh, 8rem);
 		text-align: center;
+	}
+
+	.sign {
+		margin-bottom: 1.5rem;
 	}
 
 	footer {

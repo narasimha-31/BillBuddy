@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-	<title>Add receipts · Billi</title>
+	<title>Add receipts · Billie</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

@@ -26,8 +26,8 @@
 </script>
 
 <svelte:head>
-	<title>Privacy · Billi</title>
-	<meta name="description" content="What Billi does with your receipts: what is read, what is kept, and what is deleted." />
+	<title>Privacy · Billie</title>
+	<meta name="description" content="What Billie does with your receipts: what is read, what is kept, and what is deleted." />
 </svelte:head>
 
 <div class="screen">

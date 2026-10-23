@@ -18,7 +18,7 @@ export function stepsSinceStart(here: number | undefined, start: number, entries
 }
 
 // The visit's pages become forward steps and its first page turns into the landing, so back
-// from there leaves Billi instead of walking through pages that only bounce to sign-in.
+// from there leaves Billie instead of walking through pages that only bounce to sign-in.
 function rewindToLanding() {
 	const steps = stepsSinceStart(indexHere(), Number(sessionStorage.getItem(START)), history.length);
 	sessionStorage.removeItem(START);

@@ -45,7 +45,7 @@
 </script>
 
 <svelte:head>
-	<title>Settings · Billi</title>
+	<title>Settings · Billie</title>
 </svelte:head>
 
 <AppShell firstName={data.firstName}>
@@ -75,7 +75,7 @@
 
 		<!-- a switch applies the moment it flips, as in iOS; without JavaScript the Save button does it -->
 		<form method="POST" action="?/save" use:enhance={() => async ({ update }) => update({ reset: false })}>
-			<h2 class="list-label">What Billi keeps</h2>
+			<h2 class="list-label">What Billie keeps</h2>
 			<ul class="group">
 				<li>
 					<label class="row">

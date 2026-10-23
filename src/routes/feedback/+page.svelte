@@ -10,8 +10,8 @@
 </script>
 
 <svelte:head>
-	<title>Send feedback · Billi</title>
-	<meta name="description" content="Tell the Billi team about a bug or an idea." />
+	<title>Send feedback · Billie</title>
+	<meta name="description" content="Tell the Billie team about a bug or an idea." />
 </svelte:head>
 
 {#snippet sendForm()}
@@ -30,7 +30,7 @@
 					<label class:on={kind === 'bug'}><input type="radio" name="kind" value="bug" bind:group={kind} />Something's broken</label>
 					<label class:on={kind === 'idea'}><input type="radio" name="kind" value="idea" bind:group={kind} />An idea</label>
 				</fieldset>
-				<label class="list-label" for="message">{kind === 'bug' ? 'What happened, and what did you expect?' : 'What would make Billi better?'}</label>
+				<label class="list-label" for="message">{kind === 'bug' ? 'What happened, and what did you expect?' : 'What would make Billie better?'}</label>
 				<textarea id="message" name="message" class="group" rows="6" maxlength="2000" required></textarea>
 				<input type="hidden" name="page" value={data.from} />
 				{#if form?.problem}<p class="problem" role="alert">{form.problem}</p>{/if}

@@ -1,5 +1,5 @@
 <div class="site-footer">
-	<span>© 2026 Billi</span>
+	<span>© 2026 Billie</span>
 	<a href="/privacy">Privacy</a>
 	<a href="/feedback">Send feedback</a>
 </div>
