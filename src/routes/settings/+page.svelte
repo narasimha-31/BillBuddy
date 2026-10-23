@@ -138,7 +138,10 @@
 			{/if}
 		</ul>
 
-		<h2 class="list-label">Display</h2>
+		</div>
+
+		<div class="column">
+		<h2 class="list-label first">Display</h2>
 		<DisplayChoices display={data.display} />
 
 		<ul class="group tour-again">
@@ -321,8 +324,26 @@
 			gap: 2.5rem;
 		}
 
+		/* two columns: display sits under what is kept, the account beside both */
+		.column:last-child {
+			grid-column: 2;
+			grid-row: 1 / span 2;
+		}
+
 		.list-label.first {
 			margin-top: 0;
+		}
+	}
+
+	/* a wide screen fits all three side by side */
+	@media (min-width: 1440px) {
+		.columns {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.column:last-child {
+			grid-column: auto;
+			grid-row: auto;
 		}
 	}
 
