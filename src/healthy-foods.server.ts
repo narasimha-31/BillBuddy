@@ -1,5 +1,5 @@
 import { admin } from './admin.server';
-import { sourceName, type HealthyFood } from './healthy';
+import { ALLERGENS, sourceName, type Allergen, type HealthyFood } from './healthy';
 import { CATEGORIES, knownPayload } from './item-names';
 import { AiUnavailable, BadAnswer, structured } from './nebius.server';
 import { names } from './recalls';
@@ -34,9 +34,10 @@ const schema = {
 					why: { type: 'string' },
 					diet: { type: 'string', enum: ['vegan', 'vegetarian', 'meat'] },
 					category: { type: 'string', enum: [...CATEGORIES] },
+					allergens: { type: 'array', items: { type: 'string', enum: [...ALLERGENS] } },
 					source: { type: 'integer' }
 				},
-				required: ['name', 'why', 'diet', 'category', 'source'],
+				required: ['name', 'why', 'diet', 'category', 'allergens', 'source'],
 				additionalProperties: false
 			}
 		}
@@ -51,15 +52,16 @@ The user message holds a JSON list of pages between <pages> and </pages>, each w
 
 Return up to 6 foods that a page names as good to eat, each one:
 - name: one plain whole food in sentence case, as a shopper would find it in a US grocery store, 1 to 3 words ("Lentils", "Brussels sprouts", "Plain Greek yogurt"). Only a food the page itself names. Never a group of foods ("nuts", "legumes", "whole grains", "leafy greens", "beans"), never juice, fortified or processed foods, dishes, supplements or brands, and never a food most US stores don't carry.
-- why: one short plain sentence, under 120 characters, saying what the page says it is good for ("Beans and oats have soluble fiber that can help lower bad cholesterol."). Only what the page says, no cures and no numbers it does not give.
+- why: one short plain sentence, under 120 characters, naming what it has and what that does for the body, as the page says ("Lentils have fiber and protein, which keep you full and help digestion."). Never only a nutrient with no benefit ("contains magnesium"). Only what the page says, no cures and no numbers it does not give.
 - diet: "vegan" for plant foods, "vegetarian" for eggs and dairy, "meat" for meat, poultry or fish.
 - category: the aisle it is found in, from the list.
+- allergens: which of the major US food allergens the food is or is made from, from the list. "fish" for any fish, "shellfish" for shrimp, crab, lobster or clams, "tree nuts" for almonds, cashews, walnuts and the like, "sesame" only for sesame seeds and foods made with them like tahini or hummus ("Peanut butter" has peanuts; "Plain Greek yogurt" has milk). Never one the food does not contain: sunflower and pumpkin seeds are not sesame. Empty when it has none.
 - source: the index of the page it came from.
 
 Return only the JSON object described by the schema:
 ${JSON.stringify(schema)}`;
 
-type Answer = { foods: { name: string; why: string; diet: HealthyFood['diet']; category: string; source: number }[] };
+type Answer = { foods: { name: string; why: string; diet: HealthyFood['diet']; category: string; allergens: Allergen[]; source: number }[] };
 
 // Today's topic searched on trusted nutrition sites, the foods it names pulled out by the model, and
 // each one kept only if its own page really names it. Food names only ever leave, never a shopper.
@@ -85,15 +87,17 @@ export async function findHealthyFoods(day = new Date()) {
 		if (problem instanceof BadAnswer || problem instanceof AiUnavailable) return { foods: [] };
 		throw problem;
 	});
-	const rows = (answer.foods ?? []).flatMap((f) => {
+	// one row per name, as an upsert can't touch the same row twice
+	const found = (answer.foods ?? []).flatMap((f) => {
 		const page = usable[f.source];
 		const name = f.name.trim().slice(0, 60);
 		const why = f.why.trim().slice(0, 220);
 		if (!page || !name || !why || !names(page.content, name)) return [];
-		return [{ name, why, diet: f.diet, category: f.category, source_url: page.url.slice(0, 500), source: sourceName(page.url) }];
+		return [{ name, why, diet: f.diet, category: f.category, allergens: [...new Set(f.allergens.filter((a) => ALLERGENS.includes(a)))], source_url: page.url.slice(0, 500), source: sourceName(page.url) }];
 	});
+	const rows = [...new Map(found.map((r) => [r.name.toLowerCase(), r])).values()];
 	if (!rows.length) return 0;
-	const { error } = await admin.from('healthy_foods').upsert(rows, { onConflict: 'name', ignoreDuplicates: true });
+	const { error } = await admin.from('healthy_foods').upsert(rows.map((r) => ({ ...r, found_on: new Date().toISOString().slice(0, 10) })), { onConflict: 'name' });
 	if (error) throw error;
 	return rows.length;
 }

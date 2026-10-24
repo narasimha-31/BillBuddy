@@ -1,7 +1,10 @@
 import { names } from './recalls';
 
 export type Diet = 'vegan' | 'vegetarian' | 'meat';
-export type HealthyFood = { name: string; why: string; diet: Diet; category: string; source_url: string; source: string };
+// the nine major allergens US labels must name
+export const ALLERGENS = ['milk', 'eggs', 'fish', 'shellfish', 'tree nuts', 'peanuts', 'wheat', 'soy', 'sesame'] as const;
+export type Allergen = (typeof ALLERGENS)[number];
+export type HealthyFood = { name: string; why: string; diet: Diet; category: string; allergens: Allergen[]; source_url: string; source: string };
 
 // what each kind of eater can be offered
 const FITS: Record<Diet, Diet[]> = { vegan: ['vegan'], vegetarian: ['vegan', 'vegetarian'], meat: ['vegan', 'vegetarian', 'meat'] };

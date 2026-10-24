@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nextPick, sourceName, type HealthyFood } from './healthy';
 
-const food = (name: string, diet: HealthyFood['diet'], category = 'Produce'): HealthyFood => ({ name, why: 'Good for you.', diet, category, source_url: 'https://www.mayoclinic.org/x', source: 'Mayo Clinic' });
+const food = (name: string, diet: HealthyFood['diet'], category = 'Produce'): HealthyFood => ({ name, why: 'Good for you.', diet, category, allergens: [], source_url: 'https://www.mayoclinic.org/x', source: 'Mayo Clinic' });
 const foods = [food('Lentils', 'vegan', 'Pantry'), food('Broccoli', 'vegan'), food('Greek yogurt', 'vegetarian', 'Dairy & eggs'), food('Salmon', 'meat', 'Meat & seafood')];
 
 describe('nextPick', () => {
