@@ -129,6 +129,11 @@
 		{ value: 'vegetarian', label: 'Vegetarian' },
 		{ value: 'vegan', label: 'Vegan' }
 	];
+	// milk is also where lactose comes from
+	const allergyText = (list: string[]) => {
+		const names = list.map((a) => (a === 'milk' ? 'milk (lactose)' : a));
+		return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+	};
 	const dietName = { meat: 'Eats meat', vegetarian: 'Vegetarian', vegan: 'Vegan' };
 	const answered: SubmitFunction = () => async ({ update }) => {
 		askDiet = false;
@@ -321,6 +326,12 @@
 							<div class="pick" in:fly={{ y: 8, duration: still ? 0 : 260 }}>
 								<p class="pick-name"><AisleIcon aisle={data.healthy.category} />{data.healthy.name}</p>
 								<p class="healthy-why">{data.healthy.why}</p>
+								{#if data.healthy.allergens.length}
+									<p class="allergens">
+										<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.5 20h19zM12 10v4.5M12 17.2v.1" /></svg>
+										Contains {allergyText(data.healthy.allergens)}. Check the label if you have an allergy.
+									</p>
+								{/if}
 								<a class="source" href={data.healthy.source_url} target="_blank" rel="noopener noreferrer">From {data.healthy.source}</a>
 							</div>
 						{/key}
@@ -586,6 +597,30 @@
 		font-size: 0.9375rem;
 		line-height: 1.45;
 		color: var(--color-ink);
+	}
+
+	.allergens {
+		display: flex;
+		gap: 0.4rem;
+		align-items: flex-start;
+		border-radius: 10px;
+		background: color-mix(in srgb, #b45309 9%, var(--color-surface));
+		padding: 0.45rem 0.6rem;
+		font-size: 0.8125rem;
+		line-height: 1.4;
+		color: #7c3a06;
+	}
+
+	.allergens svg {
+		width: 1rem;
+		height: 1rem;
+		flex: none;
+		margin-top: 0.05rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 
 	.source {

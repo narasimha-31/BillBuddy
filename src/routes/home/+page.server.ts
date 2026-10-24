@@ -123,7 +123,7 @@ type SpendRow = { purchased_on: string; receipt_items: { category: string | null
 // Today's healthy thing to try, the same all day. A new day, or a skip, moves it on to one that fits
 // their diet, that they have never bought and never been shown, from the aisle they spend least on.
 async function healthyPick(locals: App.Locals, userId: string, settings: PickSettings, rows: SpendRow[], today: string) {
-	const foods = await locals.supabase.from('healthy_foods').select('name, why, diet, category, source_url, source');
+	const foods = await locals.supabase.from('healthy_foods').select('name, why, diet, category, allergens, source_url, source');
 	if (foods.error) throw foods.error;
 	const all = foods.data as HealthyFood[];
 	const current = all.find((f) => f.name === settings.healthy_pick && suits(f, settings.diet));
