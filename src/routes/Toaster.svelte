@@ -21,6 +21,8 @@
 	// a short swipe down puts it away, like a phone notification
 	let startY: number | null = null;
 	const down = (e: PointerEvent) => {
+		// capturing would send the click to the toast instead of its buttons
+		if ((e.target as Element).closest('a, button')) return;
 		startY = e.clientY;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	};
