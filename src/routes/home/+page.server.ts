@@ -7,6 +7,8 @@ import type { Paid } from '../../price-change';
 import { byAisle } from '../../spend';
 import { dueSoon, habitText, rhythm, type Bought } from '../../rhythm';
 import { recallsFor, type Recall } from '../../recalls';
+import { nextPick, suits, type Diet, type HealthyFood } from '../../healthy';
+import { listName } from '../../list-compare';
 
 type Change = {
 	name: string;
@@ -50,7 +52,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.supabase.from('receipts').select('id, status, problem, processing_at').in('status', ['pending', 'processing', 'failed']),
 		locals.supabase.rpc('my_price_changes', { how_many: 10 }),
 		locals.supabase.rpc('my_upload_window'),
-		locals.supabase.from('user_settings').select('tour_seen, monthly_budget_cents').maybeSingle(),
+		locals.supabase.from('user_settings').select('tour_seen, monthly_budget_cents, diet, healthy_pick, healthy_pick_on, healthy_seen').maybeSingle(),
 		locals.supabase.from('recalls').select('url, title, published_on, found_on').gte('found_on', daysBefore(today, 30)).order('found_on', { ascending: false }).limit(100)
 	]);
 	for (const answer of [recent, spend, undated, unread, changes, uploaded, settings, recalls]) if (answer.error) throw answer.error;
@@ -66,8 +68,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const lately = daysBefore(today, 90);
 	const bought = [...new Set(spendRows.filter((r) => r.purchased_on >= lately).flatMap((r) => r.receipt_items.map((l) => l.products?.name ?? l.name).filter((n): n is string => !!n)))];
 
+	const healthy = settings.data?.diet ? await healthyPick(locals, user.id, settings.data, spendRows, today) : null;
+
 	return {
 		firstName: firstNameOf(user),
+		diet: (settings.data?.diet as Diet | null) ?? null,
+		healthy,
 		uploads: uploadWindow(uploaded.data),
 		dailyLimit: uploadWindow(uploaded.data).limit,
 		paused: await paused,
@@ -111,7 +117,80 @@ function runningLow(rows: { purchased_on: string; receipt_items: { name: string 
 		.slice(0, SHOWN_DUE);
 }
 
+type PickSettings = { diet: Diet; healthy_pick: string | null; healthy_pick_on: string | null; healthy_seen: string[] };
+type SpendRow = { purchased_on: string; receipt_items: { category: string | null; total_cents: number; name: string | null; products: { name: string } | null }[] };
+
+// Today's healthy thing to try, the same all day. A new day, or a skip, moves it on to one that fits
+// their diet, that they have never bought and never been shown, from the aisle they spend least on.
+async function healthyPick(locals: App.Locals, userId: string, settings: PickSettings, rows: SpendRow[], today: string) {
+	const foods = await locals.supabase.from('healthy_foods').select('name, why, diet, category, source_url, source');
+	if (foods.error) throw foods.error;
+	const all = foods.data as HealthyFood[];
+	const current = all.find((f) => f.name === settings.healthy_pick && suits(f, settings.diet));
+	if (current && settings.healthy_pick_on === today) return current;
+
+	const lastMonth = daysBefore(today, 30);
+	const aisleCents: Record<string, number> = {};
+	for (const row of rows.filter((r) => r.purchased_on >= lastMonth))
+		for (const line of row.receipt_items) aisleCents[line.category ?? 'Other'] = (aisleCents[line.category ?? 'Other'] ?? 0) + line.total_cents;
+	const bought = [...new Set(rows.flatMap((r) => r.receipt_items.map((l) => l.products?.name ?? l.name).filter((n): n is string => !!n)))];
+	const seen = [...settings.healthy_seen, ...(settings.healthy_pick ? [settings.healthy_pick] : [])].slice(-500);
+	const next = nextPick(all, settings.diet, bought, seen, aisleCents);
+	const { error } = await locals.supabase.from('user_settings').upsert({ user_id: userId, healthy_pick: next?.name ?? null, healthy_pick_on: today, healthy_seen: seen, updated_at: new Date().toISOString() });
+	if (error) throw error;
+	return next;
+}
+
+// the pick is set aside; Home picks the next one when it loads again
+async function moveOn(locals: App.Locals, userId: string) {
+	const { data, error } = await locals.supabase.from('user_settings').select('healthy_pick, healthy_seen').maybeSingle();
+	if (error) throw error;
+	const seen = [...((data?.healthy_seen as string[] | undefined) ?? []), ...(data?.healthy_pick ? [data.healthy_pick] : [])].slice(-500);
+	const saved = await locals.supabase.from('user_settings').upsert({ user_id: userId, healthy_pick: null, healthy_pick_on: null, healthy_seen: seen, updated_at: new Date().toISOString() });
+	if (saved.error) throw saved.error;
+	return (data?.healthy_pick as string | null) ?? null;
+}
+
+const DIETS: Diet[] = ['vegan', 'vegetarian', 'meat'];
+const MOST_ITEMS = 60;
+
 export const actions: Actions = {
+	diet: async ({ request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401);
+		const diet = String((await request.formData()).get('diet') ?? '');
+		if (!DIETS.includes(diet as Diet)) return fail(400, { problem: 'Pick one of the three.' });
+		const { error } = await locals.supabase.from('user_settings').upsert({ user_id: user.id, diet, healthy_pick: null, healthy_pick_on: null, updated_at: new Date().toISOString() });
+		if (error) throw error;
+	},
+
+	another: async ({ locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401);
+		await moveOn(locals, user.id);
+	},
+
+	// onto their first list, or a new "My list" when they have none
+	try_it: async ({ locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401);
+		const name = listName(await moveOn(locals, user.id));
+		if (!name) return fail(400, { problem: 'Nothing to add.' });
+		const lists = await locals.supabase.from('shopping_lists').select('id, name, items').order('created_at').limit(1);
+		if (lists.error) throw lists.error;
+		const list = lists.data[0] as { id: string; name: string; items: string[] } | undefined;
+		if (!list) {
+			const made = await locals.supabase.from('shopping_lists').insert({ user_id: user.id, name: 'My list', items: [name] });
+			if (made.error) throw made.error;
+			return { added: name, to: 'My list' };
+		}
+		if (list.items.some((i) => i.toLowerCase() === name.toLowerCase())) return { added: name, to: list.name };
+		if (list.items.length >= MOST_ITEMS) return fail(400, { problem: `${list.name} is full.` });
+		const { error } = await locals.supabase.from('shopping_lists').update({ items: [...list.items, name], updated_at: new Date().toISOString() }).eq('id', list.id);
+		if (error) throw error;
+		return { added: name, to: list.name };
+	},
+
 	// finished or skipped, the tour stays away on every device
 	tour_seen: async ({ locals }) => {
 		const user = await locals.getUser();

@@ -9,11 +9,14 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { handoff } from '../receipts/handoff';
 	import { changeLine, isLowest } from '../../price-change';
-	import { slide } from 'svelte/transition';
+	import { fly, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { announce, readReceipt } from '../receipts/reading';
 	import { toast } from '../../toasts.svelte';
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import AisleIcon from '../AisleIcon.svelte';
 
 	let { data } = $props();
 
@@ -114,7 +117,35 @@
 		const start = setTimeout(() => (touring = true), 700);
 		return () => clearTimeout(start);
 	});
+	// what they eat, asked once, after the tour if there is one
+	let askDiet = $state(false);
+	onMount(() => {
+		if (data.diet || data.tour) return;
+		const ask = setTimeout(() => (askDiet = true), 900);
+		return () => clearTimeout(ask);
+	});
+	const DIETS = [
+		{ value: 'meat', label: 'Yes, I eat meat or fish' },
+		{ value: 'vegetarian', label: 'Vegetarian' },
+		{ value: 'vegan', label: 'Vegan' }
+	];
+	const dietName = { meat: 'Eats meat', vegetarian: 'Vegetarian', vegan: 'Vegan' };
+	const answered: SubmitFunction = () => async ({ update }) => {
+		askDiet = false;
+		await update();
+	};
+	let picking = $state(false);
+	const tried: SubmitFunction = () => {
+		picking = true;
+		return async ({ result, update }) => {
+			if (result.type === 'success' && result.data?.added) toast({ key: `healthy:${result.data.added}`, kind: 'done', text: `${result.data.added} is on ${result.data.to}.`, action: { label: 'Open', href: '/list' } });
+			await update();
+			picking = false;
+		};
+	};
+
 	function endTour() {
+		if (!data.diet) setTimeout(() => (askDiet = true), 400);
 		touring = false;
 		fetch('/home?/tour_seen', { method: 'POST', body: new FormData(), headers: { 'x-sveltekit-action': 'true' } });
 	}
@@ -276,6 +307,32 @@
 				</section>
 			</div>
 			<div class="side-col">
+				<section class="healthy" aria-labelledby="healthy-title">
+					<h2 class="due-title" id="healthy-title">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zM5 19l7-7" /></svg>
+						Something healthy to try
+						{#if data.diet}<button type="button" class="diet" onclick={() => (askDiet = true)}>{dietName[data.diet]}</button>{/if}
+					</h2>
+					{#if !data.diet}
+						<p class="healthy-why">Billie finds healthy foods you don't buy yet, from nutrition sites like Harvard and the American Heart Association. First, one question.</p>
+						<button type="button" class="pill-button" onclick={() => (askDiet = true)}>Do you eat meat?</button>
+					{:else if data.healthy}
+						{#key data.healthy.name}
+							<div class="pick" in:fly={{ y: 8, duration: still ? 0 : 260 }}>
+								<p class="pick-name"><AisleIcon aisle={data.healthy.category} />{data.healthy.name}</p>
+								<p class="healthy-why">{data.healthy.why}</p>
+								<a class="source" href={data.healthy.source_url} target="_blank" rel="noopener noreferrer">From {data.healthy.source}</a>
+							</div>
+						{/key}
+						<div class="pick-actions">
+							<form method="POST" action="?/try_it" use:enhance={tried}><button class="pill-button" disabled={picking}>Add to my list</button></form>
+							<form method="POST" action="?/another" use:enhance={tried}><button class="quiet-button" disabled={picking}>Show another</button></form>
+						</div>
+					{:else}
+						<p class="healthy-why">You've seen every pick for now. New ones are found each day.</p>
+					{/if}
+				</section>
+
 				<section class="month surface" aria-labelledby="month-title">
 					<div class="month-head">
 						<h2 id="month-title" aria-live="polite">{title}</h2>
@@ -349,6 +406,20 @@
 		</div>
 
 		{#if touring}<Tour stops={TOUR} onclose={endTour} />{/if}
+
+		{#if askDiet}
+			<dialog class="diet-ask" {@attach (d) => d.showModal()} onclose={() => (askDiet = false)} aria-labelledby="diet-question">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zM5 19l7-7" /></svg>
+				<p id="diet-question" class="question">Do you eat meat or fish?</p>
+				<p class="detail">Billie suggests a healthy food to try each day. This keeps them to what you eat. You can change it any time.</p>
+				<form method="POST" action="?/diet" use:enhance={answered} class="diet-options">
+					{#each DIETS as option (option.value)}
+						<button name="diet" value={option.value} class:chosen={data.diet === option.value}>{option.label}</button>
+					{/each}
+				</form>
+				<button type="button" class="not-now" onclick={() => (askDiet = false)}>Not now</button>
+			</dialog>
+		{/if}
 
 		<!-- on a phone Settings is otherwise only behind the avatar -->
 		<ul class="group settings">
@@ -458,6 +529,197 @@
 	@media (hover: hover) {
 		.add-button:hover {
 			filter: brightness(1.08);
+		}
+	}
+
+	/* the day's healthy pick: its own fresh card, top right */
+	.healthy {
+		display: grid;
+		gap: 0.6rem;
+		border-radius: 20px;
+		background:
+			radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
+			var(--color-surface);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 16%, transparent),
+			0 1px 2px rgb(0 0 0 / 0.04);
+		padding: 1.1rem 1.15rem 1.2rem;
+	}
+
+	.healthy .due-title {
+		margin: 0;
+	}
+
+	.diet {
+		margin-left: auto;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		padding: 0.2rem 0.65rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-accent);
+	}
+
+	.pick {
+		display: grid;
+		gap: 0.35rem;
+	}
+
+	.pick-name {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		line-height: 1.15;
+		color: var(--color-ink);
+	}
+
+	.pick-name :global(.aisle-icon) {
+		width: 1.5rem;
+		height: 1.5rem;
+		stroke: var(--color-accent);
+	}
+
+	.healthy-why {
+		font-size: 0.9375rem;
+		line-height: 1.45;
+		color: var(--color-ink);
+	}
+
+	.source {
+		justify-self: start;
+		font-size: 0.8125rem;
+		color: var(--color-muted);
+		text-decoration: underline;
+		text-decoration-color: color-mix(in srgb, var(--color-muted) 40%, transparent);
+		text-underline-offset: 3px;
+	}
+
+	.pick-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.2rem;
+	}
+
+	.quiet-button {
+		min-height: 2.75rem;
+		border-radius: 999px;
+		background: rgb(118 118 128 / 0.12);
+		padding: 0.55rem 1.1rem;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		color: var(--color-ink);
+		transition: transform var(--standard) var(--ease);
+	}
+
+	.quiet-button:active {
+		transform: scale(0.96);
+		transition-duration: var(--quick);
+	}
+
+	.healthy button:disabled {
+		opacity: 0.6;
+	}
+
+	.diet-ask {
+		width: min(21rem, calc(100vw - 2rem));
+		margin: auto;
+		border: 0;
+		border-radius: 20px;
+		background: var(--color-surface);
+		padding: 1.4rem 1.25rem 1rem;
+		color: var(--color-ink);
+		text-align: center;
+		box-shadow: 0 24px 60px -16px rgb(0 0 0 / 0.35);
+	}
+
+	.diet-ask[open] {
+		animation: ask-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	.diet-ask::backdrop {
+		background: color-mix(in srgb, var(--color-shade) 30%, transparent);
+	}
+
+	@keyframes ask-in {
+		from {
+			opacity: 0;
+			transform: translateY(10px) scale(0.98);
+		}
+	}
+
+	.diet-ask > svg {
+		width: 2rem;
+		height: 2rem;
+		fill: none;
+		stroke: var(--color-accent);
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.diet-ask .question {
+		margin-top: 0.4rem;
+		font-size: 1.1875rem;
+		font-weight: 650;
+	}
+
+	.diet-ask .detail {
+		margin-top: 0.35rem;
+		font-size: 0.875rem;
+		line-height: 1.45;
+		color: var(--color-muted);
+	}
+
+	.diet-options {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 1.1rem;
+	}
+
+	.diet-options button {
+		min-height: 2.9rem;
+		border-radius: 14px;
+		background: rgb(118 118 128 / 0.12);
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--color-ink);
+		transition: transform var(--standard) var(--ease);
+	}
+
+	.diet-options button.chosen {
+		background: var(--color-accent-fill);
+		color: #fff;
+	}
+
+	.diet-options button:active {
+		transform: scale(0.98);
+		transition-duration: var(--quick);
+	}
+
+	.not-now {
+		margin-top: 0.6rem;
+		min-height: 2.75rem;
+		padding: 0 1rem;
+		font-size: 0.9375rem;
+		color: var(--color-accent);
+	}
+
+	.diet:focus-visible,
+	.quiet-button:focus-visible,
+	.diet-options button:focus-visible,
+	.not-now:focus-visible,
+	.source:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.diet-ask[open] {
+			animation: none;
 		}
 	}
 
@@ -636,10 +898,11 @@
 			order: 2;
 		}
 
-		.due-soon {
+		.healthy {
 			order: 3;
 		}
 
+		.due-soon,
 		.month {
 			order: 4;
 		}
